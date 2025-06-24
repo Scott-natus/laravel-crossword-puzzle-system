@@ -1,0 +1,90 @@
+.crossword-grid {
+    display: inline-block;
+    border: 2px solid #333;
+    background: #fff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.grid-row {
+    display: flex;
+}
+
+.grid-cell {
+    width: 40px;
+    height: 40px;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    background: #fff;
+    transition: all 0.2s ease;
+}
+
+.grid-cell:hover {
+    background: #f8f9fa;
+}
+
+.grid-cell.selected {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.grid-cell.selected .cell-content {
+    color: white;
+}
+
+.grid-cell.found {
+    background: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.grid-cell.found .cell-content {
+    color: #155724;
+    font-weight: bold;
+}
+
+.grid-cell.word-cell {
+    background: #f8f9fa;
+}
+
+.grid-cell.black {
+    background: #333;
+    cursor: default;
+}
+
+.grid-cell.black:hover {
+    background: #333;
+}
+
+.cell-content {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    user-select: none;
+}
+
+/* 그리드 크기 조정 */
+@media (max-width: 768px) {
+    .grid-cell {
+        width: 30px;
+        height: 30px;
+    }
+    
+    .cell-content {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid-cell {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .cell-content {
+        font-size: 12px;
+    }
+} 
