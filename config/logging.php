@@ -53,43 +53,67 @@ return [
 
     'channels' => [
         'stack' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'stack',
+            'channels' => ['single'],
+            'ignore_exceptions' => false,
         ],
 
         'single' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'single',
+            'path' => storage_path('logs/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'daily' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'daily',
+            'path' => storage_path('logs/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
         ],
 
         'slack' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'slack',
+            'url' => env('LOG_SLACK_WEBHOOK_URL'),
+            'username' => 'Laravel Log',
+            'emoji' => ':boom:',
+            'level' => env('LOG_LEVEL', 'critical'),
         ],
 
         'papertrail' => [
             'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => env('LOG_PAPERTRAIL_HANDLER', SyslogUdpHandler::class),
+            'handler_with' => [
+                'host' => env('PAPERTRAIL_URL'),
+                'port' => env('PAPERTRAIL_PORT'),
+                'connectionString' => 'tls://'.env('PAPERTRAIL_URL').':'.env('PAPERTRAIL_PORT'),
+            ],
         ],
 
         'stderr' => [
             'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'level' => env('LOG_LEVEL', 'debug'),
+            'handler' => StreamHandler::class,
+            'formatter' => env('LOG_STDERR_FORMATTER'),
+            'formatter_with' => [
+                'format' => null,
+                'date_format' => null,
+                'allow_inline_line_breaks' => true,
+                'ignore_empty_context_and_extra' => true,
+            ],
+            'handler_with' => [
+                'stream' => 'php://stderr',
+            ],
         ],
 
         'syslog' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'syslog',
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'errorlog' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'driver' => 'errorlog',
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'null' => [
@@ -98,8 +122,7 @@ return [
         ],
 
         'emergency' => [
-            'driver' => 'monolog',
-            'handler' => NullHandler::class,
+            'path' => storage_path('logs/laravel.log'),
         ],
     ],
 

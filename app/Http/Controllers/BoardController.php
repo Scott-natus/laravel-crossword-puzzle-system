@@ -25,7 +25,16 @@ class BoardController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
-        $boardType = BoardType::where('slug', $request->route('boardType'))->firstOrFail();
+        $boardTypeSlug = $request->route('boardType');
+        $boardType = BoardType::where('slug', $boardTypeSlug)->firstOrFail();
+        
+        // 디버깅 로그 추가
+        \Log::info('Board index method called:', [
+            'requested_slug' => $boardTypeSlug,
+            'found_boardType_id' => $boardType->id,
+            'found_boardType_name' => $boardType->name,
+            'found_boardType_slug' => $boardType->slug
+        ]);
         
         $query = \App\Models\Board::with(['user', 'attachments', 'children'])
             ->where('board_type_id', $boardType->id);
@@ -82,6 +91,14 @@ class BoardController extends Controller
         $totalAttachments = \App\Models\BoardAttachment::whereHas('board', function($q) use ($boardType) {
             $q->where('board_type_id', $boardType->id);
         })->count();
+
+        // 디버깅 로그 추가
+        \Log::info('Board index view data:', [
+            'boardType_id' => $boardType->id,
+            'boardType_name' => $boardType->name,
+            'boardType_slug' => $boardType->slug,
+            'totalPosts' => $totalPosts
+        ]);
 
         return view('board.index', compact('boards', 'search', 'totalPosts', 'totalComments', 'activeUsers', 'totalAttachments', 'boardType'));
     }

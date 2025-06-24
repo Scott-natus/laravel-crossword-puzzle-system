@@ -156,8 +156,15 @@
                     </div>
                     <div class="col-md-1 text-end">
                         @auth
-                            @if(isset($boardType) && $boardType)
-                                <a href="{{ route('board.create', ['boardType' => $boardType->slug]) }}" class="btn btn-search w-100 py-2 px-3">글쓰기</a>
+                            @php
+                                $currentBoardTypeSlug = request()->route('boardType');
+                            @endphp
+                            @if($currentBoardTypeSlug)
+                                <!-- Debug: Current slug from URL: {{ $currentBoardTypeSlug }} -->
+                                <a href="{{ route('board.create', ['boardType' => $currentBoardTypeSlug]) }}" class="btn btn-search w-100 py-2 px-3">글쓰기</a>
+                            @else
+                                <!-- Debug: No boardType in URL -->
+                                <span class="text-danger">글쓰기 버튼 오류</span>
                             @endif
                         @endauth
                     </div>
