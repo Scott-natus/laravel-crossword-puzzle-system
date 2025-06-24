@@ -156,7 +156,9 @@
                     </div>
                     <div class="col-md-1 text-end">
                         @auth
-                            <a href="{{ route('board.create', ['boardType' => $boardType->slug]) }}" class="btn btn-search w-100 py-2 px-3">글쓰기</a>
+                            @if(isset($boardType) && $boardType)
+                                <a href="{{ route('board.create', ['boardType' => $boardType->slug]) }}" class="btn btn-search w-100 py-2 px-3">글쓰기</a>
+                            @endif
                         @endauth
                     </div>
                 </form>
