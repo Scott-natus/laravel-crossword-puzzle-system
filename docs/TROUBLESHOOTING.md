@@ -113,7 +113,65 @@ Column 'content' doesn't exist in table 'puzzle_hints'
 1. 컨트롤러에서 GET 파라미터 처리
 2. 서버사이드 정렬 구현
 
-## 5. API 관련 문제
+### 문제: 게시판별 글쓰기 버튼이 항상 같은 게시판으로 이동
+**원인:** AppServiceProvider에서 전역 변수 공유 시 컨텍스트 문제
+
+**해결책:**
+1. AppServiceProvider에서 전역 `$boardType` 변수 제거
+2. 레이아웃에서 현재 URL의 `boardType` 파라미터를 직접 읽어 링크 생성
+3. 각 게시판에서 올바른 글쓰기 페이지로 이동하는지 확인
+
+**구현 예시:**
+```php
+// layouts/app.blade.php
+@php
+    $currentBoardType = request()->route('boardType');
+@endphp
+<a href="{{ route('board.create', ['boardType' => $currentBoardType]) }}" class="btn btn-primary">글쓰기</a>
+```
+
+## 5. 로그 시스템 문제
+
+### 문제: 로그가 생성되지 않음
+**원인:** config/logging.php에서 모든 로그 채널이 NullHandler로 설정
+
+**해결책:**
+1. config/logging.php 설정 확인
+2. 모든 로그 채널이 NullHandler로 설정되지 않았는지 확인
+3. 올바른 로그 설정으로 수정:
+   ```php
+   'single' => [
+       'driver' => 'single',
+       'path' => storage_path('logs/laravel.log'),
+       'level' => env('LOG_LEVEL', 'debug'),
+   ],
+   ```
+4. 설정 캐시 클리어: `php artisan config:clear`
+5. 실시간 로그 확인: `tail -f storage/logs/laravel.log`
+
+### 문제: 로그 레벨 설정 오류
+**원인:** .env 파일에서 LOG_CHANNEL 설정 문제
+
+**해결책:**
+1. .env 파일에서 LOG_CHANNEL 확인
+2. 기본값은 'stack' 또는 'single' 사용
+3. 설정 변경 후 config:clear 실행
+
+### 문제: 디버깅 로그가 보이지 않음
+**원인:** 로그 설정 또는 코드 문제
+
+**해결책:**
+1. 컨트롤러에서 로그 코드 확인:
+   ```php
+   \Log::info('Board index method called:', [
+       'requested_slug' => $boardTypeSlug,
+       'found_boardType_id' => $boardType->id
+   ]);
+   ```
+2. 로그 파일 권한 확인: `chmod 755 storage/logs/`
+3. 로그 파일 존재 확인: `ls -la storage/logs/`
+
+## 6. API 관련 문제
 
 ### 문제: Gemini API 호출 실패
 **원인:** 개별 호출로 인한 비효율성
@@ -131,7 +189,7 @@ Column 'content' doesn't exist in table 'puzzle_hints'
 2. 응답 형식 표준화
 3. 디버깅 로그 추가
 
-## 6. 포트 및 서비스 충돌 문제
+## 7. 포트 및 서비스 충돌 문제
 
 ### 문제: 포트 충돌
 **원인:** Laravel과 React 서비스 간 포트 충돌
@@ -151,7 +209,7 @@ Column 'content' doesn't exist in table 'puzzle_hints'
 2. API 호환성 확인
 3. 단계별 배포
 
-## 7. 성능 문제
+## 8. 성능 문제
 
 ### 문제: 페이지 로딩 느림
 **원인:** N+1 쿼리 문제
@@ -169,7 +227,7 @@ Column 'content' doesn't exist in table 'puzzle_hints'
 2. 메모리 제한 설정
 3. 배치 처리 구현
 
-## 8. 백업 및 복구 문제
+## 9. 백업 및 복구 문제
 
 ### 문제: 백업 파일이 너무 큼
 **해결책:**
@@ -187,7 +245,7 @@ pg_dump -h 127.0.0.1 -U myuser mydb | gzip > backup_$(date +%Y%m%d_%H%M%S).sql.g
 2. 권한 확인
 3. 충돌하는 데이터 확인
 
-## 9. 개발 환경 문제
+## 10. 개발 환경 문제
 
 ### 문제: 파일 권한 오류
 **해결책:**
@@ -201,65 +259,88 @@ chmod -R 755 bootstrap/cache/
 ```bash
 php artisan cache:clear
 php artisan config:clear
+php artisan route:clear
 php artisan view:clear
 ```
 
-## 10. 일반적인 디버깅 방법
+### 문제: 설정 변경이 반영되지 않음
+**원인:** 설정 캐시 문제
+
+**해결책:**
+1. 설정 캐시 클리어: `php artisan config:clear`
+2. 애플리케이션 캐시 클리어: `php artisan cache:clear`
+3. 뷰 캐시 클리어: `php artisan view:clear`
+
+## 11. 게시판 시스템 문제
+
+### 문제: 게시판 타입별 데이터 불일치
+**원인:** board_type_id 연결 문제
+
+**해결책:**
+1. board_types 테이블 데이터 확인:
+   ```sql
+   SELECT * FROM board_types;
+   ```
+2. boards 테이블의 board_type_id 확인:
+   ```sql
+   SELECT b.id, b.title, bt.name as board_type 
+   FROM boards b 
+   JOIN board_types bt ON b.board_type_id = bt.id;
+   ```
+
+### 문제: 게시판 URL 라우팅 오류
+**원인:** 라우트 파라미터 문제
+
+**해결책:**
+1. routes/web.php에서 게시판 라우트 확인
+2. 컨트롤러에서 boardType 파라미터 처리 확인
+3. 뷰에서 올바른 URL 생성 확인
+
+## 12. 일반적인 디버깅 방법
 
 ### 로그 확인
 ```bash
+# 실시간 로그 확인
 tail -f storage/logs/laravel.log
+
+# 최근 로그 확인
+tail -50 storage/logs/laravel.log
+
+# 특정 키워드로 로그 검색
+grep "Board index method" storage/logs/laravel.log
 ```
 
-### 데이터베이스 쿼리 확인
-```php
-// app/Providers/AppServiceProvider.php에 추가
-DB::listen(function($query) {
-    Log::info($query->sql, $query->bindings);
-});
+### 데이터베이스 확인
+```bash
+# PostgreSQL 접속
+PGPASSWORD=tngkrrhk psql -h 127.0.0.1 -U myuser -d mydb
+
+# 테이블 구조 확인
+\d table_name
+
+# 데이터 확인
+SELECT * FROM table_name LIMIT 10;
 ```
 
 ### 환경 설정 확인
 ```bash
+# .env 파일 확인
+cat .env
+
+# Laravel 설정 확인
 php artisan tinker --execute="echo config('database.default');"
 ```
 
-### 포트 사용 현황 확인
-```bash
-netstat -tulpn | grep :80
-netstat -tulpn | grep :3000
-netstat -tulpn | grep :5050
-```
+## 13. 최근 해결된 문제들
 
-## 11. 예방 조치
+### 2025-06-24: 게시판별 글쓰기 버튼 문제
+**문제:** 모든 게시판에서 글쓰기 버튼이 프로젝트 게시판으로 이동
+**해결:** AppServiceProvider에서 전역 변수 제거, 레이아웃에서 현재 URL 파라미터 직접 읽기
 
-1. **정기 백업**: 자동 백업 스크립트 설정
-2. **코드 리뷰**: 변경사항 검토
-3. **테스트**: 변경 후 기능 테스트
-4. **문서화**: 모든 변경사항 기록
-5. **영향도 분석**: 데이터베이스 변경 전 필수
-6. **사용자 확인**: 모든 중요 변경사항 승인 후 진행
-7. **대화형 진행**: 데이터베이스 조작 작업 시 반드시 사용자와 대화형으로 진행
+### 2025-06-24: 로그 시스템 문제
+**문제:** 로그가 생성되지 않음
+**해결:** config/logging.php에서 NullHandler 설정을 올바른 로그 설정으로 변경
 
-## 1. React/Laravel API 연동 500 에러
-- storage, session, cache 권한 문제 → chown/chmod로 권한 변경
-- 캐시/세션 드라이버 array로 변경
-
-## 2. CORS 오류
-- public/index.php의 직접 CORS 헤더 제거
-- config/cors.php에서 allowed_origins만 관리
-
-## 3. 419 CSRF 에러
-- VerifyCsrfToken 미들웨어 except에 puzzle/hint-generator/* 추가
-
-## 4. 퍼즐/힌트/레벨 데이터 문제
-- puzzle_levels 테이블 백업 후 신규 구조로 일괄 업데이트
-- 대량 작업은 artisan 명령어/스케줄러로 처리
-
-## 5. 자동화/스케줄러
-- 크론탭에 schedule:run 등록, Kernel.php에서 스케줄러 관리
-- 로그는 storage/logs/hint-scheduler.log 확인
-
-## 6. 백업/복구
-- DB/소스 전체 백업은 backups/ 폴더에 저장
-- 복구 시 pg_restore, tar 명령 사용 
+### 2025-06-22: 데이터베이스 스키마 변경
+**문제:** puzzle_levels 테이블 구조 변경 필요
+**해결:** 백업 후 일괄 업데이트, 스키마 문서화 

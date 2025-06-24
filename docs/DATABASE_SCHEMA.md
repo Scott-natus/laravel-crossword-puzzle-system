@@ -94,6 +94,35 @@ CREATE TABLE crossword_grid (
 );
 ```
 
+### 7. boards (게시판 테이블)
+```sql
+CREATE TABLE boards (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+    password VARCHAR(255) NOT NULL,
+    comment_notify BOOLEAN DEFAULT false,
+    views INTEGER DEFAULT 0,
+    parent_id BIGINT REFERENCES boards(id) ON DELETE CASCADE,
+    board_type_id BIGINT REFERENCES board_types(id) ON DELETE CASCADE,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+### 8. board_types (게시판 타입 테이블)
+```sql
+CREATE TABLE board_types (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE NOT NULL, -- URL 구분용 (bbs1, talk, proj)
+    description TEXT,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
 ## 제약조건 정보
 
 ### puzzle_levels 테이블 제약조건
@@ -108,6 +137,18 @@ CREATE TABLE crossword_grid (
 - **NOT NULL**: hint_text, difficulty
 - **기본값**: hint_type = 'ai_generated', is_primary = false
 
+### boards 테이블 제약조건
+- **PRIMARY KEY**: id
+- **FOREIGN KEY**: user_id → users(id) CASCADE
+- **FOREIGN KEY**: parent_id → boards(id) CASCADE (답글 구조)
+- **FOREIGN KEY**: board_type_id → board_types(id) CASCADE
+- **NOT NULL**: title, content, password, board_type_id
+
+### board_types 테이블 제약조건
+- **PRIMARY KEY**: id
+- **UNIQUE**: slug (URL 중복 불가)
+- **NOT NULL**: name, slug
+
 ## 레벨별 명칭 규칙
 ```php
 // PuzzleLevel::getLevelName($level)
@@ -119,12 +160,23 @@ CREATE TABLE crossword_grid (
 100+:     절대적 해답 (Absolute Resolution)
 ```
 
+## 게시판 타입 정보
+```sql
+-- 기본 게시판 타입들
+INSERT INTO board_types (name, slug, description) VALUES
+('주저리', 'bbs1', '일반 게시판'),
+('자유게시판', 'talk', '자유로운 토론 공간'),
+('프로젝트', 'proj', '프로젝트 관련 게시판');
+```
+
 ## 관련 테이블들
 - **puzzle_grid_rules**: 레벨별 그리드 규칙
 - **puzzle_grid_templates**: 레벨별 그리드 템플릿
 - **puzzle_hint_limits**: 레벨별 힌트 제한
 - **puzzle_scoring_rules**: 레벨별 점수 규칙
 - **puzzle_sessions**: 퍼즐 세션 기록
+- **board_attachments**: 게시판 첨부파일
+- **board_comments**: 게시판 댓글
 
 ## 유용한 쿼리
 
@@ -133,6 +185,8 @@ CREATE TABLE crossword_grid (
 \d puzzle_levels
 \d puzzle_words
 \d puzzle_hints
+\d boards
+\d board_types
 ```
 
 ### 제약조건 확인
@@ -149,6 +203,15 @@ FROM information_schema.columns
 WHERE table_name = 'puzzle_levels';
 ```
 
+### 게시판별 글 수 확인
+```sql
+SELECT bt.name, bt.slug, COUNT(b.id) as post_count
+FROM board_types bt
+LEFT JOIN boards b ON bt.id = b.board_type_id
+GROUP BY bt.id, bt.name, bt.slug
+ORDER BY bt.id;
+```
+
 ## 백업 명령어
 ```bash
 # 전체 데이터베이스 백업
@@ -156,9 +219,14 @@ pg_dump -h 127.0.0.1 -U myuser mydb > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 특정 테이블만 백업
 pg_dump -h 127.0.0.1 -U myuser -t puzzle_levels mydb > puzzle_levels_backup.sql
+
+# 게시판 관련 테이블 백업
+pg_dump -h 127.0.0.1 -U myuser -t boards -t board_types mydb > boards_backup.sql
 ```
 
 ## 최근 변경 이력
+- 2025-06-24: 게시판 시스템 로그 설정 개선 및 디버깅 로그 추가
+- 2025-06-24: 게시판별 글쓰기 버튼 문제 해결 (boardType 파라미터 직접 읽기 방식으로 변경)
 - 2025-06-22: puzzle_levels 테이블 백업 후 신규 구조로 일괄 업데이트
 - 2025-06-22: 대량 힌트 생성 스케줄러 도입
 - 2025-06-21: 중복 단어 정리 및 넘버링/정규화

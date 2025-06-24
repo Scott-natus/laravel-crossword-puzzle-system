@@ -41,16 +41,31 @@
 - 모든 주요 변경사항은 docs/ 폴더에 기록
 - 변경 후 실제 동작 확인
 
+### 6. 로그 시스템 관리
+- 로그 설정은 config/logging.php에서 관리
+- 모든 로그 채널이 NullHandler로 설정되지 않도록 주의
+- 디버깅 로그는 \Log::info() 사용하여 기록
+- 로그 레벨은 env('LOG_LEVEL', 'debug')로 설정
+
+### 7. 게시판 시스템 관리
+- 각 게시판별 글쓰기 버튼은 현재 URL의 boardType 파라미터를 직접 읽어 생성
+- AppServiceProvider에서 전역 변수 공유 시 주의 (boardType 등)
+- 레이아웃에서 동적 링크 생성 시 현재 컨텍스트 확인
+
 ## 데이터베이스 스키마
 - puzzle_words: 퍼즐 단어 테이블
 - puzzle_hints: 퍼즐 힌트 테이블  
 - puzzle_levels: 퍼즐 레벨 테이블 (level 컬럼은 100 이상 제한 없음)
+- boards: 게시판 테이블 (board_type_id로 게시판 구분)
+- board_types: 게시판 타입 테이블 (slug로 URL 구분)
 
 ## 자주 사용하는 명령어
 - 데이터베이스 백업: pg_dump -h 127.0.0.1 -U myuser mydb > backup.sql
 - 테이블 구조 확인: \d table_name
 - Laravel 설정 확인: php artisan tinker --execute="echo config('database.default');"
 - 환경 설정 확인: cat .env
+- 로그 확인: tail -f storage/logs/laravel.log
+- 설정 캐시 클리어: php artisan config:clear
 
 ## 주의사항
 - **원격 개발 환경**: SSH로 222.100.103.227에 직접 연결하여 작업
@@ -58,6 +73,7 @@
 - **모든 설명**: 한글로 진행
 - **스키마 변경**: puzzle_db_schema.sql에 반드시 기록
 - **DB 조작**: INSERT/UPDATE/DELETE/TRUNCATE/DROP 시 반드시 대화형 진행 
+- **로그 설정**: config/logging.php 수정 후 반드시 config:clear 실행
 
 # Cursor AI 프로젝트 작업 규칙
 
@@ -82,4 +98,12 @@
 - 소스: backups/source_backup_YYYYMMDD_HHMMSS.tar.gz
 
 ## 5. 문서화
-- 모든 주요 변경/문제해결은 docs/ 폴더에 기록 
+- 모든 주요 변경/문제해결은 docs/ 폴더에 기록
+
+## 6. 작업 내용 저장 규칙
+- 작업 완료 후 다음 4개 파일에 내용 반영:
+  1. .cursorrules (프로젝트 루트)
+  2. docs/WORKFLOW.md (작업 방법론)
+  3. docs/DATABASE_SCHEMA.md (DB 스키마)
+  4. docs/TROUBLESHOOTING.md (문제 해결 가이드)
+- Git 커밋 및 GitHub 푸시 포함 
