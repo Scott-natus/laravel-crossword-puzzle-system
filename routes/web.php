@@ -122,9 +122,11 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
         Route::get('/create', [GridTemplateController::class, 'create'])->name('create');
         Route::post('/', [GridTemplateController::class, 'store'])->name('store');
         Route::get('/{id}', [GridTemplateController::class, 'show'])->name('show');
+        Route::put('/{id}', [GridTemplateController::class, 'update'])->name('update');
         Route::delete('/{id}', [GridTemplateController::class, 'destroy'])->name('destroy');
         Route::post('/level-conditions', [GridTemplateController::class, 'getLevelConditions'])->name('level-conditions');
         Route::post('/extract-words', [GridTemplateController::class, 'extractWords'])->name('extract-words');
+        Route::post('/update-numbering', [GridTemplateController::class, 'updateTemplateNumbering'])->name('update-numbering');
     });
 });
 

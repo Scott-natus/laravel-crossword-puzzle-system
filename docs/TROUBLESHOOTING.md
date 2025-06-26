@@ -130,6 +130,44 @@ Column 'content' doesn't exist in table 'puzzle_hints'
 <a href="{{ route('board.create', ['boardType' => $currentBoardType]) }}" class="btn btn-primary">글쓰기</a>
 ```
 
+### 문제: 그리드 템플릿 저장 시 사용자가 선택한 번호가 무시됨
+**원인:** PuzzleGridTemplateService의 saveTemplate()에서 sortWordPositionsWithPriority() 함수가 사용자 선택 번호를 재할당
+
+**해결책:**
+1. `app/Services/PuzzleGridTemplateService.php`의 `saveTemplate()` 메서드에서 `sortWordPositionsWithPriority()` 호출 제거
+2. 사용자가 입력한 `word_positions`를 그대로 저장
+3. 불필요한 `sortWordPositionsWithPriority()` 메서드 삭제
+
+**수정된 코드:**
+```php
+public function saveTemplate($template)
+{
+    try {
+        // 사용자가 입력한 번호를 그대로 유지 (정렬하지 않음)
+        $wordPositions = $template['word_positions'];
+        
+        $insertData = [
+            // ... 기타 필드들
+            'word_positions' => json_encode($wordPositions),
+            // ... 나머지 필드들
+        ];
+        
+        $id = DB::table('puzzle_grid_templates')->insertGetId($insertData);
+        return $id;
+    } catch (\Exception $e) {
+        throw $e;
+    }
+}
+```
+
+### 문제: 템플릿 수정 시 번호 정보가 변경됨
+**원인:** 수정 모드에서도 자동 넘버링이 적용됨
+
+**해결책:**
+1. 수정 모드에서는 기존 번호 정보 유지
+2. 사용자가 변경한 번호만 업데이트
+3. 자동 넘버링 비활성화
+
 ## 5. 로그 시스템 문제
 
 ### 문제: 로그가 생성되지 않음

@@ -1,0 +1,74 @@
+# Laravel 기본 제외 파일들
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.phpunit.result.cache
+docker-compose.override.yml
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+# Laravel 로그 및 캐시
+/storage/logs/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/bootstrap/cache/*
+
+# 환경 설정 파일 (보안상 중요)
+.env
+.env.local
+.env.production
+.env.staging
+
+# 백업 파일들 (용량이 크고 불필요)
+/backups/
+*.sql
+*.tar.gz
+*.zip
+
+# IDE 설정 파일들
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 생성 파일들
+.DS_Store
+Thumbs.db
+
+# 임시 파일들
+*.tmp
+*.temp
+*.log
+
+# 데이터베이스 백업 (보안상 중요)
+backup_*.sql
+database_backup_*.sql
+full_backup_*.sql
+level_update_*.sql
+puzzle_levels_*.sql
+numbering_removal_*.sql
+multi_category_*.sql
+single_category_*.sql
+word_renumbering_*.sql
+duplicate_words_*.sql
+
+# 소스 백업 파일들 (용량이 큼)
+source_backup_*.tar.gz
+
+# React 빌드 파일들 (frontend 폴더)
+/frontend/build/
+/frontend/dist/
+/frontend/node_modules/
+
+# 기타 임시 파일들
+*.bak
+*.old
+*.orig 

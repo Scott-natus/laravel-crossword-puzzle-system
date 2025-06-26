@@ -1,0 +1,109 @@
+# Laravel Crossword Puzzle Management System - Cursor AI Rules
+
+## 프로젝트 개요
+- Laravel 기반 크로스워드 퍼즐 관리 시스템
+- 운영 서버: 222.100.103.227 (SSH 접속)
+- 데이터베이스: PostgreSQL (mydb)
+- 사용자: myuser / 비밀번호: tngkrrhk
+
+## 개발 환경 설정
+- **개발 방식**: SSH 원격 개발 (222.100.103.227에 직접 연결)
+- **워크스페이스**: /var/www/html
+- **데이터베이스 접속**: PGPASSWORD=tngkrrhk psql -h 127.0.0.1 -U myuser -d mydb
+- **포트 구성**:
+  - Laravel (게시판/관리 페이지): 80 포트
+  - React 프론트엔드: 3000 포트
+  - React API: 5050 포트
+
+## 중요 작업 원칙
+
+### 1. 데이터베이스 변경 시 필수 절차
+- **변경 전**: 데이터에 미치는 영향 분석 및 설명
+- **사용자 확인**: 변경 작업 진행 여부 및 백업 진행 여부 확인
+- **스키마 기록**: /var/www/html/puzzle_db_schema.sql에 변경사항 추가
+
+### 2. 데이터베이스 조작 작업 규칙 (매우 중요!)
+- **대화형 진행 필수**: INSERT, UPDATE, DELETE, TRUNCATE, DROP 작업 시 반드시 사용자와 대화형으로 진행
+- **작업 전 확인**: 실행할 SQL 문과 예상 결과를 먼저 보여주고 승인 요청
+- **단계별 진행**: 복잡한 작업은 단계별로 나누어 진행
+- **실행 후 확인**: 작업 완료 후 결과 확인 및 보고
+
+### 3. 라이브 서버 주의사항 (222.100.103.227 전용)
+- 데이터베이스 변경 시 항상 백업 후 진행
+- Laravel 파일 수정 시 서비스 영향도 분석
+- React 기능 추가/수정 시 Laravel 서비스 영향 고려
+
+### 4. 환경 설정 확인
+- 문제 발생 시 즉시 `cat .env`로 환경 설정 확인
+- 불필요한 중간 단계 건너뛰고 직접적인 방법 사용
+
+### 5. 문서화 원칙
+- 모든 주요 변경사항은 docs/ 폴더에 기록
+- 변경 후 실제 동작 확인
+
+### 6. 로그 시스템 관리
+- 로그 설정은 config/logging.php에서 관리
+- 모든 로그 채널이 NullHandler로 설정되지 않도록 주의
+- 디버깅 로그는 \Log::info() 사용하여 기록
+- 로그 레벨은 env('LOG_LEVEL', 'debug')로 설정
+
+### 7. 게시판 시스템 관리
+- 각 게시판별 글쓰기 버튼은 현재 URL의 boardType 파라미터를 직접 읽어 생성
+- AppServiceProvider에서 전역 변수 공유 시 주의 (boardType 등)
+- 레이아웃에서 동적 링크 생성 시 현재 컨텍스트 확인
+
+## 데이터베이스 스키마
+- puzzle_words: 퍼즐 단어 테이블
+- puzzle_hints: 퍼즐 힌트 테이블  
+- puzzle_levels: 퍼즐 레벨 테이블 (level 컬럼은 100 이상 제한 없음)
+- boards: 게시판 테이블 (board_type_id로 게시판 구분)
+- board_types: 게시판 타입 테이블 (slug로 URL 구분)
+
+## 자주 사용하는 명령어
+- 데이터베이스 백업: pg_dump -h 127.0.0.1 -U myuser mydb > backup.sql
+- 테이블 구조 확인: \d table_name
+- Laravel 설정 확인: php artisan tinker --execute="echo config('database.default');"
+- 환경 설정 확인: cat .env
+- 로그 확인: tail -f storage/logs/laravel.log
+- 설정 캐시 클리어: php artisan config:clear
+
+## 주의사항
+- **원격 개발 환경**: SSH로 222.100.103.227에 직접 연결하여 작업
+- **데이터베이스 호스트**: 127.0.0.1 (서버 내부에서 같은 서버의 DB 접근)
+- **모든 설명**: 한글로 진행
+- **스키마 변경**: puzzle_db_schema.sql에 반드시 기록
+- **DB 조작**: INSERT/UPDATE/DELETE/TRUNCATE/DROP 시 반드시 대화형 진행 
+- **로그 설정**: config/logging.php 수정 후 반드시 config:clear 실행
+
+# Cursor AI 프로젝트 작업 규칙
+
+## 1. 데이터베이스 변경
+- 모든 DB 변경 전 반드시 백업
+- 변경 SQL/쿼리문 사전 검토 및 승인
+- 변경 후 /backups/ 폴더에 백업 파일 생성
+- 스키마 변경 시 docs/DATABASE_SCHEMA.md에 기록
+
+## 2. 퍼즐/힌트 시스템
+- 퍼즐/힌트 API는 React/Laravel 연동
+- 퍼즐 레벨 데이터는 요구사항에 맞게 일괄 업데이트
+- 힌트 생성은 Gemini API 연동, 419 에러시 CSRF 예외 처리
+
+## 3. 대량 작업/자동화
+- 대량 힌트 생성은 artisan 명령어(puzzle:generate-hints-scheduler)로 처리
+- 한 시간마다 100개씩 자동 생성 (스케줄러/크론탭)
+- 진행상황은 storage/logs/hint-scheduler.log에 기록
+
+## 4. 백업
+- DB: backups/full_backup_YYYYMMDD_HHMMSS.sql
+- 소스: backups/source_backup_YYYYMMDD_HHMMSS.tar.gz
+
+## 5. 문서화
+- 모든 주요 변경/문제해결은 docs/ 폴더에 기록
+
+## 6. 작업 내용 저장 규칙
+- 작업 완료 후 다음 4개 파일에 내용 반영:
+  1. .cursorrules (프로젝트 루트)
+  2. docs/WORKFLOW.md (작업 방법론)
+  3. docs/DATABASE_SCHEMA.md (DB 스키마)
+  4. docs/TROUBLESHOOTING.md (문제 해결 가이드)
+- Git 커밋 및 GitHub 푸시 포함 

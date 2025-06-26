@@ -103,13 +103,14 @@ class PuzzleGridTemplateService
     public function saveTemplate($template)
     {
         try {
-            // 새 규칙에 따라 단어 순서 정렬
-            $sortedWordPositions = $this->sortWordPositionsWithPriority($template['word_positions'], $template['grid_width'], $template['grid_height']);
-            $id = DB::table('puzzle_grid_templates')->insertGetId([
+            // 사용자가 입력한 번호를 그대로 유지 (정렬하지 않음)
+            $wordPositions = $template['word_positions'];
+            
+            $insertData = [
                 'level_id' => $template['level_id'],
                 'template_name' => $template['template_name'],
                 'grid_pattern' => json_encode($template['grid_pattern']),
-                'word_positions' => json_encode($sortedWordPositions),
+                'word_positions' => json_encode($wordPositions),
                 'grid_width' => $template['grid_width'],
                 'grid_height' => $template['grid_height'],
                 'difficulty_rating' => $template['difficulty_rating'],
@@ -120,7 +121,10 @@ class PuzzleGridTemplateService
                 'is_active' => $template['is_active'],
                 'created_at' => now(),
                 'updated_at' => now()
-            ]);
+            ];
+            
+            $id = DB::table('puzzle_grid_templates')->insertGetId($insertData);
+            
             Log::info("그리드 템플릿 저장 완료", [
                 'template_id' => $id,
                 'template_name' => $template['template_name'],
@@ -134,46 +138,6 @@ class PuzzleGridTemplateService
             ]);
             throw $e;
         }
-    }
-
-    /**
-     * 좌측 맨위부터 한 칸씩 스캔하며, 해당 칸에서 가로/세로 단어가 동시에 시작하면 가로를 먼저 넘버링, 그 다음 세로를 넘버링
-     */
-    private function sortWordPositionsWithPriority($wordPositions, $gridWidth, $gridHeight)
-    {
-        $sorted = [];
-        $used = [];
-        $wordNumber = 1;
-        // (x, y) 기준으로 단어 시작점 찾기
-        for ($y = 0; $y < $gridHeight; $y++) {
-            for ($x = 0; $x < $gridWidth; $x++) {
-                // 해당 칸에서 시작하는 가로/세로 단어 찾기
-                $hWord = null;
-                $vWord = null;
-                foreach ($wordPositions as $idx => $word) {
-                    if (in_array($idx, $used)) continue;
-                    if ($word['start_x'] == $x && $word['start_y'] == $y) {
-                        if ($word['direction'] == 'horizontal') $hWord = $idx;
-                        if ($word['direction'] == 'vertical') $vWord = $idx;
-                    }
-                }
-                // 가로/세로가 모두 있으면 가로 먼저, 그 다음 세로
-                if (!is_null($hWord)) {
-                    $word = $wordPositions[$hWord];
-                    $word['id'] = $wordNumber++;
-                    $sorted[] = $word;
-                    $used[] = $hWord;
-                }
-                if (!is_null($vWord)) {
-                    $word = $wordPositions[$vWord];
-                    // 가로와 세로가 같은 칸에서 시작하면 id가 중복되지 않게 증가
-                    $word['id'] = $wordNumber++;
-                    $sorted[] = $word;
-                    $used[] = $vWord;
-                }
-            }
-        }
-        return $sorted;
     }
 
     /**

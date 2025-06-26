@@ -52,6 +52,11 @@
 - AppServiceProvider에서 전역 변수 공유 시 주의 (boardType 등)
 - 레이아웃에서 동적 링크 생성 시 현재 컨텍스트 확인
 
+### 8. 그리드 템플릿 시스템 관리
+- 그리드 템플릿 저장 시 사용자가 "단어 위치 정보"에서 선택한 번호가 그대로 저장됨
+- PuzzleGridTemplateService의 saveTemplate()에서 sortWordPositionsWithPriority() 호출 제거
+- 사용자 입력 번호 우선 보존, 자동 넘버링 비활성화
+
 ## 데이터베이스 스키마
 - puzzle_words: 퍼즐 단어 테이블
 - puzzle_hints: 퍼즐 힌트 테이블  
