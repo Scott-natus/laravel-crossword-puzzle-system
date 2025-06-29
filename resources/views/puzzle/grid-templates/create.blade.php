@@ -204,6 +204,7 @@ let gridSize = 5;
 let levelConditions = null;
 let currentTemplateId = null; // 현재 수정 중인 템플릿 ID
 let isEditMode = false; // 수정 모드 여부
+let savedScrollPosition = 0; // 모달 열기 전 스크롤 위치 저장
 
 // 그리드 초기화
 function initializeGrid(size) {
@@ -971,6 +972,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 단어 추출 함수
 function extractWords(templateId) {
+    // 현재 스크롤 위치 저장
+    savedScrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    
     // 로딩 표시
     const modal = new bootstrap.Modal(document.getElementById('wordExtractionModal'));
     const content = document.getElementById('wordExtractionContent');
@@ -1015,8 +1019,17 @@ function closeWordExtractionModalAndFocus() {
     const modal = bootstrap.Modal.getInstance(modalEl);
     if (modal) modal.hide();
     
-    // 바로 새로고침
-    window.location.reload();
+    // 페이지 새로고침 제거 - 스크롤 위치 유지를 위해
+    // window.location.reload();
+    
+    // 모달 닫힌 후 포커스 복원 및 스크롤 위치 복원
+    setTimeout(() => {
+        document.body.focus();
+        // 저장된 스크롤 위치로 복원
+        if (savedScrollPosition > 0) {
+            window.scrollTo(0, savedScrollPosition);
+        }
+    }, 200);
 }
 
 // 단어 추출 결과 표시 함수
@@ -1279,8 +1292,18 @@ document.addEventListener('DOMContentLoaded', function() {
             modalElement.addEventListener('hidden.bs.modal', function() {
                 // 모든 백드롭 강제 제거
                 document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                
+                // body 스크롤 관련 스타일 완전 복원
                 document.body.classList.remove('modal-open');
                 document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
+                
+                // 단어 추출 모달인 경우 저장된 스크롤 위치로 복원
+                if (modalId === 'wordExtractionModal' && savedScrollPosition > 0) {
+                    setTimeout(() => {
+                        window.scrollTo(0, savedScrollPosition);
+                    }, 100);
+                }
             });
         }
     });
