@@ -168,6 +168,47 @@ public function saveTemplate($template)
 2. 사용자가 변경한 번호만 업데이트
 3. 자동 넘버링 비활성화
 
+### 문제: 단어 추출 시 단어 순서가 뒤섞여 표시됨
+**원인:** 백엔드에서 word_positions를 정렬하지 않고 처리
+
+**해결책:**
+1. `app/Http/Controllers/GridTemplateController.php`의 `extractWords` 메서드에서 word_positions를 id 순서대로 정렬
+2. 정렬 로직 활성화:
+   ```php
+   usort($wordPositions, function($a, $b) {
+       return $a['id'] - $b['id'];
+   });
+   ```
+
+### 문제: 템플릿 수정 시 사용자가 선택한 번호가 저장되지 않음
+**원인:** 수정 모드에서 word_positions의 id 값을 업데이트하지 않음
+
+**해결책:**
+1. `resources/views/puzzle/grid-templates/create.blade.php`의 폼 제출 로직에서 수정 모드일 때 사용자가 선택한 번호로 word_positions의 id 값 업데이트
+2. 번호 매핑 생성 후 word_positions의 id 값 변경:
+   ```javascript
+   if (isEditMode && wordNumbering.length > 0) {
+       const numberMapping = {};
+       wordNumbering.forEach(item => {
+           numberMapping[item.word_id] = item.order;
+       });
+       
+       wordPositions.forEach(word => {
+           if (numberMapping[word.id]) {
+               word.id = numberMapping[word.id];
+           }
+       });
+   }
+   ```
+
+### 문제: 특정 템플릿에서 번호가 잘못 저장됨
+**원인:** 일부 템플릿이 자동 생성된 번호로 저장되어 있음
+
+**해결책:**
+1. 문제가 있는 템플릿 확인: `SELECT id, template_name, word_positions FROM puzzle_grid_templates WHERE template_name LIKE '%템플릿 #14%' OR template_name LIKE '%템플릿 #15%';`
+2. 문제 템플릿 비활성화: `UPDATE puzzle_grid_templates SET is_active = false WHERE template_name LIKE '%템플릿 #14%' OR template_name LIKE '%템플릿 #15%';`
+3. 새로운 템플릿 생성 또는 기존 템플릿 수정
+
 ## 5. 로그 시스템 문제
 
 ### 문제: 로그가 생성되지 않음

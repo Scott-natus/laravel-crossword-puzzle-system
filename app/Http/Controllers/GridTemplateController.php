@@ -217,6 +217,12 @@ class GridTemplateController extends Controller
         // JSON 데이터 파싱
         $gridPattern = json_decode($template->grid_pattern, true);
         $wordPositions = json_decode($template->word_positions, true);
+        
+        // 사용자가 설정한 번호 순서를 유지 (정렬하지 않음)
+        \Log::info("템플릿 상세 조회", [
+            'template_id' => $id,
+            'word_positions' => $wordPositions
+        ]);
 
         return view('puzzle.grid-templates.show', compact('template', 'gridPattern', 'wordPositions'));
     }
@@ -258,284 +264,150 @@ class GridTemplateController extends Controller
     }
 
     /**
-     * 그리드 템플릿에서 단어 추출
+     * 템플릿에서 단어 추출
      */
     public function extractWords(Request $request)
     {
-        $request->validate([
-            'template_id' => 'required|exists:puzzle_grid_templates,id'
-        ]);
-
+        $templateId = $request->input('template_id');
+        
         try {
+            // 템플릿 정보 가져오기
             $template = DB::table('puzzle_grid_templates')
-                ->where('id', $request->template_id)
-                ->where('is_active', true)
+                ->join('puzzle_levels', 'puzzle_grid_templates.level_id', '=', 'puzzle_levels.id')
+                ->select(
+                    'puzzle_grid_templates.*',
+                    'puzzle_levels.word_difficulty',
+                    'puzzle_levels.hint_difficulty'
+                )
+                ->where('puzzle_grid_templates.id', $templateId)
                 ->first();
 
             if (!$template) {
                 return response()->json([
                     'success' => false,
-                    'message' => '템플릿을 찾을 수 없습니다.',
-                    'debug_info' => []
+                    'message' => '템플릿을 찾을 수 없습니다.'
                 ]);
             }
 
-            $gridPattern = json_decode($template->grid_pattern, true);
             $wordPositions = json_decode($template->word_positions, true);
+            $gridPattern = json_decode($template->grid_pattern, true);
             
-            // 단어 배치 순서 결정 로직
-            $wordOrder = $this->determineWordOrder($wordPositions, $gridPattern);
+            // 디버깅: 정렬 전 wordPositions 확인
+            \Log::info("정렬 전 wordPositions", [
+                'template_id' => $templateId,
+                'word_positions' => $wordPositions
+            ]);
             
+            // 사용자가 설정한 번호 순서대로 정렬
+            usort($wordPositions, function($a, $b) {
+                return $a['id'] - $b['id'];
+            });
+
+            // 디버깅: 정렬 후 wordPositions 확인
+            \Log::info("정렬 후 wordPositions", [
+                'template_id' => $templateId,
+                'word_positions' => $wordPositions
+            ]);
+
+            // 단어 추출 결과
+            $extractedWords = [];
+            $usedWords = [];
+
+            // 1. 단어 순서대로 처리
+            foreach ($wordPositions as $word) {
+                $wordId = $word['id'];
+                
+                // 이미 처리된 단어는 건너뛰기
+                if (in_array($wordId, $usedWords)) {
+                    continue;
+                }
+
+                // 2. 단어의 상태 확인 (교차점이 있는지 여부)
+                $intersections = $this->findWordIntersections($word, $wordPositions);
+                
+                // 디버깅 로그 추가
+                \Log::info("단어 처리 중", [
+                    'word_id' => $wordId,
+                    'word_position' => $word,
+                    'intersections_count' => count($intersections),
+                    'intersections' => $intersections,
+                    'used_words' => $usedWords
+                ]);
+                
+                if (empty($intersections)) {
+                    // 3. 교차점이 없다면 독립 단어 추출
+                    $extractedWord = $this->extractIndependentWord($word, $template);
+                    $extractedWords[] = [
+                        'word_id' => $wordId,
+                        'position' => $word,
+                        'type' => 'no_intersection',
+                        'extracted_word' => $extractedWord['word'],
+                        'hint' => $extractedWord['hint']
+                    ];
+                    $usedWords[] = $wordId;
+                } else {
+                    // 4. 교차점이 있다면 연쇄 처리
+                    // 이미 처리된 단어와의 교차점이 있는지 확인
+                    $processedIntersections = [];
+                    $unprocessedIntersections = [];
+                    
+                    foreach ($intersections as $intersection) {
+                        if (in_array($intersection['connected_word_id'], $usedWords)) {
+                            $processedIntersections[] = $intersection;
+                        } else {
+                            $unprocessedIntersections[] = $intersection;
+                        }
+                    }
+                    
+                    // 이미 처리된 단어와 교차점이 있다면, 해당 정보를 사용해서 연쇄 처리
+                    if (!empty($processedIntersections)) {
+                        $chainResult = $this->extractChainWordsWithProcessed($word, $processedIntersections, $unprocessedIntersections, $wordPositions, $template, $usedWords, $extractedWords);
+                        
+                        foreach ($chainResult as $chainWord) {
+                            $extractedWords[] = $chainWord;
+                            $usedWords[] = $chainWord['word_id'];
+                        }
+                    } else {
+                        // 새로운 연쇄 처리
+                        $chainResult = $this->extractChainWords($word, $intersections, $wordPositions, $template, $usedWords);
+                        
+                        foreach ($chainResult as $chainWord) {
+                            $extractedWords[] = $chainWord;
+                            $usedWords[] = $chainWord['word_id'];
+                        }
+                    }
+                }
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => '단어 배치 순서가 결정되었습니다.',
-                'template' => $template,
-                'word_analysis' => [
-                    'total_words' => count($wordPositions),
-                    'word_positions' => $wordPositions
+                'template' => [
+                    'id' => $template->id,
+                    'template_name' => $template->template_name,
+                    'level_id' => $template->level_id
                 ],
                 'extracted_words' => [
-                    'status' => 'order_determined',
-                    'message' => '단어 배치 순서가 결정되었습니다.',
-                    'word_order' => $wordOrder,
                     'grid_info' => [
                         'width' => $template->grid_width,
                         'height' => $template->grid_height,
                         'pattern' => $gridPattern
-                    ]
+                    ],
+                    'word_order' => $extractedWords
                 ],
-                'debug_info' => [
-                    'algorithm_version' => 'word_order_only',
-                    'template_id' => $template->id,
-                    'level_id' => $template->level_id
+                'word_analysis' => [
+                    'total_words' => count($wordPositions),
+                    'extracted_words' => count($extractedWords)
                 ]
-            ], 200, [], JSON_INVALID_UTF8_SUBSTITUTE);
-            
+            ]);
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => '단어 배치 순서 결정 중 오류가 발생했습니다: ' . $e->getMessage(),
-                'debug_info' => [
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]
-            ], 500, [], JSON_INVALID_UTF8_SUBSTITUTE);
+                'message' => '단어 추출 중 오류가 발생했습니다: ' . $e->getMessage()
+            ]);
         }
     }
     
-    /**
-     * 새로운 넘버링 로직 (2025-06-25)
-     * 1. 넘버링은 1에서 시작
-     * 2. 좌측 맨위부터 가로열 우선으로 진행
-     * 3. 최초 만나는 검은색칸에서 넘버링 시작
-     * 4. 교차점으로 연결된 단어들을 연쇄적으로 넘버링
-     * 5. 연결된 단어가 없으면 순차적으로 진행
-     */
-    private function determineWordOrder($wordPositions, $gridPattern)
-    {
-        $wordOrder = [];
-        $usedWords = [];
-        $gridSize = count($gridPattern);
-        $visitedPositions = [];
-        $currentNumber = 1;
-        
-        // 1. 좌측 맨위부터 가로열 우선으로 진행
-        for ($y = 0; $y < $gridSize; $y++) {
-            for ($x = 0; $x < $gridSize; $x++) {
-                $positionKey = $x . ',' . $y;
-                if (in_array($positionKey, $visitedPositions)) continue;
-                
-                // 2. 최초 만나는 검은색칸(단어가 있는 칸)인지 확인
-                if ($gridPattern[$y][$x] === 1) {
-                    // 이 위치에서 시작하는 단어들 찾기
-                    $wordsAtPosition = $this->findWordsAtPosition($x, $y, $wordPositions, $usedWords);
-                    
-                    if (!empty($wordsAtPosition)) {
-                        // 3. 최초 넘버링 단어 처리
-                        $firstWord = $wordsAtPosition[0];
-                        $wordOrder[] = [
-                            'word_id' => $firstWord['id'],
-                            'position' => $firstWord,
-                            'type' => 'first_word',
-                            'order' => $currentNumber,
-                            'start_x' => $x,
-                            'start_y' => $y
-                        ];
-                        $usedWords[] = $firstWord['id'];
-                        $this->markWordPositionsAsVisited($firstWord, $visitedPositions);
-                        
-                        // 4-5. 교차점으로 연결된 단어들을 연쇄적으로 넘버링
-                        $this->processConnectedWordsChain($wordOrder, $usedWords, $wordPositions, $visitedPositions, $currentNumber);
-                        
-                        // 6. 연결된 단어가 없으면 다음 검은색칸으로 진행
-                        $currentNumber = count($wordOrder) + 1;
-                    }
-                }
-            }
-        }
-        
-        // 7-8. 남은 단어들 처리 (교차점이 없는 단어들)
-        foreach ($wordPositions as $word) {
-            if (!in_array($word['id'], $usedWords)) {
-                $wordOrder[] = [
-                    'word_id' => $word['id'],
-                    'position' => $word,
-                    'type' => 'remaining_word',
-                    'order' => $currentNumber
-                ];
-                $usedWords[] = $word['id'];
-                $currentNumber++;
-            }
-        }
-        
-        return $wordOrder;
-    }
-    
-    /**
-     * 교차점으로 연결된 단어들을 연쇄적으로 넘버링
-     */
-    private function processConnectedWordsChain(&$wordOrder, &$usedWords, $wordPositions, &$visitedPositions, &$currentNumber)
-    {
-        $changed = true;
-        
-        while ($changed) {
-            $changed = false;
-            $newConnectedWords = [];
-            
-            // 현재 넘버링된 단어들과 교차점으로 연결된 단어들 찾기
-            foreach ($wordOrder as $orderedWord) {
-                $connectedWords = $this->findConnectedWordsByIntersection($orderedWord['position'], $wordPositions, $usedWords);
-                
-                foreach ($connectedWords as $connectedWord) {
-                    if (!in_array($connectedWord['id'], $usedWords)) {
-                        $newConnectedWords[] = [
-                            'word' => $connectedWord,
-                            'connected_to' => $orderedWord['word_id']
-                        ];
-                    }
-                }
-            }
-            
-            // 새로 연결된 단어들을 넘버링
-            foreach ($newConnectedWords as $connectedInfo) {
-                $word = $connectedInfo['word'];
-                $currentNumber++;
-                
-                $wordOrder[] = [
-                    'word_id' => $word['id'],
-                    'position' => $word,
-                    'type' => 'connected_word',
-                    'order' => $currentNumber,
-                    'connected_to' => $connectedInfo['connected_to']
-                ];
-                $usedWords[] = $word['id'];
-                $this->markWordPositionsAsVisited($word, $visitedPositions);
-                $changed = true;
-            }
-        }
-    }
-    
-    /**
-     * 단어가 차지한 위치들을 방문된 것으로 표시
-     */
-    private function markWordPositionsAsVisited($word, &$visitedPositions)
-    {
-        if ($word['direction'] === 'horizontal') {
-            for ($x = $word['start_x']; $x <= $word['end_x']; $x++) {
-                $positionKey = $x . ',' . $word['start_y'];
-                if (!in_array($positionKey, $visitedPositions)) {
-                    $visitedPositions[] = $positionKey;
-                }
-            }
-        } else {
-            for ($y = $word['start_y']; $y <= $word['end_y']; $y++) {
-                $positionKey = $word['start_x'] . ',' . $y;
-                if (!in_array($positionKey, $visitedPositions)) {
-                    $visitedPositions[] = $positionKey;
-                }
-            }
-        }
-    }
-    
-    /**
-     * 특정 위치에서 시작하는 단어들 찾기 (가로, 세로 모두)
-     */
-    private function findWordsAtPosition($x, $y, $wordPositions, $usedWords)
-    {
-        $words = [];
-        
-        foreach ($wordPositions as $word) {
-            if (in_array($word['id'], $usedWords)) continue;
-            
-            // 가로 단어 확인
-            if ($word['direction'] === 'horizontal' && 
-                $word['start_x'] === $x && $word['start_y'] === $y) {
-                $words[] = $word;
-            }
-            
-            // 세로 단어 확인
-            if ($word['direction'] === 'vertical' && 
-                $word['start_x'] === $x && $word['start_y'] === $y) {
-                $words[] = $word;
-            }
-        }
-        
-        return $words;
-    }
-    
-    /**
-     * 교차점으로 연결된 단어들 찾기
-     */
-    private function findConnectedWordsByIntersection($word, $wordPositions, $usedWords)
-    {
-        $connectedWords = [];
-        
-        foreach ($wordPositions as $otherWord) {
-            if (in_array($otherWord['id'], $usedWords)) continue;
-            if ($word['id'] === $otherWord['id']) continue;
-            
-            // 교차점 확인
-            $intersection = $this->findIntersection($word, $otherWord);
-            if ($intersection) {
-                $connectedWords[] = $otherWord;
-            }
-        }
-        
-        return $connectedWords;
-    }
-    
-    /**
-     * 두 단어의 교차점 찾기
-     */
-    private function findIntersection($word1, $word2)
-    {
-        // 가로-세로 교차만 고려
-        if ($word1['direction'] == $word2['direction']) {
-            return null;
-        }
-        
-        $horizontal = $word1['direction'] == 'horizontal' ? $word1 : $word2;
-        $vertical = $word1['direction'] == 'vertical' ? $word1 : $word2;
-        
-        // 교차점 좌표 계산
-        $intersectX = $vertical['start_x'];
-        $intersectY = $horizontal['start_y'];
-        
-        // 교차점이 두 단어 범위 내에 있는지 확인
-        if ($intersectX >= $horizontal['start_x'] && $intersectX <= $horizontal['end_x'] &&
-            $intersectY >= $vertical['start_y'] && $intersectY <= $vertical['end_y']) {
-            
-            return [
-                'x' => $intersectX,
-                'y' => $intersectY,
-                'horizontal_word_id' => $horizontal['id'],
-                'vertical_word_id' => $vertical['id']
-            ];
-        }
-        
-        return null;
-    }
-
     /**
      * 기존 템플릿들의 넘버링을 새로운 로직으로 업데이트
      */
@@ -723,5 +595,500 @@ class GridTemplateController extends Controller
                 'message' => '템플릿 수정 중 오류가 발생했습니다: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * 단어의 교차점 찾기
+     */
+    private function findWordIntersections($word, $wordPositions)
+    {
+        $intersections = [];
+        
+        foreach ($wordPositions as $otherWord) {
+            if ($word['id'] === $otherWord['id']) continue;
+            
+            $intersection = $this->findIntersection($word, $otherWord);
+            if ($intersection) {
+                $intersections[] = [
+                    'position' => $intersection,
+                    'connected_word_id' => $otherWord['id'],
+                    'connected_word' => $otherWord
+                ];
+            }
+        }
+        
+        return $intersections;
+    }
+
+    /**
+     * 두 단어의 교차점 찾기
+     */
+    private function findIntersection($word1, $word2)
+    {
+        // 가로-세로 교차만 고려
+        if ($word1['direction'] == $word2['direction']) {
+            return null;
+        }
+        
+        $horizontal = $word1['direction'] == 'horizontal' ? $word1 : $word2;
+        $vertical = $word1['direction'] == 'vertical' ? $word1 : $word2;
+        
+        // 교차점 좌표 계산
+        $intersectX = $vertical['start_x'];
+        $intersectY = $horizontal['start_y'];
+        
+        // 교차점이 두 단어 범위 내에 있는지 확인
+        if ($intersectX >= $horizontal['start_x'] && $intersectX <= $horizontal['end_x'] &&
+            $intersectY >= $vertical['start_y'] && $intersectY <= $vertical['end_y']) {
+            
+            return [
+                'x' => $intersectX,
+                'y' => $intersectY,
+                'horizontal_word_id' => $horizontal['id'],
+                'vertical_word_id' => $vertical['id']
+            ];
+        }
+        
+        return null;
+    }
+
+    /**
+     * 독립 단어 추출 (교차점이 없는 단어)
+     */
+    private function extractIndependentWord($word, $template)
+    {
+        $length = $word['length'];
+        $wordDifficulty = $template->word_difficulty;
+        $hintDifficulty = $this->convertDifficultyToEnglish($template->hint_difficulty);
+        
+        $result = DB::table('pz_words as a')
+            ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
+            ->select('a.word', 'b.hint_text as hint')
+            ->where('a.length', $length)
+            ->where('a.is_active', true)
+            ->where('a.difficulty', '<=', $wordDifficulty)
+            ->whereRaw("b.difficulty = '{$hintDifficulty}'")
+            ->orderByRaw('RANDOM()')
+            ->first();
+        
+        if (!$result) {
+            return [
+                'word' => '추출 실패',
+                'hint' => '조건에 맞는 단어를 찾을 수 없습니다.'
+            ];
+        }
+        
+        return [
+            'word' => $result->word,
+            'hint' => $result->hint
+        ];
+    }
+
+    /**
+     * 이미 처리된 단어와의 교차점을 고려한 연쇄 단어 추출
+     */
+    private function extractChainWordsWithProcessed($word, $processedIntersections, $unprocessedIntersections, $wordPositions, $template, &$usedWords, $extractedWords)
+    {
+        $chainWords = [];
+        
+        // 이미 처리된 단어 중 하나와의 교차점 정보 찾기
+        $processedIntersection = $processedIntersections[0];
+        $processedWordId = $processedIntersection['connected_word_id'];
+        
+        // 이미 추출된 단어에서 해당 단어의 정보 찾기
+        $processedWordInfo = null;
+        foreach ($extractedWords as $extractedWord) {
+            if ($extractedWord['word_id'] == $processedWordId) {
+                $processedWordInfo = $extractedWord;
+                break;
+            }
+        }
+        
+        if (!$processedWordInfo) {
+            return $this->fallbackToIndependentWord($word, $template);
+        }
+        
+        // 현재 단어의 교차점 음절 위치
+        $currentWordSyllablePos = $this->getSyllablePosition($word, $processedIntersection['position']);
+        
+        // 이미 처리된 단어의 교차점 음절 위치
+        $processedWord = $this->findWordById($processedWordId, $wordPositions);
+        $processedWordSyllablePos = $this->getSyllablePosition($processedWord, $processedIntersection['position']);
+        
+        // 이미 처리된 단어의 해당 위치 음절 추출
+        $processedWordSyllable = mb_substr($processedWordInfo['extracted_word'], $processedWordSyllablePos - 1, 1, 'UTF-8');
+        
+        // 현재 단어 추출 (이미 처리된 단어의 음절과 매칭)
+        $currentWordCandidates = $this->extractWordCandidatesWithSyllables($word, $template, [$processedWordSyllable], $currentWordSyllablePos, 100);
+        
+        if (empty($currentWordCandidates)) {
+            return $this->fallbackToIndependentWord($word, $template);
+        }
+        
+        // 매칭되는 단어 찾기
+        $matchedWord = null;
+        foreach ($currentWordCandidates as $candidate) {
+            $currentSyllable = mb_substr($candidate->word, $currentWordSyllablePos - 1, 1, 'UTF-8');
+            if ($currentSyllable === $processedWordSyllable) {
+                $matchedWord = $candidate;
+                break;
+            }
+        }
+        
+        if (!$matchedWord) {
+            return $this->fallbackToIndependentWord($word, $template);
+        }
+        
+        // 현재 단어 추가
+        $chainWords[] = [
+            'word_id' => $word['id'],
+            'position' => $word,
+            'type' => 'chain_connected',
+            'extracted_word' => $matchedWord->word,
+            'hint' => $matchedWord->hint
+        ];
+        
+        // 추가로 처리되지 않은 교차점이 있다면 처리
+        if (!empty($unprocessedIntersections)) {
+            foreach ($unprocessedIntersections as $intersection) {
+                $connectedWord = $this->findWordById($intersection['connected_word_id'], $wordPositions);
+                
+                if (!$connectedWord || in_array($connectedWord['id'], $usedWords)) {
+                    continue;
+                }
+                
+                // 현재 단어와 연결된 단어의 교차점 찾기
+                $newIntersection = $this->findIntersection($word, $connectedWord);
+                if (!$newIntersection) {
+                    continue;
+                }
+                
+                // 연결된 단어의 교차점 음절 위치
+                $connectedWordSyllablePos = $this->getSyllablePosition($connectedWord, $newIntersection);
+                
+                // 현재 단어의 교차점 음절 추출
+                $currentWordSyllablePos2 = $this->getSyllablePosition($word, $newIntersection);
+                $currentWordSyllable2 = mb_substr($matchedWord->word, $currentWordSyllablePos2 - 1, 1, 'UTF-8');
+                
+                // 연결된 단어 추출
+                $connectedWordCandidates = $this->extractWordCandidatesWithSyllables($connectedWord, $template, [$currentWordSyllable2], $connectedWordSyllablePos, 100);
+                
+                if (empty($connectedWordCandidates)) {
+                    continue;
+                }
+                
+                // 매칭되는 연결 단어 찾기
+                $matchedConnectedWord = null;
+                foreach ($connectedWordCandidates as $candidate) {
+                    $connectedSyllable = mb_substr($candidate->word, $connectedWordSyllablePos - 1, 1, 'UTF-8');
+                    if ($connectedSyllable === $currentWordSyllable2) {
+                        $matchedConnectedWord = $candidate;
+                        break;
+                    }
+                }
+                
+                if ($matchedConnectedWord) {
+                    $chainWords[] = [
+                        'word_id' => $connectedWord['id'],
+                        'position' => $connectedWord,
+                        'type' => 'chain_middle',
+                        'extracted_word' => $matchedConnectedWord->word,
+                        'hint' => $matchedConnectedWord->hint
+                    ];
+                    break;
+                }
+            }
+        }
+        
+        return $chainWords;
+    }
+
+    /**
+     * 연쇄 단어 추출 (교차점이 있는 단어들)
+     */
+    private function extractChainWords($firstWord, $intersections, $wordPositions, $template, &$usedWords)
+    {
+        $chainWords = [];
+        
+        // 4-1. 첫 번째 단어 추출 (100개)
+        $firstWordCandidates = $this->extractWordCandidates($firstWord, $template, 100);
+        
+        if (empty($firstWordCandidates)) {
+            return $this->fallbackToIndependentWord($firstWord, $template);
+        }
+        
+        // 첫 번째 교차점 처리
+        $firstIntersection = $intersections[0];
+        $secondWord = $this->findWordById($firstIntersection['connected_word_id'], $wordPositions);
+        
+        if (!$secondWord || in_array($secondWord['id'], $usedWords)) {
+            return $this->fallbackToIndependentWord($firstWord, $template);
+        }
+        
+        // 4-2. 첫 번째 단어의 교차점 음절 추출
+        $firstWordSyllablePos = $this->getSyllablePosition($firstWord, $firstIntersection['position']);
+        $firstWordSyllables = $this->extractSyllablesFromCandidates($firstWordCandidates, $firstWordSyllablePos);
+        
+        // 4-3. 두 번째 단어의 교차점 음절 위치
+        $secondWordSyllablePos = $this->getSyllablePosition($secondWord, $firstIntersection['position']);
+        
+        // 4-4. 두 번째 단어 추출
+        $secondWordCandidates = $this->extractWordCandidatesWithSyllables($secondWord, $template, $firstWordSyllables, $secondWordSyllablePos, 100);
+        
+        if (empty($secondWordCandidates)) {
+            return $this->fallbackToIndependentWord($firstWord, $template);
+        }
+        
+        // 4-5. 첫 번째와 두 번째 단어 매칭
+        $matchedPair = $this->findMatchingWordPair($firstWordCandidates, $secondWordCandidates, $firstWordSyllablePos, $secondWordSyllablePos);
+        
+        if (!$matchedPair) {
+            return $this->fallbackToIndependentWord($firstWord, $template);
+        }
+        
+        // 첫 번째와 두 번째 단어 추가
+        $chainWords[] = [
+            'word_id' => $firstWord['id'],
+            'position' => $firstWord,
+            'type' => 'intersection_start',
+            'extracted_word' => $matchedPair['first_word'],
+            'hint' => $matchedPair['first_hint']
+        ];
+        
+        $chainWords[] = [
+            'word_id' => $secondWord['id'],
+            'position' => $secondWord,
+            'type' => 'chain_middle',
+            'extracted_word' => $matchedPair['second_word'],
+            'hint' => $matchedPair['second_hint']
+        ];
+        
+        // 4-6~4-9. 세 번째 단어가 있는지 확인
+        $remainingIntersections = array_slice($intersections, 1);
+        foreach ($remainingIntersections as $intersection) {
+            $thirdWord = $this->findWordById($intersection['connected_word_id'], $wordPositions);
+            
+            if (!$thirdWord || in_array($thirdWord['id'], $usedWords)) {
+                continue;
+            }
+            
+            // 두 번째 단어와 세 번째 단어의 교차점 찾기
+            $secondIntersection = $this->findIntersection($secondWord, $thirdWord);
+            if (!$secondIntersection) {
+                continue;
+            }
+            
+            // 4-6. 두 번째 단어의 교차점 음절 추출
+            $secondWordSyllablePos2 = $this->getSyllablePosition($secondWord, $secondIntersection);
+            // 두 번째 단어의 매칭된 단어에서 해당 위치의 음절 추출
+            $secondWordSyllable = mb_substr($matchedPair['second_word'], $secondWordSyllablePos2 - 1, 1, 'UTF-8');
+            $secondWordSyllables = [$secondWordSyllable];
+            
+            // 4-7. 세 번째 단어의 교차점 음절 위치
+            $thirdWordSyllablePos = $this->getSyllablePosition($thirdWord, $secondIntersection);
+            
+            // 4-8. 세 번째 단어 추출
+            $thirdWordCandidates = $this->extractWordCandidatesWithSyllables($thirdWord, $template, $secondWordSyllables, $thirdWordSyllablePos, 100);
+            
+            if (empty($thirdWordCandidates)) {
+                continue;
+            }
+            
+            // 4-9. 세 단어 매칭
+            $matchedTriple = $this->findMatchingWordTriple(
+                $matchedPair['first_word'], 
+                $matchedPair['second_word'], 
+                $thirdWordCandidates,
+                $firstWordSyllablePos, 
+                $secondWordSyllablePos, 
+                $thirdWordSyllablePos
+            );
+            
+            if ($matchedTriple) {
+                $chainWords[] = [
+                    'word_id' => $thirdWord['id'],
+                    'position' => $thirdWord,
+                    'type' => 'chain_middle',
+                    'extracted_word' => $matchedTriple['third_word'],
+                    'hint' => $matchedTriple['third_hint']
+                ];
+                break;
+            }
+        }
+        
+        return $chainWords;
+    }
+
+    /**
+     * 한국어 난이도를 영어로 변환
+     */
+    private function convertDifficultyToEnglish($difficulty)
+    {
+        $difficultyMap = [
+            '쉬움' => 'easy',
+            '보통' => 'medium',
+            '어려움' => 'hard'
+        ];
+        
+        return $difficultyMap[$difficulty] ?? 'easy';
+    }
+
+    /**
+     * 단어 후보 추출
+     */
+    private function extractWordCandidates($word, $template, $limit = 100)
+    {
+        $length = $word['length'];
+        $wordDifficulty = $template->word_difficulty;
+        $hintDifficulty = $this->convertDifficultyToEnglish($template->hint_difficulty);
+        
+        return DB::table('pz_words as a')
+            ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
+            ->select('a.word', 'b.hint_text as hint')
+            ->where('a.length', $length)
+            ->where('a.is_active', true)
+            ->where('a.difficulty', '<=', $wordDifficulty)
+            ->whereRaw("b.difficulty = '{$hintDifficulty}'")
+            ->orderByRaw('RANDOM()')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * 특정 음절 위치의 음절들을 추출
+     */
+    private function extractSyllablesFromCandidates($candidates, $syllablePos)
+    {
+        $syllables = [];
+        foreach ($candidates as $candidate) {
+            $word = $candidate->word;
+            if (mb_strlen($word, 'UTF-8') >= $syllablePos) {
+                $syllable = mb_substr($word, $syllablePos - 1, 1, 'UTF-8');
+                if (!in_array($syllable, $syllables)) {
+                    $syllables[] = $syllable;
+                }
+            }
+        }
+        return $syllables;
+    }
+
+    /**
+     * 특정 음절 조건으로 단어 후보 추출
+     */
+    private function extractWordCandidatesWithSyllables($word, $template, $syllables, $syllablePos, $limit = 100)
+    {
+        if (empty($syllables)) {
+            return collect();
+        }
+        
+        $length = $word['length'];
+        $wordDifficulty = $template->word_difficulty;
+        $hintDifficulty = $this->convertDifficultyToEnglish($template->hint_difficulty);
+        
+        $syllableConditions = [];
+        foreach ($syllables as $syllable) {
+            $syllableConditions[] = "substring(word, {$syllablePos}, 1) = '" . addslashes($syllable) . "'";
+        }
+        
+        $syllableWhere = '(' . implode(' OR ', $syllableConditions) . ')';
+        
+        return DB::table('pz_words as a')
+            ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
+            ->select('a.word', 'b.hint_text as hint')
+            ->whereRaw($syllableWhere)
+            ->where('a.length', $length)
+            ->where('a.is_active', true)
+            ->where('a.difficulty', '<=', $wordDifficulty)
+            ->whereRaw("b.difficulty = '{$hintDifficulty}'")
+            ->orderByRaw('RANDOM()')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * 두 단어 매칭 찾기
+     */
+    private function findMatchingWordPair($firstCandidates, $secondCandidates, $firstPos, $secondPos)
+    {
+        foreach ($firstCandidates as $firstCandidate) {
+            $firstSyllable = mb_substr($firstCandidate->word, $firstPos - 1, 1, 'UTF-8');
+            
+            foreach ($secondCandidates as $secondCandidate) {
+                $secondSyllable = mb_substr($secondCandidate->word, $secondPos - 1, 1, 'UTF-8');
+                
+                if ($firstSyllable === $secondSyllable) {
+                    return [
+                        'first_word' => $firstCandidate->word,
+                        'first_hint' => $firstCandidate->hint,
+                        'second_word' => $secondCandidate->word,
+                        'second_hint' => $secondCandidate->hint
+                    ];
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 세 단어 매칭 찾기
+     */
+    private function findMatchingWordTriple($firstWord, $secondWord, $thirdCandidates, $firstPos, $secondPos, $thirdPos)
+    {
+        $firstSyllable = mb_substr($firstWord, $firstPos - 1, 1, 'UTF-8');
+        $secondSyllable = mb_substr($secondWord, $secondPos - 1, 1, 'UTF-8');
+        
+        foreach ($thirdCandidates as $thirdCandidate) {
+            $thirdSyllable = mb_substr($thirdCandidate->word, $thirdPos - 1, 1, 'UTF-8');
+            
+            if ($secondSyllable === $thirdSyllable) {
+                return [
+                    'third_word' => $thirdCandidate->word,
+                    'third_hint' => $thirdCandidate->hint
+                ];
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 음절 위치 계산
+     */
+    private function getSyllablePosition($word, $intersection)
+    {
+        if ($word['direction'] === 'horizontal') {
+            return $intersection['x'] - $word['start_x'] + 1;
+        } else {
+            return $intersection['y'] - $word['start_y'] + 1;
+        }
+    }
+
+    /**
+     * ID로 단어 찾기
+     */
+    private function findWordById($id, $wordPositions)
+    {
+        foreach ($wordPositions as $word) {
+            if ($word['id'] == $id) {
+                return $word;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 독립 단어로 폴백
+     */
+    private function fallbackToIndependentWord($word, $template)
+    {
+        $extractedWord = $this->extractIndependentWord($word, $template);
+        return [[
+            'word_id' => $word['id'],
+            'position' => $word,
+            'type' => 'no_intersection',
+            'extracted_word' => $extractedWord['word'],
+            'hint' => $extractedWord['hint']
+        ]];
     }
 } 

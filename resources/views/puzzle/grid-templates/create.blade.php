@@ -424,7 +424,7 @@ function showTemplateDetail(template) {
     setTimeout(() => {
         updateWordPositionsList(wordPositions);
         
-        // word_positions의 id 값이 이미 번호로 설정되어 있으므로 그대로 사용
+        // word_positions의 id 값이 사용자가 설정한 번호이므로 그대로 사용
         wordPositions.forEach(word => {
             const select = document.querySelector(`.word-number-select[data-word-id="${word.id}"]`);
             if (select) {
@@ -860,7 +860,20 @@ gridTemplateForm.addEventListener('submit', (e) => {
         return;
     }
     
-    const wordPositions = analyzeGrid();
+    // 수정 모드일 때는 기존 word_positions 사용, 신규 생성일 때는 analyzeGrid() 사용
+    let wordPositions;
+    if (isEditMode && currentTemplateId) {
+        const templateSelect = document.getElementById('templateSelect');
+        if (templateSelect && templateSelect.value) {
+            const selectedTemplate = JSON.parse(templateSelect.value);
+            wordPositions = JSON.parse(selectedTemplate.word_positions);
+        }
+    }
+    
+    if (!wordPositions) {
+        wordPositions = analyzeGrid();
+    }
+    
     const intersectionCount = countIntersections(wordPositions);
     
     // 번호 정보 수집
@@ -873,6 +886,22 @@ gridTemplateForm.addEventListener('submit', (e) => {
             });
         }
     });
+    
+    // 수정 모드에서 사용자가 선택한 번호로 word_positions의 id 값 업데이트
+    if (isEditMode && wordNumbering.length > 0) {
+        // 번호 매핑 생성
+        const numberMapping = {};
+        wordNumbering.forEach(item => {
+            numberMapping[item.word_id] = item.order;
+        });
+        
+        // word_positions의 id 값을 선택된 번호로 변경
+        wordPositions.forEach(word => {
+            if (numberMapping[word.id]) {
+                word.id = numberMapping[word.id];
+            }
+        });
+    }
     
     const formData = {
         level_id: document.getElementById('level_id').value,
@@ -1034,82 +1063,88 @@ function closeWordExtractionModalAndFocus() {
 
 // 단어 추출 결과 표시 함수
 function showWordExtractionResult(data) {
-    console.log('showWordExtractionResult 호출됨:', data);
-    
     const modal = document.getElementById('wordExtractionModal');
     const content = document.getElementById('wordExtractionContent');
-    
-    if (!modal || !content) {
-        console.error('Modal elements not found');
-        alert('팝업 요소를 찾을 수 없습니다.');
-        return;
-    }
     
     let html = '';
     
     if (data.success) {
+        // 원본 데이터를 DOM에 저장 (정렬 기능을 위해)
+        content.dataset.wordOrder = JSON.stringify(data.extracted_words.word_order);
+        content.dataset.gridPattern = JSON.stringify(data.extracted_words.grid_info.pattern);
+        
         html = `
-            <div class="word-extraction-result">
-                <h5>🎯 단어 배치 순서 결정 결과</h5>
-                
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>📊 템플릿 분석</h6>
-                        <table class="table table-sm">
-                            <tr><th>템플릿:</th><td>${data.template.template_name}</td></tr>
-                            <tr><th>그리드 크기:</th><td>${data.extracted_words.grid_info.width}×${data.extracted_words.grid_info.height}</td></tr>
-                            <tr><th>총 단어 수:</th><td><span class="badge bg-primary">${data.word_analysis.total_words}</span></td></tr>
-                            <tr><th>배치 순서:</th><td><span class="badge bg-success">${data.extracted_words.word_order.length}개</span></td></tr>
-                        </table>
-                        
-                        <h6>🔍 교차점 분석</h6>
-                        <div class="alert alert-info">
-                            <p><strong>독립 단어:</strong> ${data.extracted_words.word_order.filter(item => item.type === 'no_intersection').length}개</p>
-                            <p><strong>연결된 단어:</strong> ${data.extracted_words.word_order.filter(item => item.type !== 'no_intersection').length}개</p>
-                        </div>
-                    </div>
+            <div class="alert alert-success mb-3">
+                <h6>✅ 단어 배치 순서 결정 완료!</h6>
+                <p>총 ${data.extracted_words.word_order.length}개의 단어가 성공적으로 배치되었습니다.</p>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>📊 배치 통계</h6>
+                    <table class="table table-sm">
+                        <tr><th>총 단어 수:</th><td><span class="badge bg-primary">${data.word_analysis.total_words}</span></td></tr>
+                        <tr><th>배치 순서:</th><td><span class="badge bg-success">${data.extracted_words.word_order.length}개</span></td></tr>
+                    </table>
                     
-                    <div class="col-md-6">
-                        <h6>📝 결정된 단어 배치 순서</h6>
-                        <div class="word-order-list" style="max-height: 300px; overflow-y: auto;">
-                            ${data.extracted_words.word_order.map((item, index) => `
-                                <div class="card mb-2">
-                                    <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <span class="badge bg-primary me-2">${item.word_id}</span>
-                                                <strong>단어 ${item.word_id}</strong>
-                                                <small class="text-muted ms-2">(${item.position.length}글자)</small>
-                                            </div>
-                                            <div>
-                                                <span class="badge ${item.type === 'no_intersection' ? 'bg-secondary' : item.type === 'intersection_start' ? 'bg-warning' : 'bg-success'}">${getTypeLabel(item.type)}</span>
-                                            </div>
+                    <h6>🔍 교차점 분석</h6>
+                    <div class="alert alert-info">
+                        <p><strong>독립 단어:</strong> ${calculateIndependentWords(data.extracted_words.word_order)}개</p>
+                        <p><strong>연결된 단어:</strong> ${calculateConnectedWords(data.extracted_words.word_order)}개</p>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <h6>📝 결정된 단어 배치 순서</h6>
+                    <div class="word-order-list" style="max-height: 300px; overflow-y: auto;">
+                        ${data.extracted_words.word_order.map((item, index) => `
+                            <div class="card mb-2">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <span class="badge bg-primary me-2">${item.word_id}</span>
+                                            <strong>단어 ${item.word_id}</strong>
+                                            <small class="text-muted ms-2">(${item.position.length}글자)</small>
                                         </div>
-                                        <div class="mt-1">
-                                            <small class="text-muted">
-                                                ${item.position.direction === 'horizontal' ? '가로' : '세로'} 
-                                                (${item.position.start_x},${item.position.start_y}) → (${item.position.end_x},${item.position.end_y})
-                                            </small>
+                                        <div>
+                                            <span class="badge ${item.type === 'no_intersection' || item.type === 'sequential_word' || item.type === 'remaining_word' ? 'bg-secondary' : 
+                                                                item.type === 'intersection_start' || item.type === 'first_word' ? 'bg-warning' : 
+                                                                item.type === 'chain_middle' || item.type === 'intersection_connected' ? 'bg-success' : 
+                                                                item.type === 'intersection_horizontal' || item.type === 'intersection_vertical' ? 'bg-info' : 'bg-primary'}">${getTypeLabel(item.type)}</span>
                                         </div>
                                     </div>
+                                    <div class="mt-1">
+                                        <small class="text-muted">
+                                            ${item.position.direction === 'horizontal' ? '가로' : '세로'} 
+                                            (${item.position.start_x},${item.position.start_y}) → (${item.position.end_x},${item.position.end_y})
+                                        </small>
+                                    </div>
+                                    ${item.extracted_word ? `
+                                    <div class="mt-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <strong class="text-success">추출된 단어: ${item.extracted_word}</strong>
+                                            <button class="btn btn-sm btn-outline-info" onclick="showHint('${item.hint || '힌트 없음'}')">힌트 보기</button>
+                                        </div>
+                                    </div>
+                                    ` : ''}
                                 </div>
-                            `).join('')}
-                        </div>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-12">
-                        <h6>🔲 그리드 패턴 시각화</h6>
-                        <div class="grid-visualization mb-3">
-                            ${renderGridWithWordOrder(data.extracted_words.grid_info.pattern, data.extracted_words.word_order)}
-                        </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12">
+                    <h6>🔲 그리드 패턴 시각화</h6>
+                    <div class="grid-visualization mb-3">
+                        ${renderGridWithWordOrder(data.extracted_words.grid_info.pattern, data.extracted_words.word_order)}
                     </div>
                 </div>
-                
-                <div class="text-center mt-3">
-                    <button class="btn btn-secondary" onclick="closeWordExtractionModalAndFocus()">닫기</button>
-                </div>
+            </div>
+            
+            <div class="text-center mt-3">
+                <button class="btn btn-secondary" onclick="closeWordExtractionModalAndFocus()">닫기</button>
             </div>
         `;
     } else {
@@ -1160,10 +1195,96 @@ function showWordExtractionResult(data) {
 function getTypeLabel(type) {
     switch(type) {
         case 'no_intersection': return '독립 단어';
+        case 'sequential_word': return '순차 단어';
+        case 'remaining_word': return '남은 단어';
         case 'intersection_start': return '교차 시작';
         case 'chain_middle': return '연결 중간';
+        case 'intersection_connected': return '교차 연결';
+        case 'intersection_horizontal': return '교차 가로';
+        case 'intersection_vertical': return '교차 세로';
+        case 'first_word': return '첫 번째 단어';
         default: return type;
     }
+}
+
+// 독립 단어 개수 계산 (교차점이 없는 단어)
+function calculateIndependentWords(wordOrder) {
+    const independentWords = [];
+    
+    for (let i = 0; i < wordOrder.length; i++) {
+        const word1 = wordOrder[i];
+        let hasIntersection = false;
+        
+        // 다른 모든 단어와 교차점 확인
+        for (let j = 0; j < wordOrder.length; j++) {
+            if (i === j) continue;
+            
+            const word2 = wordOrder[j];
+            if (hasIntersectionWith(word1, word2)) {
+                hasIntersection = true;
+                break;
+            }
+        }
+        
+        if (!hasIntersection) {
+            independentWords.push(word1);
+        }
+    }
+    
+    return independentWords.length;
+}
+
+// 연결된 단어 개수 계산 (교차점이 있는 단어)
+function calculateConnectedWords(wordOrder) {
+    const connectedWords = [];
+    
+    for (let i = 0; i < wordOrder.length; i++) {
+        const word1 = wordOrder[i];
+        let hasIntersection = false;
+        
+        // 다른 모든 단어와 교차점 확인
+        for (let j = 0; j < wordOrder.length; j++) {
+            if (i === j) continue;
+            
+            const word2 = wordOrder[j];
+            if (hasIntersectionWith(word1, word2)) {
+                hasIntersection = true;
+                break;
+            }
+        }
+        
+        if (hasIntersection) {
+            connectedWords.push(word1);
+        }
+    }
+    
+    return connectedWords.length;
+}
+
+// 두 단어가 교차점을 가지는지 확인
+function hasIntersectionWith(word1, word2) {
+    const pos1 = word1.position;
+    const pos2 = word2.position;
+    
+    // 가로-세로 교차만 고려
+    if (pos1.direction === pos2.direction) {
+        return false;
+    }
+    
+    const horizontal = pos1.direction === 'horizontal' ? pos1 : pos2;
+    const vertical = pos1.direction === 'vertical' ? pos1 : pos2;
+    
+    // 교차점 좌표 계산
+    const intersectX = vertical.start_x;
+    const intersectY = horizontal.start_y;
+    
+    // 교차점이 두 단어 범위 내에 있는지 확인
+    if (intersectX >= horizontal.start_x && intersectX <= horizontal.end_x &&
+        intersectY >= vertical.start_y && intersectY <= vertical.end_y) {
+        return true;
+    }
+    
+    return false;
 }
 
 // 추출된 단어로 그리드 렌더링
@@ -1308,6 +1429,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// 힌트 보기 함수
+function showHint(hint) {
+    alert('힌트: ' + hint);
+}
 </script>
 
 <style>

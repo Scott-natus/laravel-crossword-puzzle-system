@@ -124,6 +124,9 @@
 - PuzzleGridTemplateService의 saveTemplate()에서 sortWordPositionsWithPriority() 호출 제거
 - 사용자 입력 번호 우선 보존, 자동 넘버링 비활성화
 - 템플릿 수정 시 기존 번호 정보 유지
+- 템플릿 수정 시 사용자가 선택한 번호로 word_positions의 id 값 업데이트
+- 단어 추출 시 word_positions를 id 순서대로 정렬하여 표시 (백엔드에서 처리)
+- 문제가 있는 템플릿(#14, #15)은 비활성화 처리
 
 ## 5. API 최적화
 

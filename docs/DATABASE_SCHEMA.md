@@ -123,6 +123,29 @@ CREATE TABLE board_types (
 );
 ```
 
+### 9. puzzle_grid_templates (퍼즐 그리드 템플릿 테이블)
+```sql
+CREATE TABLE puzzle_grid_templates (
+    id BIGSERIAL PRIMARY KEY,
+    level_id BIGINT REFERENCES puzzle_levels(id) ON DELETE CASCADE,
+    template_name VARCHAR(255) NOT NULL,
+    grid_pattern JSONB NOT NULL, -- 그리드 패턴 (2차원 배열)
+    word_positions JSONB NOT NULL, -- 단어 위치 정보 (id, start_x, start_y, end_x, end_y, direction, length)
+    grid_width INTEGER NOT NULL,
+    grid_height INTEGER NOT NULL,
+    difficulty_rating INTEGER,
+    word_count INTEGER NOT NULL,
+    intersection_count INTEGER NOT NULL,
+    category VARCHAR(50) DEFAULT 'custom',
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+```
+
+**중요**: word_positions의 id 값은 사용자가 설정한 번호를 그대로 저장하며, 자동 정렬하지 않음
+
 ## 제약조건 정보
 
 ### puzzle_levels 테이블 제약조건
