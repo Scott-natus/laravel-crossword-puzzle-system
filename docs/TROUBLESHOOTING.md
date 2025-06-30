@@ -423,3 +423,16 @@ php artisan tinker --execute="echo config('database.default');"
 ### 2025-06-22: 데이터베이스 스키마 변경
 **문제:** puzzle_levels 테이블 구조 변경 필요
 **해결:** 백업 후 일괄 업데이트, 스키마 문서화 
+
+## 2025-06-30 크론탭 및 배치 스케줄러 문제 해결
+- 서버 OS 재설치 후 크론탭 미설정 → 크론탭(`*/10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1`) 재등록
+- storage/logs/laravel.log 권한 문제 → 소유자 및 권한을 www-data: 775로 변경
+- 로그 파일 삭제 없이 권한만 조정, 필요시 백업 후 신규 생성
+- 배치 스케줄러 정상 동작 확인 (로그 tail 및 dry-run 테스트)
+
+## 2025-06-30 단어 추출 로직 개선 및 크론 권한 문제 해결
+- 단어 추출 로직에서 난이도 조건 제거: extractIndependentWord, extractWordWithConfirmedSyllables 메서드에서 단어/힌트 난이도 필터링 제거
+- 단어 추출 실패 시 재시도 로직 구현: 최대 5회까지 확정된 단어를 초기화하고 처음부터 재시도
+- 크론 배치 작업 권한 문제 해결: natus-server를 www-data 그룹에 추가 (sudo usermod -a -G www-data natus-server)
+- convertDifficultyToEnglish 메서드 제거 (더 이상 사용되지 않음)
+- 재시도 로직에서 실패 시 "단어 ID X에서 확정된 음절들과 매칭되는 단어를 찾을 수 없습니다." 메시지 출력 

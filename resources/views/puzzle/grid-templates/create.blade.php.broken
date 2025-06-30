@@ -169,16 +169,7 @@
                 <h5 class="modal-title">템플릿 단어 추출 결과</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div id="wordExtractionContent">
-                </div>
-                <hr>
-                <div class="mt-3">
-                    <h6>실행된 데이터베이스 쿼리</h6>
-                    <div id="queryLog" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px;">
-                        <p class="text-muted">쿼리 로그가 여기에 표시됩니다...</p>
-                    </div>
-                </div>
+            <div class="modal-body" id="wordExtractionContent">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
@@ -208,27 +199,33 @@
 
 @push('scripts')
 <script>
+console.log('=== JavaScript 로드됨 ===');
+
+// 전역 변수 선언
 let currentGrid = [];
 let gridSize = 5;
 let levelConditions = null;
-let currentTemplateId = null; // 현재 수정 중인 템플릿 ID
-let isEditMode = false; // 수정 모드 여부
-let savedScrollPosition = 0; // 모달 열기 전 스크롤 위치 저장
+let currentTemplateId = null;
+let isEditMode = false;
+let savedScrollPosition = 0;
+
+console.log('전역 변수 초기화 완료');
 
 // 그리드 초기화
 function initializeGrid(size) {
+    console.log('initializeGrid 호출됨, size:', size);
     gridSize = size;
     currentGrid = [];
     
     for (let i = 0; i < size; i++) {
         currentGrid[i] = [];
         for (let j = 0; j < size; j++) {
-            currentGrid[i][j] = 1; // 1: 흰색 칸 (빈 공간), 2: 검은색 칸 (단어 입력 공간)
+            currentGrid[i][j] = 0; // 흰색 칸 (빈 공간)
         }
     }
     
     renderGrid();
-    checkConditions();
+    console.log('그리드 초기화 완료');
 }
 
 // 그리드 렌더링
@@ -272,51 +269,51 @@ function toggleCell(row, col) {
     checkConditions();
 }
 
-// DOM 로드 완료 후 초기화
-document.addEventListener('DOMContentLoaded', function() {
-    // 전체 지우기
-    document.getElementById('clearGrid').addEventListener('click', () => {
-        for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
-                currentGrid[i][j] = 1; // 흰색 칸 (빈 공간)
-            }
+// 전체 지우기
+document.getElementById('clearGrid').addEventListener('click', () => {
+    for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+            currentGrid[i][j] = 1; // 흰색 칸 (빈 공간)
         }
-        renderGrid();
-        checkConditions();
-    });
-
-    // 전체 채우기
-    document.getElementById('fillGrid').addEventListener('click', () => {
-        for (let i = 0; i < gridSize; i++) {
-            for (let j = 0; j < gridSize; j++) {
-                currentGrid[i][j] = 2; // 검은색 칸 (단어 입력 공간)
-            }
-        }
-        renderGrid();
-        checkConditions();
-    });
-
-    // 그리드 크기 변경
-    document.getElementById('grid_size').addEventListener('change', (e) => {
-        initializeGrid(parseInt(e.target.value));
-    });
-
-    // 레벨 선택
-    document.getElementById('level_id').addEventListener('change', (e) => {
-        const levelId = e.target.value;
-        if (levelId) {
-            fetchLevelConditions(levelId);
-        } else {
-            hideLevelInfo();
-        }
-    });
-
-    // 초기 그리드 생성
-    initializeGrid(5);
+    }
+    renderGrid();
+    checkConditions();
 });
+
+// 전체 채우기
+document.getElementById('fillGrid').addEventListener('click', () => {
+    for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+            currentGrid[i][j] = 2; // 검은색 칸 (단어 입력 공간)
+        }
+    }
+    renderGrid();
+    checkConditions();
+});
+
+// 그리드 크기 변경
+// document.getElementById('grid_size').addEventListener('change', (e) => {
+//     initializeGrid(parseInt(e.target.value));
+// });
+
+// 레벨 선택
+// document.getElementById('level_id').addEventListener('change', (e) => {
+//     console.log('레벨 선택 이벤트 발생:', e.target.value);
+//     const levelId = e.target.value;
+//     if (levelId) {
+//         console.log('fetchLevelConditions 호출:', levelId);
+//         fetchLevelConditions(levelId);
+//     } else {
+//         console.log('레벨이 선택되지 않음, hideLevelInfo 호출');
+//         hideLevelInfo();
+//     }
+// });
 
 // 레벨 조건 가져오기
 function fetchLevelConditions(levelId) {
+    console.log('fetchLevelConditions 시작, levelId:', levelId);
+    console.log('API URL:', '{{ route("puzzle.grid-templates.level-conditions") }}');
+    
     fetch('{{ route("puzzle.grid-templates.level-conditions") }}', {
         method: 'POST',
         headers: {
@@ -326,28 +323,38 @@ function fetchLevelConditions(levelId) {
         body: JSON.stringify({ level_id: levelId })
     })
     .then(async response => {
+        console.log('API 응답 받음, status:', response.status);
         const contentType = response.headers.get('content-type');
+        console.log('Content-Type:', contentType);
+        
         if (contentType && contentType.indexOf('application/json') !== -1) {
             const data = await response.json();
+            console.log('JSON 응답 데이터:', data);
+            
             if (data.success) {
+                console.log('성공 응답, showLevelInfo 호출');
                 levelConditions = data.level;
                 showLevelInfo(data.level, data.existing_templates);
             } else {
+                console.log('실패 응답:', data.message);
                 alert(data.message);
             }
         } else {
             const text = await response.text();
+            console.log('JSON이 아닌 응답:', text.substring(0, 200));
             throw new Error('서버에서 JSON이 아닌 응답이 반환되었습니다.\n' + text.substring(0, 200));
         }
     })
     .catch(error => {
-        console.error('Error:', error);
+        console.error('fetchLevelConditions 오류:', error);
         alert('레벨 정보를 가져오는 중 오류가 발생했습니다.');
     });
 }
 
 // 레벨 정보 표시
 function showLevelInfo(level, templates) {
+    console.log('showLevelInfo 호출됨:', { level, templates });
+    
     document.getElementById('requiredWordCount').textContent = level.word_count;
     document.getElementById('requiredIntersectionCount').textContent = level.intersection_count;
     document.getElementById('wordDifficulty').textContent = level.word_difficulty;
@@ -355,15 +362,23 @@ function showLevelInfo(level, templates) {
     document.getElementById('levelConditions').style.display = 'block';
     window.existingTemplates = templates || [];
     
-    // 기존 템플릿 목록 표시
+    console.log('templates 배열:', templates);
+    console.log('templates 길이:', templates ? templates.length : 0);
+    
+    // 템플릿 목록 표시
     if (templates && templates.length > 0) {
+        console.log('템플릿 목록 렌더링 시작');
         const templatesList = document.getElementById('templatesList');
         templatesList.innerHTML = templates.map(template => 
             `<div class="mb-2">
-                <a href="#" class="text-decoration-none template-link" data-template='${JSON.stringify(template)}' style="color: #0d6efd; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#0a58ca'" onmouseout="this.style.color='#0d6efd'">
-                    <strong>${template.template_name}</strong> 
+                <a href="#" class="text-decoration-none template-link" data-template-id="${template.id}" style="color: #0d6efd; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#0a58ca'" onmouseout="this.style.color='#0d6efd'">
+                    <strong>${escapeHtml(template.template_name)}</strong> 
                     (${template.grid_width}x${template.grid_height}, ${template.word_count}단어, ${template.intersection_count}교차점)
-                    <small class="text-muted">- ${new Date(template.created_at).toLocaleDateString()}</small>
+                    <small class="text-muted">- ${
+                        template.created_at
+                            ? new Date(template.created_at).toLocaleDateString()
+                            : ''
+                    }</small>
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-success ms-2" onclick="extractWords(${template.id})">
                     <i class="fas fa-magic"></i> 단어 추출
@@ -371,19 +386,37 @@ function showLevelInfo(level, templates) {
             </div>`
         ).join('');
         
-        // 템플릿 링크에 클릭 이벤트 추가
+        console.log('템플릿 목록 렌더링 완료');
+        
+        // 템플릿 링크에 클릭 이벤트 추가 (ID만 넘기고 Ajax로 상세 정보 요청)
         document.querySelectorAll('.template-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();
-                const template = JSON.parse(e.target.closest('.template-link').dataset.template);
-                showTemplateDetail(template);
+                const templateId = e.target.closest('.template-link').dataset.templateId;
+                fetchTemplateDetail(templateId);
             });
         });
         
         document.getElementById('existingTemplates').style.display = 'block';
+        console.log('existingTemplates div 표시됨');
     } else {
+        console.log('템플릿이 없거나 빈 배열');
         document.getElementById('existingTemplates').style.display = 'none';
     }
+}
+
+// 템플릿 상세 정보 Ajax로 받아오기
+function fetchTemplateDetail(templateId) {
+    fetch(`/puzzle/grid-templates/${templateId}/json`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showTemplateDetail(data.template);
+            } else {
+                alert(data.message || '템플릿 정보를 불러올 수 없습니다.');
+            }
+        })
+        .catch(() => alert('템플릿 정보를 불러오는 중 오류가 발생했습니다.'));
 }
 
 // 템플릿 상세보기 대신, 템플릿 클릭 시 그리드에 바로 적용
@@ -1009,6 +1042,73 @@ function handleDrag(e) {
     }
 }
 
+// DOM 로드 완료 후 초기화
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('=== DOM 로드 완료 ===');
+    
+    // 레벨 선택 이벤트 리스너 추가
+    const levelSelect = document.getElementById('level_id');
+    if (levelSelect) {
+        console.log('레벨 선택 요소 찾음:', levelSelect);
+        levelSelect.addEventListener('change', (e) => {
+            console.log('레벨 선택 이벤트 발생:', e.target.value);
+            const levelId = e.target.value;
+            if (levelId) {
+                console.log('fetchLevelConditions 호출:', levelId);
+                fetchLevelConditions(levelId);
+            } else {
+                console.log('레벨이 선택되지 않음, hideLevelInfo 호출');
+                hideLevelInfo();
+            }
+        });
+        console.log('레벨 선택 이벤트 리스너 등록 완료');
+    } else {
+        console.error('레벨 선택 요소를 찾을 수 없음!');
+    }
+    
+    // 그리드 크기 변경 이벤트 리스너 추가
+    const gridSizeInput = document.getElementById('grid_size');
+    if (gridSizeInput) {
+        console.log('그리드 크기 요소 찾음:', gridSizeInput);
+        gridSizeInput.addEventListener('change', (e) => {
+            console.log('그리드 크기 변경:', e.target.value);
+            initializeGrid(parseInt(e.target.value));
+        });
+    }
+    
+    // 초기 그리드 생성
+    console.log('초기 그리드 생성 시작');
+    initializeGrid(5);
+    console.log('초기 그리드 생성 완료');
+    
+    // 모든 모달에 대해 백드롭 제거 이벤트 추가
+    const modals = ['resultModal', 'wordExtractionModal', 'templateDetailModal'];
+    
+    modals.forEach(modalId => {
+        const modalElement = document.getElementById(modalId);
+        if (modalElement) {
+            modalElement.addEventListener('hidden.bs.modal', function() {
+                // 모든 백드롭 강제 제거
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                
+                // body 스크롤 관련 스타일 완전 복원
+                document.body.classList.remove('modal-open');
+                document.body.style.paddingRight = '';
+                document.body.style.overflow = '';
+                
+                // 단어 추출 모달인 경우 저장된 스크롤 위치로 복원
+                if (modalId === 'wordExtractionModal' && savedScrollPosition > 0) {
+                    setTimeout(() => {
+                        window.scrollTo(0, savedScrollPosition);
+                    }, 100);
+                }
+            });
+        }
+    });
+    
+    console.log('=== DOM 초기화 완료 ===');
+});
+
 // 단어 추출 함수
 function extractWords(templateId) {
     // 현재 스크롤 위치 저장
@@ -1043,14 +1143,81 @@ function extractWords(templateId) {
         const errorContent = document.getElementById('wordExtractionContent');
         errorContent.innerHTML = `
             <div class="alert alert-danger">
-                <h6>❌ 오류 발생!</h6>
-                <p>단어 추출 중 오류가 발생했습니다.</p>
-                <p><strong>오류 내용:</strong> ${error.message}</p>
-                <button class="btn btn-secondary" onclick="closeWordExtractionModalAndFocus()">닫기</button>
+                <h6>❌ 단어 추출 실패!</h6>
+                <p><strong>오류 메시지:</strong> ${data.message || '알 수 없는 오류'}</p>
+                
+                ${data.word_id ? `
+                <div class="mt-2">
+                    <p><strong>문제가 발생한 단어 ID:</strong> <span class="badge bg-warning">${data.word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.required_syllable ? `
+                <div class="mt-2">
+                    <p><strong>필요한 음절:</strong> <span class="badge bg-info">${data.required_syllable}</span></p>
+                    <p><strong>음절 위치:</strong> <span class="badge bg-secondary">${data.syllable_position}번째</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.second_word_id ? `
+                <div class="mt-2">
+                    <p><strong>연결된 단어 ID:</strong> <span class="badge bg-warning">${data.second_word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.first_word_id ? `
+                <div class="mt-2">
+                    <p><strong>첫 번째 단어 ID:</strong> <span class="badge bg-warning">${data.first_word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                <div class="mt-3">
+                    <div class="alert alert-warning">
+                        <h6>💡 해결 방법</h6>
+                        <ul class="mb-0">
+                            <li>데이터베이스에 해당 조건에 맞는 단어가 충분히 있는지 확인하세요</li>
+                            <li>단어의 난이도 설정이 적절한지 확인하세요</li>
+                            <li>교차점 음절이 올바르게 설정되었는지 확인하세요</li>
+                            <li>필요한 경우 더 많은 단어를 데이터베이스에 추가하세요</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                ${data.debug_info ? `
+                <div class="mt-3">
+                    <h6>🔍 디버그 정보</h6>
+                    <div class="card">
+                        <div class="card-body">
+                            <pre class="mb-0" style="font-size: 0.8em;">${JSON.stringify(data.debug_info, null, 2)}</pre>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                
+                <div class="text-center mt-3">
+                    <button class="btn btn-secondary" onclick="closeWordExtractionModalAndFocus()">닫기</button>
+                </div>
             </div>
         `;
-        errorModal.show();
-    });
+    }
+    
+    content.innerHTML = html;
+    
+    // Bootstrap 모달 열기
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+
+    // 닫기 버튼에 포커스 이동 함수 연결
+    setTimeout(() => {
+        const closeBtns = document.querySelectorAll('#wordExtractionModal .btn-secondary');
+        closeBtns.forEach(btn => {
+            btn.onclick = function() {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('wordExtractionModal'));
+                if (modal) modal.hide();
+                setTimeout(() => { document.body.focus(); }, 200);
+            };
+        });
+    }, 500);
 }
 
 function closeWordExtractionModalAndFocus() {
@@ -1075,7 +1242,6 @@ function closeWordExtractionModalAndFocus() {
 function showWordExtractionResult(data) {
     const modal = document.getElementById('wordExtractionModal');
     const content = document.getElementById('wordExtractionContent');
-    const queryLogDiv = document.getElementById('queryLog');
     
     let html = '';
     
@@ -1161,9 +1327,46 @@ function showWordExtractionResult(data) {
     } else {
         // 오류 발생 시 상세 정보 표시
         html = `
-            <div class="alert alert-warning">
-                <h6>⚠️ 단어 배치 순서 결정 결과</h6>
-                <p><strong>메시지:</strong> ${data.message || '알 수 없는 오류'}</p>
+            <div class="alert alert-danger">
+                <h6>❌ 단어 추출 실패!</h6>
+                <p><strong>오류 메시지:</strong> ${data.message || '알 수 없는 오류'}</p>
+                
+                ${data.word_id ? `
+                <div class="mt-2">
+                    <p><strong>문제가 발생한 단어 ID:</strong> <span class="badge bg-warning">${data.word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.required_syllable ? `
+                <div class="mt-2">
+                    <p><strong>필요한 음절:</strong> <span class="badge bg-info">${data.required_syllable}</span></p>
+                    <p><strong>음절 위치:</strong> <span class="badge bg-secondary">${data.syllable_position}번째</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.second_word_id ? `
+                <div class="mt-2">
+                    <p><strong>연결된 단어 ID:</strong> <span class="badge bg-warning">${data.second_word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                ${data.first_word_id ? `
+                <div class="mt-2">
+                    <p><strong>첫 번째 단어 ID:</strong> <span class="badge bg-warning">${data.first_word_id}</span></p>
+                </div>
+                ` : ''}
+                
+                <div class="mt-3">
+                    <div class="alert alert-warning">
+                        <h6>💡 해결 방법</h6>
+                        <ul class="mb-0">
+                            <li>데이터베이스에 해당 조건에 맞는 단어가 충분히 있는지 확인하세요</li>
+                            <li>단어의 난이도 설정이 적절한지 확인하세요</li>
+                            <li>교차점 음절이 올바르게 설정되었는지 확인하세요</li>
+                            <li>필요한 경우 더 많은 단어를 데이터베이스에 추가하세요</li>
+                        </ul>
+                    </div>
+                </div>
                 
                 ${data.debug_info ? `
                 <div class="mt-3">
@@ -1184,34 +1387,6 @@ function showWordExtractionResult(data) {
     }
     
     content.innerHTML = html;
-    
-    // 쿼리 로그 표시
-    if (data.query_log && data.query_log.length > 0) {
-        let queryLogHtml = '';
-        data.query_log.forEach((log, index) => {
-            const bindingsStr = log.bindings.map(b => typeof b === 'string' ? `'${b}'` : b).join(', ');
-            const finalSql = log.sql.replace(/\?/g, () => {
-                const binding = log.bindings.shift();
-                return typeof binding === 'string' ? `'${binding}'` : binding;
-            });
-            
-            queryLogHtml += `
-                <div class="mb-3 p-2 border-start border-3 border-primary">
-                    <div class="fw-bold text-primary">${index + 1}. ${log.description}</div>
-                    <div class="mt-1">
-                        <strong>SQL:</strong>
-                        <pre class="bg-dark text-light p-2 rounded mt-1" style="font-size: 11px; overflow-x: auto;">${finalSql}</pre>
-                    </div>
-                    <div class="mt-1">
-                        <strong>바인딩:</strong> [${bindingsStr}]
-                    </div>
-                </div>
-            `;
-        });
-        queryLogDiv.innerHTML = queryLogHtml;
-    } else {
-        queryLogDiv.innerHTML = '<p class="text-muted">실행된 쿼리가 없습니다.</p>';
-    }
     
     // Bootstrap 모달 열기
     const bootstrapModal = new bootstrap.Modal(modal);
@@ -1441,37 +1616,23 @@ function updateSaveButtonState() {
     saveButton.disabled = !isValid || !numberValidation;
 }
 
-// 모달 닫힐 때 백드롭 강제 제거 (중복 방지)
-document.addEventListener('DOMContentLoaded', function() {
-    // 모든 모달에 대해 백드롭 제거 이벤트 추가
-    const modals = ['resultModal', 'wordExtractionModal', 'templateDetailModal'];
-    
-    modals.forEach(modalId => {
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            modalElement.addEventListener('hidden.bs.modal', function() {
-                // 모든 백드롭 강제 제거
-                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
-                
-                // body 스크롤 관련 스타일 완전 복원
-                document.body.classList.remove('modal-open');
-                document.body.style.paddingRight = '';
-                document.body.style.overflow = '';
-                
-                // 단어 추출 모달인 경우 저장된 스크롤 위치로 복원
-                if (modalId === 'wordExtractionModal' && savedScrollPosition > 0) {
-                    setTimeout(() => {
-                        window.scrollTo(0, savedScrollPosition);
-                    }, 100);
-                }
-            });
-        }
-    });
-});
-
 // 힌트 보기 함수
 function showHint(hint) {
     alert('힌트: ' + hint);
+}
+
+// HTML 이스케이프 함수 추가
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, function(m) {
+        return ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[m];
+    });
 }
 </script>
 

@@ -114,4 +114,12 @@
   2. docs/WORKFLOW.md (작업 방법론)
   3. docs/DATABASE_SCHEMA.md (DB 스키마)
   4. docs/TROUBLESHOOTING.md (문제 해결 가이드)
-- Git 커밋 및 GitHub 푸시 포함 
+- Git 커밋 및 GitHub 푸시 포함
+
+# 2025-06-30 작업 내역
+- 서버 OS 재설치 후 크론탭(`*/10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1`) 재등록
+- storage 및 storage/logs 디렉토리, 로그 파일 권한/소유자(www-data)로 변경
+- 배치 스케줄러 정상 동작 및 로그 권한 이슈 대응
+- 단어 추출 로직에서 난이도 조건(단어 난이도, 힌트 난이도) 제거하여 더 다양한 단어 추출 가능
+- 단어 추출 실패 시 확정된 단어를 초기화하고 최대 5회까지 재시도하는 로직 구현
+- 크론 배치 작업 권한 문제 해결: natus-server를 www-data 그룹에 추가하여 로그 파일 쓰기 권한 확보 

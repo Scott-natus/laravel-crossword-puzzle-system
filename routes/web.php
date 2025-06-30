@@ -128,6 +128,8 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
         Route::post('/extract-words', [GridTemplateController::class, 'extractWords'])->name('extract-words');
         Route::post('/update-numbering', [GridTemplateController::class, 'updateTemplateNumbering'])->name('update-numbering');
     });
+
+    Route::get('/grid-templates/{id}/json', [GridTemplateController::class, 'showJson']);
 });
 
 // 크로스워드 퍼즐 테스트 페이지 (제미나이 알고리즘)
