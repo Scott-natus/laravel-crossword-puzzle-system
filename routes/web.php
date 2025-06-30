@@ -9,6 +9,7 @@ use App\Http\Controllers\PuzzleLevelController;
 use App\Http\Controllers\PuzzleGridController;
 use App\Http\Controllers\GridTemplateController;
 use App\Http\Controllers\Auth\SocialLoginController;
+use App\Http\Controllers\PuzzleGameController;
 
 /*
 |--------------------------------------------------------------------------
@@ -25,6 +26,11 @@ Route::get('/', function () {
     $boardTypes = BoardType::where('is_active', true)->get();
     return view('welcome', compact('boardTypes'));
 });
+
+Route::get('/main', function () {
+    $boardTypes = BoardType::where('is_active', true)->get();
+    return view('welcome', compact('boardTypes'));
+})->name('main');
 
 Auth::routes();
 
@@ -136,3 +142,13 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
 Route::get('/crossword-test', function () {
     return view('crossword-test');
 })->name('crossword.test');
+
+// 크로스워드 퍼즐 게임 (모든 사용자)
+Route::prefix('puzzle-game')->name('puzzle-game.')->middleware(['auth'])->group(function () {
+    Route::get('/', [PuzzleGameController::class, 'index'])->name('index');
+    Route::get('/template', [PuzzleGameController::class, 'getTemplate'])->name('get-template');
+    Route::post('/check-answer', [PuzzleGameController::class, 'checkAnswer'])->name('check-answer');
+    Route::get('/hints', [PuzzleGameController::class, 'getHints'])->name('get-hints');
+    Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
+    Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
+});

@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class PuzzleGridTemplates extends Model
+class PuzzleGridTemplate extends Model
 {
     use HasFactory;
+
+    protected $table = 'puzzle_grid_templates';
 
     protected $fillable = [
         'level_id',
@@ -33,6 +35,13 @@ class PuzzleGridTemplates extends Model
     public function level()
     {
         return $this->belongsTo(PuzzleLevel::class, 'level_id');
+    }
+
+    public function words()
+    {
+        return $this->belongsToMany(PzWord::class, 'puzzle_grid_template_word', 'template_id', 'word_id')
+            ->withPivot('word_positions')
+            ->withTimestamps();
     }
 
     public function getGridSize()

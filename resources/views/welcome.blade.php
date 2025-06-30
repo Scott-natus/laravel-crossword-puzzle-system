@@ -16,12 +16,68 @@
                 font-family: 'Figtree', sans-serif;
                 background-color: #f8f9fa;
             }
-            .hero-section {
-                background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-                color: white;
+            
+            /* 게시판과 동일한 히어로 배너 스타일 */
+            .hero-banner {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                position: relative;
                 padding: 4rem 0;
+                color: white;
+                overflow: hidden;
                 margin-bottom: 2rem;
             }
+            .hero-banner::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background-image: 
+                    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 1px, transparent 1px),
+                    radial-gradient(circle at 40% 40%, rgba(255,255,255,0.05) 1px, transparent 1px);
+                background-size: 50px 50px, 60px 60px, 40px 40px;
+            }
+            .tech-icons { 
+                position: absolute; 
+                top: 0; 
+                left: 0; 
+                right: 0; 
+                bottom: 0; 
+                overflow: hidden; 
+            }
+            .tech-icon { 
+                position: absolute; 
+                font-size: 2rem; 
+                opacity: 0.3; 
+                animation: float 6s ease-in-out infinite; 
+                color: #fff; 
+            }
+            .tech-icon:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+            .tech-icon:nth-child(2) { top: 20%; right: 15%; animation-delay: 1s; }
+            .tech-icon:nth-child(3) { top: 60%; left: 20%; animation-delay: 2s; }
+            .tech-icon:nth-child(4) { bottom: 20%; right: 20%; animation-delay: 3s; }
+            .tech-icon:nth-child(5) { bottom: 10%; left: 50%; animation-delay: 4s; }
+            .tech-icon:nth-child(6) { top: 30%; left: 60%; animation-delay: 5s; }
+            @keyframes float { 
+                0%, 100% { transform: translateY(0px) rotate(0deg); } 
+                50% { transform: translateY(-20px) rotate(5deg); } 
+            }
+            .hero-content { 
+                position: relative; 
+                z-index: 2; 
+                text-align: center; 
+            }
+            .hero-title { 
+                font-size: 3rem; 
+                font-weight: 700; 
+                margin-bottom: 1rem; 
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+            }
+            .hero-subtitle { 
+                font-size: 1.2rem; 
+                opacity: 0.9; 
+                margin-bottom: 2rem; 
+            }
+            
             .feature-card {
                 background: white;
                 border-radius: 10px;
@@ -76,12 +132,16 @@
                 pointer-events: none;
                 opacity: 1;
             }
+            
+            @media (max-width: 768px) {
+                .hero-title { font-size: 2rem; }
+            }
         </style>
     </head>
     <body>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
-                <a class="navbar-brand" href="/">natus 작업소</a>
+                <a class="navbar-brand" href="/main">natus 작업소</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
@@ -114,20 +174,47 @@
                 </div>
         </nav>
 
-        <section class="hero-section">
-            <div class="container text-center">
-                <h1 class="display-4 mb-4">natus's Tech Lab</h1>
-                <p class="lead mb-4">게시판이 있는 공간</p>
-                @guest
-                    <a href="{{ route('register') }}" class="btn btn-light btn-lg me-3">회원가입</a>
-                    <a href="{{ route('login') }}" class="btn btn-outline-light btn-lg">로그인</a>
-                @else
-                    @if(Auth::user()->isSpecificAdmin('rainynux@gmail.com') || Auth::user()->isAdmin())
-                        <a href="http://222.100.103.227/puzzle/words" class="btn btn-light btn-lg">퍼즐관리</a>
-                        <a href="http://222.100.103.227/pgadmin4/" class="btn btn-light btn-lg">DB관리</a>
-                    @endif
-                @endguest
-                                </div>
+        <section class="hero-banner">
+            <div class="tech-icons">
+                <div class="tech-icon" title="PHP">🐘</div>
+                <div class="tech-icon" title="PostgreSQL">🐘</div>
+                <div class="tech-icon" title="Laravel">🔥</div>
+                <div class="tech-icon" title="Composer">🎼</div>
+                <div class="tech-icon" title="Apache2">🪶</div>
+                <div class="tech-icon" title="GitLab">🪶</div>
+                <div class="tech-icon" title="Ubuntu">🐧</div>
+            </div>
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">Natus Tech Lab</h1>
+                    <p class="hero-subtitle">CURSOR AI 로 만들어진 Tech Lab</p>
+                    <div class="d-flex justify-content-center">
+                        <span class="badge bg-light text-dark me-2">Ubuntu</span>
+                        <span class="badge bg-light text-dark me-2">PHP</span>
+                        <span class="badge bg-light text-dark me-2">PostgreSQL</span>
+                        <span class="badge bg-light text-dark me-2">Apache2</span>
+                        <span class="badge bg-light text-dark me-2">Laravel</span>
+                        <span class="badge bg-light text-dark me-2">Composer</span>
+                        <span class="badge bg-light text-dark me-2">GitHub</span>
+                        <span class="badge bg-light text-dark me-2">Gemini</span>
+                        <span class="badge bg-light text-dark">CURSOR</span>
+                    </div>
+                    @guest
+                        <div class="mt-4">
+                            <a href="{{ route('register') }}" class="btn btn-light btn-lg me-3">회원가입</a>
+                            <a href="{{ route('login') }}" class="btn btn-outline-light btn-lg">로그인</a>
+                        </div>
+                    @else
+                        <div class="mt-4">
+                            <a href="{{ route('puzzle-game.index') }}" class="btn btn-light btn-lg me-3">퍼즐게임 시작</a>
+                            @if(Auth::user()->isSpecificAdmin('rainynux@gmail.com') || Auth::user()->isAdmin())
+                                <a href="http://222.100.103.227/puzzle/words" class="btn btn-light btn-lg me-3">퍼즐관리</a>
+                                <a href="http://222.100.103.227/pgadmin4/" class="btn btn-light btn-lg">DB관리</a>
+                            @endif
+                        </div>
+                    @endguest
+                </div>
+            </div>
         </section>
 
         <div class="container">

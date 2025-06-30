@@ -18,6 +18,10 @@
 
     <!-- Bootstrap CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
     @stack('styles')
 </head>
 <body class="custom-board">
@@ -88,8 +92,8 @@
         </div>
         <div class="container">
             <div class="hero-content">
-                <h1 class="hero-title">BBS</h1>
-                <p class="hero-subtitle">CURSOR AI 로 만들어진 BBS</p>
+                <h1 class="hero-title">Natus Tech Lab</h1>
+                <p class="hero-subtitle">CURSOR AI 로 만들어진 Tech Lab</p>
                 <div class="d-flex justify-content-center">
                     <span class="badge bg-light text-dark me-2">Ubuntu</span>
                     <span class="badge bg-light text-dark me-2">PHP</span>
