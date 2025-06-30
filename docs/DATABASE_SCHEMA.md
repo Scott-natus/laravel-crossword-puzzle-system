@@ -255,3 +255,9 @@ pg_dump -h 127.0.0.1 -U myuser -t boards -t board_types mydb > boards_backup.sql
 - 2025-06-21: 중복 단어 정리 및 넘버링/정규화
 - 2025-06-22: crossword_words 테이블에 updated_at 컬럼 추가 (React 퍼즐 생성 기능 지원)
 - 2025-06-22: 크로스워드 퍼즐 관련 테이블들 (crossword_puzzles, crossword_words, crossword_grid) 추가 
+
+## 2025-07-01 퍼즐 게임 관련 DB 스키마 작업
+- user_puzzle_games 테이블 생성 및 마이그레이션
+- puzzle_grid_template_word pivot 테이블 생성
+- 퍼즐 정답/진행상황 저장 로직 반영
+- 불필요한 컬럼/관계 정리 

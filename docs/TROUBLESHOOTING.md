@@ -436,3 +436,12 @@ php artisan tinker --execute="echo config('database.default');"
 - 크론 배치 작업 권한 문제 해결: natus-server를 www-data 그룹에 추가 (sudo usermod -a -G www-data natus-server)
 - convertDifficultyToEnglish 메서드 제거 (더 이상 사용되지 않음)
 - 재시도 로직에서 실패 시 "단어 ID X에서 확정된 음절들과 매칭되는 단어를 찾을 수 없습니다." 메시지 출력 
+
+## 2025-07-01 퍼즐 게임 및 관리 시스템 문제해결 내역
+- 교차점 클릭 시 배지 우선 단어 선택, 힌트 표시 오류 해결
+- 정답 입력 시 배지와 정답 겹침/숨김 UI 문제 해결
+- 모든 단어 정답 시 레벨 완료 모달 정상 동작 확인
+- 상단 타이틀 링크 /home 미동작 이슈 수정
+- 소스코드/핵심소스 백업 명령어 정리
+- phpPgAdmin 완전 삭제 및 의존성 정리
+- git 커밋/푸시, 소스 백업 정상 동작 확인 

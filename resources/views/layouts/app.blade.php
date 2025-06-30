@@ -28,7 +28,7 @@
     <!-- 네비게이션: 로고, 로그인/사용자명 -->
     <nav class="navbar navbar-expand-lg navbar-custom">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="/home">
                 <i class="fas fa-brain me-2"></i>natus 작업소
             </a>
 
