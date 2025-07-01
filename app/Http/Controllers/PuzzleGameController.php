@@ -7,6 +7,7 @@ use App\Models\UserPuzzleGame;
 use App\Models\PuzzleGridTemplates;
 use App\Models\PuzzleLevel;
 use App\Models\PzWord;
+use App\Http\Controllers\GridTemplateController;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
@@ -69,16 +70,59 @@ class PuzzleGameController extends Controller
             return response()->json(['error' => '해당 레벨의 템플릿을 찾을 수 없습니다.'], 404);
         }
 
-        // 기존 GridTemplateController의 extractWords 메서드 호출
-        $templateService = app(\App\Services\PuzzleGridTemplateService::class);
-        $gridTemplateController = new GridTemplateController($templateService);
-        $extractRequest = new Request(['template_id' => $template->id]);
-        $extractResult = $gridTemplateController->extractWords($extractRequest);
+        // 5회 반복 로직으로 단어 추출 시도
+        $maxRetries = 5;
+        $retryCount = 0;
+        $extractData = null;
         
-        $extractData = json_decode($extractResult->getContent(), true);
+        while ($retryCount < $maxRetries) {
+            $retryCount++;
+            
+            // GridTemplateController의 extractWords 메서드 호출
+            $templateService = app(\App\Services\PuzzleGridTemplateService::class);
+            $gridTemplateController = new GridTemplateController($templateService);
+            $extractRequest = new Request(['template_id' => $template->id]);
+            $extractResult = $gridTemplateController->extractWords($extractRequest);
+            
+            $extractData = json_decode($extractResult->getContent(), true);
+            
+            // 성공하면 루프 종료
+            if ($extractData['success']) {
+                \Log::info("게임 단어 추출 성공 - 시도 #{$retryCount}에서 완료", [
+                    'template_id' => $template->id,
+                    'level_id' => $level->id,
+                    'user_id' => $user->id
+                ]);
+                break;
+            }
+            
+            \Log::info("게임 단어 추출 실패 - 시도 #{$retryCount}", [
+                'template_id' => $template->id,
+                'level_id' => $level->id,
+                'user_id' => $user->id,
+                'error_message' => $extractData['message'] ?? '알 수 없는 오류'
+            ]);
+            
+            // 마지막 시도가 아니면 잠시 대기 후 재시도
+            if ($retryCount < $maxRetries) {
+                usleep(100000); // 0.1초 대기
+            }
+        }
         
+        // 5회 시도 후에도 실패한 경우
         if (!$extractData['success']) {
-            return response()->json(['error' => '단어 추출에 실패했습니다: ' . $extractData['message']], 500);
+            \Log::error("게임 단어 추출 최종 실패 - 5회 시도 후 실패", [
+                'template_id' => $template->id,
+                'level_id' => $level->id,
+                'user_id' => $user->id,
+                'final_error' => $extractData['message'] ?? '알 수 없는 오류'
+            ]);
+            
+            return response()->json([
+                'error' => '단어 추출에 실패했습니다. 잠시 후 다시 시도해주세요.',
+                'retry_count' => $retryCount,
+                'message' => $extractData['message'] ?? '알 수 없는 오류'
+            ], 500);
         }
 
         // 단어 정보에 실제 pz_words ID 추가
@@ -91,6 +135,20 @@ class PuzzleGameController extends Controller
                 ->first();
             
             $wordInfo['pz_word_id'] = $pzWord ? $pzWord->id : null;
+            
+            // 기본 힌트 ID 추가
+            if ($pzWord) {
+                $baseHint = DB::table('pz_hints')
+                    ->where('word_id', $pzWord->id)
+                    ->where('is_primary', true)
+                    ->first();
+                $wordInfo['hint_id'] = $baseHint ? $baseHint->id : null;
+                $wordInfo['hint'] = $baseHint ? $baseHint->hint_text : null;
+            } else {
+                $wordInfo['hint_id'] = null;
+                $wordInfo['hint'] = null;
+            }
+            
             $wordsWithIds[] = $wordInfo;
         }
 
@@ -185,31 +243,22 @@ class PuzzleGameController extends Controller
             'has_base_hint_id' => $request->has('base_hint_id')
         ]);
 
-        // 단어 ID로 해당 단어의 모든 힌트 가져오기
-        $query = DB::table('pz_hints')
-            ->where('word_id', $request->word_id)
-            ->select('id', 'hint_text as hint', 'is_primary', 'created_at')
-            ->orderBy('is_primary', 'desc') // 주요 힌트를 먼저
-            ->orderBy('created_at', 'asc');   // 그 다음 생성 순서
+        // 사용자가 요청한 쿼리 방식으로 수정
+        // 기본 힌트 ID를 사용하여 같은 word_id를 가진 다른 힌트를 찾되, 기본 힌트 ID는 제외
+        $query = DB::table('pz_hints as h1')
+            ->join('pz_hints as h2', 'h1.word_id', '=', 'h2.word_id')
+            ->where('h1.id', $request->base_hint_id)
+            ->where('h2.id', '<>', $request->base_hint_id)
+            ->select('h2.hint_text as hint', 'h2.id')
+            ->orderByRaw('RANDOM()')
+            ->limit(1);
 
-        // 제외할 힌트 ID들
-        $excludeIds = [];
-        
-        // 기본 힌트 ID 제외
-        if ($request->has('base_hint_id') && $request->base_hint_id) {
-            $excludeIds[] = $request->base_hint_id;
-        }
-        
-        // 현재 보여주고 있는 힌트 ID 제외
-        if ($request->has('current_hint_id') && $request->current_hint_id) {
-            $excludeIds[] = $request->current_hint_id;
-        }
-        
-        // 제외할 ID가 있으면 쿼리에 추가
-        if (!empty($excludeIds)) {
-            $query->whereNotIn('id', $excludeIds);
-            \Log::info('Excluding hint IDs', ['excluded_ids' => $excludeIds]);
-        }
+        // 실제 실행되는 SQL 쿼리를 로그에 출력
+        \Log::info('SQL Query', [
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings(),
+            'base_hint_id' => $request->base_hint_id
+        ]);
 
         // 추가 힌트 하나만 가져오기
         $additionalHint = $query->first();

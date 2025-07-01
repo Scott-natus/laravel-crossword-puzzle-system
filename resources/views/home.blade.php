@@ -26,7 +26,7 @@
     
     <div class="loading-spinner"></div>
     
-    <a href="/" class="manual-link">
+    <a href="/main" class="manual-link">
         <i class="fas fa-home me-2"></i>지금 바로 메인으로 이동
     </a>
 </div>
@@ -189,7 +189,7 @@
         
         if (countdown <= 0) {
             clearInterval(timer);
-            window.location.href = '/';
+            window.location.href = '/main';
         }
     }, 1000);
 </script>

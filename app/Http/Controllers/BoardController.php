@@ -176,14 +176,35 @@ class BoardController extends Controller
             $board->save();
 
             // 첨부파일 저장
+            \Log::info('Attachment upload check:', [
+                'has_file_attachments' => $request->hasFile('attachments'),
+                'all_files' => $request->allFiles(),
+                'attachments_count' => $request->hasFile('attachments') ? count($request->file('attachments')) : 0
+            ]);
+            
             if ($request->hasFile('attachments')) {
-                foreach ($request->file('attachments') as $file) {
+                \Log::info('Processing attachments...');
+                foreach ($request->file('attachments') as $index => $file) {
+                    \Log::info('Processing file ' . $index . ':', [
+                        'original_name' => $file->getClientOriginalName(),
+                        'mime_type' => $file->getClientMimeType(),
+                        'size' => $file->getSize(),
+                        'is_valid' => $file->isValid(),
+                        'error' => $file->getError()
+                    ]);
+                    
                     if ($file->isValid()) {
                         // 파일 확장자 검증
                         $extension = strtolower($file->getClientOriginalExtension());
                         $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'mp4', 'avi', 'mov', 'wmv', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'];
                         
+                        \Log::info('File extension check:', [
+                            'extension' => $extension,
+                            'allowed' => in_array($extension, $allowedExtensions)
+                        ]);
+                        
                         if (!in_array($extension, $allowedExtensions)) {
+                            \Log::warning('File extension not allowed:', ['extension' => $extension]);
                             continue;
                         }
 
@@ -193,16 +214,34 @@ class BoardController extends Controller
                         // storage/app/public/attachments 디렉토리에 저장
                         $path = $file->storeAs('attachments', $safeFileName, 'public');
                         
+                        \Log::info('File storage result:', [
+                            'safe_file_name' => $safeFileName,
+                            'path' => $path,
+                            'storage_success' => !empty($path)
+                        ]);
+                        
                         if ($path) {
-                            $board->attachments()->create([
+                            $attachment = $board->attachments()->create([
                                 'file_path' => $path,
                                 'file_type' => $file->getClientMimeType(),
                                 'file_size' => $file->getSize(),
                                 'original_name' => $file->getClientOriginalName(),
                             ]);
+                            
+                            \Log::info('Attachment created:', [
+                                'attachment_id' => $attachment->id,
+                                'file_path' => $attachment->file_path
+                            ]);
                         }
+                    } else {
+                        \Log::error('File is not valid:', [
+                            'file_index' => $index,
+                            'error' => $file->getError()
+                        ]);
                     }
                 }
+            } else {
+                \Log::info('No attachments found in request');
             }
 
             DB::commit();

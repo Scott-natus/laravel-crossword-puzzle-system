@@ -200,7 +200,6 @@ $(document).ready(function() {
 function loadTemplate() {
     $.get('{{ route("puzzle-game.get-template") }}')
         .done(function(data) {
-            console.log('Template loaded:', data);
             currentTemplateWords = data.template.words;
             renderPuzzleGrid(data.template);
         })
@@ -234,7 +233,18 @@ function renderPuzzleGrid(template) {
                 
                 // 번호는 시작 위치에만 표시
                 if (wordInfo) {
-                    cellContent = `<span class="word-number">${wordInfo.word_id}</span>`;
+                    if (wordInfo.isIntersection) {
+                        // 교차점인 경우: 가로 단어는 큰 번호, 세로 단어는 작은 번호로 표시
+                        cellContent = `
+                            <div style="position: relative; width: 100%; height: 100%;">
+                                <span class="word-number" style="position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; font-size: 8px; background: #ff6b6b;">${wordInfo.horizontalWord.word_id}</span>
+                                <span class="word-number" style="position: absolute; bottom: 2px; right: 2px; width: 16px; height: 16px; font-size: 8px; background: #4ecdc4;">${wordInfo.verticalWord.word_id}</span>
+                            </div>
+                        `;
+                    } else {
+                        // 단일 단어인 경우
+                        cellContent = `<span class="word-number">${wordInfo.word_id}</span>`;
+                    }
                 }
                 
                 // 클릭 이벤트는 모든 검은색 칸에 추가
@@ -255,8 +265,11 @@ function renderPuzzleGrid(template) {
     grid.html(html);
 }
 
-// 특정 위치의 단어 정보 찾기 (번호 표시용 - 템플릿 관리와 동일)
+// 특정 위치의 단어 정보 찾기 (교차점 우선순위 적용 - 템플릿 관리와 동일)
 function getWordInfoAtPosition(x, y, words) {
+    let horizontalWord = null;
+    let verticalWord = null;
+    
     for (const wordInfo of words) {
         const word = wordInfo.position;
         
@@ -265,7 +278,7 @@ function getWordInfoAtPosition(x, y, words) {
             if (y === word.start_y && x >= word.start_x && x <= word.end_x) {
                 // 단어의 시작 위치인지 확인
                 if (x === word.start_x) {
-                    return wordInfo;
+                    horizontalWord = wordInfo;
                 }
             }
         }
@@ -274,13 +287,25 @@ function getWordInfoAtPosition(x, y, words) {
             if (x === word.start_x && y >= word.start_y && y <= word.end_y) {
                 // 단어의 시작 위치인지 확인
                 if (y === word.start_y) {
-                    return wordInfo;
+                    verticalWord = wordInfo;
                 }
             }
         }
     }
     
-    return null;
+    // 교차점인 경우: 가로 단어 우선, 세로 단어는 작은 번호로 표시
+    if (horizontalWord && verticalWord) {
+        // 가로 단어를 메인으로 반환하되, 교차점 정보 포함
+        return {
+            ...horizontalWord,
+            isIntersection: true,
+            horizontalWord: horizontalWord,
+            verticalWord: verticalWord
+        };
+    }
+    
+    // 단일 단어인 경우
+    return horizontalWord || verticalWord;
 }
 
 // 클릭 처리용 - 해당 위치의 모든 단어 찾기 (교차점 처리)
@@ -313,7 +338,6 @@ function handleCellClick(row, col, words) {
     let foundWords = getWordsAtPosition(col, row, words);
     
     if (foundWords.length === 0) {
-        console.log('No words found at position:', row, col);
         return;
     }
     
@@ -321,18 +345,14 @@ function handleCellClick(row, col, words) {
     
     // 교차점인 경우 (여러 단어가 있는 경우) 배지가 있는 단어 우선 선택
     if (foundWords.length > 1) {
-        console.log('Crossword point found:', foundWords);
-        
         // 현재 클릭한 위치에 배지가 있는지 확인
         const wordInfo = getWordInfoAtPosition(col, row, words);
         if (wordInfo) {
             // 배지가 있는 단어를 우선 선택
             selectedWord = wordInfo;
-            console.log('Selected word with badge:', selectedWord);
         } else {
             // 배지가 없으면 첫 번째 단어 선택
             selectedWord = foundWords[0];
-            console.log('Selected first word (no badge):', selectedWord);
         }
     }
     
@@ -345,21 +365,14 @@ function handleCellClick(row, col, words) {
     $('#hints-list').empty(); // 기존 힌트 목록 삭제
     $('#additional-hints').hide(); // 힌트 영역 숨기기
     
-    // 우측 힌트 영역에 단어 ID와 힌트 ID 표시
+    // 우측 힌트 영역에 기본 힌트만 표시
     $('#current-hint').html(`
-        <strong>단어 ID:</strong> ${currentWordId}<br>
-        <strong>기본 힌트 ID:</strong> ${baseHintId || '없음'}<br>
-        <strong>기본 힌트:</strong> ${selectedWord.hint || '힌트가 없습니다.'}<br>
-        <strong>단어:</strong> ${selectedWord.extracted_word || '알 수 없음'}<br>
-        <strong>방향:</strong> ${selectedWord.position.direction}<br>
-        <strong>위치:</strong> (${selectedWord.position.start_x},${selectedWord.position.start_y}) ~ (${selectedWord.position.end_x},${selectedWord.position.end_y})
+        <strong>힌트:</strong> ${selectedWord.hint || '힌트가 없습니다.'}
     `);
     
     $('#answer-input').val('').focus();
     $('#word-input-section').show();
     $('#result-message').empty();
-    
-    console.log('Selected word by cell click:', selectedWord);
 }
 
 $('#check-answer-btn').click(function() {
@@ -381,7 +394,6 @@ $('#check-answer-btn').click(function() {
         
         if (data.is_correct) {
             // 정답인 경우
-            console.log('Correct answer! Word:', data.correct_answer);
             
             // 그리드에 정답 표시
             updateGridWithAnswer(data.correct_answer);
@@ -467,20 +479,13 @@ function updateGridWithAnswer(correctWord) {
             cell.css('position', 'relative'); // 절대 위치를 위한 relative 설정
         }
     }
-    
-    console.log('Updated grid with answer:', correctWord, 'at position:', position);
-    console.log('Answered words count:', answeredWords.size, 'Total words:', currentTemplateWords.length);
 }
 
 function checkLevelCompletion() {
     // 모든 단어가 정답인지 확인
-    console.log('Checking level completion...');
-    console.log('Answered words:', answeredWords.size, 'Total words:', currentTemplateWords.length);
     
     // 모든 단어의 정답을 맞췄는지 확인
     if (answeredWords.size >= currentTemplateWords.length) {
-        console.log('Level completed! All words answered correctly.');
-        
         // 레벨 완료 모달 표시
         setTimeout(function() {
             $('#levelCompleteModal').modal('show');
@@ -491,21 +496,12 @@ function checkLevelCompletion() {
 $('#show-hint-btn').click(function() {
     if (!currentWordId) return;
     
-    // 디버깅 로그 추가
-    console.log('Requesting hint with:', {
-        word_id: currentWordId,
-        current_hint_id: currentHintId,
-        base_hint_id: baseHintId
-    });
-    
     $.get('{{ route("puzzle-game.get-hints") }}', {
         word_id: currentWordId,
         current_hint_id: currentHintId, // 현재 힌트 ID 전달
         base_hint_id: baseHintId // 기본 힌트 ID 전달
     })
     .done(function(data) {
-        console.log('Hint response:', data);
-        
         if (data.hint) {
             // 힌트 목록을 초기화하고 새로운 힌트만 표시
             const hintsList = $('#hints-list');
@@ -514,7 +510,6 @@ $('#show-hint-btn').click(function() {
             
             // 현재 힌트 ID를 새로 받은 힌트의 ID로 업데이트
             currentHintId = data.hint.id;
-            console.log('Updated currentHintId to:', currentHintId);
             
             $('#additional-hints').show();
         } else {
@@ -523,7 +518,6 @@ $('#show-hint-btn').click(function() {
         }
     })
     .fail(function(xhr) {
-        console.error('Hint request failed:', xhr);
         alert('힌트를 불러올 수 없습니다.');
     });
 });

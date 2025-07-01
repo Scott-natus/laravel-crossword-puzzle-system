@@ -445,3 +445,12 @@ php artisan tinker --execute="echo config('database.default');"
 - 소스코드/핵심소스 백업 명령어 정리
 - phpPgAdmin 완전 삭제 및 의존성 정리
 - git 커밋/푸시, 소스 백업 정상 동작 확인 
+
+### 첨부파일(이미지) 미노출 문제
+
+- 증상: 첨부파일이 업로드는 되지만 웹에서 '이미지 없음' 또는 미리보기가 되지 않음
+- 원인: `public/storage` 심볼릭 링크 미설정
+- 해결: 서버에서 `php artisan storage:link` 실행 후 정상 노출되는지 확인
+- 참고: storage/app/public/attachments 경로에 파일이 실제로 존재하는지, 퍼미션(권한)도 함께 점검 
+
+- 만약 storage:link 후에도 미노출이면 public/storage, storage/app/public, attachments 폴더 및 파일 권한이 www-data(웹서버)로 되어 있는지 확인 

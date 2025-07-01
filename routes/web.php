@@ -44,8 +44,6 @@ Route::get('auth/kakao/callback', [SocialLoginController::class, 'handleKakaoCal
 Route::get('auth/naver', [SocialLoginController::class, 'redirectToNaver'])->name('auth.naver');
 Route::get('auth/naver/callback', [SocialLoginController::class, 'handleNaverCallback']);
 
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
-
 Route::resource('posts', App\Http\Controllers\PostController::class);
 
 Route::post('board/upload-image', [App\Http\Controllers\BoardController::class, 'uploadImage'])->name('board.upload-image.global');
@@ -110,9 +108,17 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
     // 퍼즐 레벨 관리
     Route::prefix('levels')->name('levels.')->group(function () {
         Route::get('/', [PuzzleLevelController::class, 'index'])->name('index');
+        Route::get('/create', [PuzzleLevelController::class, 'create'])->name('create');
+        Route::post('/', [PuzzleLevelController::class, 'store'])->name('store');
+        Route::get('/{id}', [PuzzleLevelController::class, 'show'])->name('show');
+        Route::get('/{id}/edit', [PuzzleLevelController::class, 'edit'])->name('edit');
         Route::put('/{id}', [PuzzleLevelController::class, 'update'])->name('update');
-        Route::post('/generate-default', [PuzzleLevelController::class, 'generateDefaultData'])->name('generate-default');
+        Route::delete('/{id}', [PuzzleLevelController::class, 'destroy'])->name('destroy');
+        Route::post('/restore-origin', [PuzzleLevelController::class, 'restoreFromOrigin'])->name('restore-origin');
     });
+
+    // 레벨 목록 API (샘플보기용)
+    Route::get('/puzzle/levels', [PuzzleLevelController::class, 'getLevelsForSamples'])->name('puzzle.levels.for-samples');
 
     // 퍼즐 그리드 관리
     Route::prefix('grids')->name('grids.')->group(function () {
@@ -133,6 +139,8 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
         Route::post('/level-conditions', [GridTemplateController::class, 'getLevelConditions'])->name('level-conditions');
         Route::post('/extract-words', [GridTemplateController::class, 'extractWords'])->name('extract-words');
         Route::post('/update-numbering', [GridTemplateController::class, 'updateTemplateNumbering'])->name('update-numbering');
+        Route::post('/sample-templates', [GridTemplateController::class, 'getSampleTemplates'])->name('sample-templates');
+        Route::post('/create-from-sample', [GridTemplateController::class, 'createFromSample'])->name('create-from-sample');
     });
 
     Route::get('/grid-templates/{id}/json', [GridTemplateController::class, 'showJson']);

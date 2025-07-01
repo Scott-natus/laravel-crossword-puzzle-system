@@ -226,4 +226,15 @@
 - 상단 타이틀 링크 /home으로 통일
 - 소스코드만/핵심소스만 백업 명령어 정리
 - phpPgAdmin 완전 삭제
-- git 커밋/푸시 및 소스 백업 완료 
+- git 커밋/푸시 및 소스 백업 완료
+
+## 2025-07-01 첨부파일(이미지) 미노출 문제 해결
+
+- 증상: 게시판 답글 작성 시 첨부파일(이미지)이 정상적으로 업로드되었으나, 웹에서 '이미지 없음'으로 표시되고 미리보기/다운로드가 되지 않음
+- 원인: Laravel storage public 심볼릭 링크(`public/storage`)가 생성되어 있지 않아 웹에서 storage 파일 접근 불가
+- 조치: `php artisan storage:link` 명령어로 심볼릭 링크 생성
+- 결과: 첨부파일(이미지) 정상 노출 및 다운로드/미리보기 가능
+- 추가: 향후 첨부파일 미노출 시 storage:link 상태 점검 필요
+
+- 모든 주요 장애/이슈 해결 후 반드시 docs/WORKFLOW.md, docs/TROUBLESHOOTING.md 등 문서화
+- git add/commit/push 필수 

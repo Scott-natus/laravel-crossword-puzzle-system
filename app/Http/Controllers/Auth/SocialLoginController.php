@@ -31,7 +31,7 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/home');
+            return redirect()->intended('/main');
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Google 로그인 중 오류가 발생했습니다.');
@@ -58,7 +58,7 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/home');
+            return redirect()->intended('/main');
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Kakao 로그인 중 오류가 발생했습니다.');
@@ -85,7 +85,7 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/home');
+            return redirect()->intended('/main');
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Naver 로그인 중 오류가 발생했습니다.');

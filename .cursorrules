@@ -128,7 +128,7 @@
 - 퍼즐 게임 교차점 클릭 시 배지 우선 단어 선택 및 힌트 표시
 - 정답 입력 시 칸 회색, 흰색 글자, 배지는 정답 뒤로 숨김
 - 모든 단어 정답 시 레벨 완료 모달 표시
-- 상단 타이틀 링크 /home으로 통일
+- 상단 타이틀 링크 /main으로 통일 (메인 페이지)
 - 소스코드만/핵심소스만 백업 명령어 정리
 - phpPgAdmin 완전 삭제
 - git 커밋/푸시 및 소스 백업 완료
@@ -136,3 +136,8 @@
 # 백업 정책
 - 데이터베이스는 **풀백업** 진행 (pg_dump 등)
 - 소스코드는 **핵심 소스만** 백업 (app, resources, routes, config, public, database, docs 등) 
+
+# 첨부파일(이미지) 미노출 문제 발생 시
+- storage/app/public/attachments에 파일이 있는데 웹에서 보이지 않으면 `php artisan storage:link` 상태를 반드시 점검
+- 심볼릭 링크가 없으면 웹에서 /storage/attachments/ 경로로 접근 불가
+- 서버 이전/OS 재설치/퍼미션 변경 후 반드시 storage:link 재확인 

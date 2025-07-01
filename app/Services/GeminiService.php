@@ -196,6 +196,134 @@ class GeminiService
     }
 
     /**
+     * 단어 생성 (재미나이 API 활용)
+     */
+    public function generateWords(string $prompt): array
+    {
+        try {
+            Log::info('단어 생성 시작', ['prompt' => $prompt]);
+            
+            $requestData = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 1024,
+                ]
+            ];
+
+            $url = $this->baseUrl . '?key=' . $this->apiKey;
+            Log::info('Gemini API 호출', ['url' => $url]);
+            
+            $response = Http::timeout(60)->post($url, $requestData);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info('Gemini API 응답 성공', ['response' => $data]);
+                
+                // 응답 텍스트 직접 확인
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    $responseText = $data['candidates'][0]['content']['parts'][0]['text'];
+                    Log::info('Gemini API 응답 텍스트', ['text' => $responseText]);
+                }
+                
+                $words = $this->extractWordsFromResponse($data);
+                Log::info('단어 추출 결과', ['words' => $words]);
+
+                return [
+                    'success' => true,
+                    'words' => $words,
+                    'prompt' => $prompt
+                ];
+            } else {
+                $error = 'API 요청 실패: ' . $response->status();
+                Log::error('Gemini API word generation failed', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $error
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Gemini word generation error', [
+                'error' => $e->getMessage(),
+                'prompt' => $prompt
+            ]);
+            return [
+                'success' => false,
+                'error' => '서비스 오류: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 응답에서 단어 추출 (줄 단위 파싱)
+     */
+    private function extractWordsFromResponse(array $response): array
+    {
+        $words = [];
+
+        try {
+            if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+                $text = $response['candidates'][0]['content']['parts'][0]['text'];
+                Log::info('파싱 직전 텍스트', ['text' => $text]);
+                $lines = preg_split('/\r?\n|\r/', $text);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!$line) continue;
+                    // [카테고리,단어] 형식
+                    if (preg_match('/\[([^,\]]+),([^\]]+)\]/', $line, $match)) {
+                        $category = trim($match[1]);
+                        $word = trim($match[2]);
+                    } elseif (preg_match('/\[([^\]]+)\]/', $line, $match)) {
+                        $word = trim($match[1]);
+                        $category = $this->extractCategoryFromPrompt($text);
+                    } else {
+                        continue;
+                    }
+                    if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 4) {
+                        $words[] = [
+                            'category' => $category,
+                            'word' => $word
+                        ];
+                    }
+                }
+                return $words;
+            }
+            throw new \Exception('Invalid response structure');
+        } catch (\Exception $e) {
+            Log::error('Word extraction error', [
+                'response' => $response,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * 프롬프트에서 카테고리 추출
+     */
+    private function extractCategoryFromPrompt(string $text): string
+    {
+        // "분야: XXX" 패턴에서 카테고리 추출
+        if (preg_match('/분야:\s*([^\n]+)/', $text, $matches)) {
+            return trim($matches[1]);
+        }
+        
+        // 기본값
+        return '일반';
+    }
+
+    /**
      * 난이도 텍스트 변환
      */
     private function getDifficultyText(int $difficulty): string
