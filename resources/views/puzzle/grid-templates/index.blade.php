@@ -398,52 +398,58 @@ function deleteTemplate(id, name) {
     modal.show();
 }
 
-document.getElementById('confirmDelete').addEventListener('click', () => {
-    if (!deleteTemplateId) return;
-    
-    fetch(`/puzzle/grid-templates/${deleteTemplateId}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // 성공 메시지 표시
-            const toast = document.createElement('div');
-            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
-            toast.style.zIndex = '9999';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="fas fa-check-circle"></i> ${data.message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-            document.body.appendChild(toast);
+// DOM이 완전히 로드된 후 이벤트 연결
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmDeleteBtn = document.getElementById('confirmDelete');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', () => {
+            if (!deleteTemplateId) return;
             
-            const bsToast = new bootstrap.Toast(toast);
-            bsToast.show();
-            
-            // 페이지 새로고침
-            setTimeout(() => {
-                location.reload();
-            }, 1000);
-        } else {
-            alert('삭제 중 오류가 발생했습니다: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('삭제 중 오류가 발생했습니다.');
-    })
-    .finally(() => {
-        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
-        modal.hide();
-        deleteTemplateId = null;
-    });
+            fetch(`/puzzle/grid-templates/${deleteTemplateId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 성공 메시지 표시
+                    const toast = document.createElement('div');
+                    toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+                    toast.style.zIndex = '9999';
+                    toast.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <i class="fas fa-check-circle"></i> ${data.message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                        </div>
+                    `;
+                    document.body.appendChild(toast);
+                    
+                    const bsToast = new bootstrap.Toast(toast);
+                    bsToast.show();
+                    
+                    // 페이지 새로고침
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    alert('삭제 중 오류가 발생했습니다: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('삭제 중 오류가 발생했습니다.');
+            })
+            .finally(() => {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteModal'));
+                modal.hide();
+                deleteTemplateId = null;
+            });
+        });
+    }
 });
 </script>
 

@@ -26,14 +26,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-info" id="showSamples" style="display: none;">
-                                    <i class="fas fa-eye"></i> 샘플보기
-                                </button>
-                                <button type="button" class="btn btn-outline-warning ms-2" id="testButton">
-                                    테스트 버튼
-                                </button>
-                            </div>
                         </div>
 
                         <!-- 레벨 조건 정보 -->
@@ -212,75 +204,6 @@
     </div>
 </div>
 
-<!-- 샘플 템플릿 선택 모달 -->
-<div class="modal fade" id="sampleTemplatesModal" tabindex="-1" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">샘플 템플릿 선택</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row mb-3">
-                    <div class="col-12">
-                        <div class="alert alert-info">
-                            <h6>레벨 정보</h6>
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <strong>레벨:</strong> <span id="sampleLevelInfo">-</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>단어 개수:</strong> <span id="sampleWordCount">-</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>교차점 개수:</strong> <span id="sampleIntersectionCount">-</span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>난이도:</strong> <span id="sampleDifficulty">-</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row" id="samplesContainer">
-                    <!-- 샘플 템플릿들이 여기에 동적으로 생성됩니다 -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 샘플 템플릿 생성 모달 -->
-<div class="modal fade" id="createFromSampleModal" tabindex="-1" data-bs-backdrop="true" data-bs-keyboard="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">샘플 템플릿 생성</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="templateName" class="form-label">템플릿 이름</label>
-                    <input type="text" class="form-control" id="templateName" placeholder="샘플 템플릿 이름을 입력하세요">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">선택된 샘플</label>
-                    <div id="selectedSampleInfo" class="alert alert-info">
-                        <!-- 선택된 샘플 정보가 여기에 표시됩니다 -->
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
-                <button type="button" class="btn btn-primary" id="createTemplateBtn">템플릿 생성</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
@@ -291,9 +214,6 @@ let levelConditions = null;
 let currentTemplateId = null; // 현재 수정 중인 템플릿 ID
 let isEditMode = false; // 수정 모드 여부
 let savedScrollPosition = 0; // 모달 열기 전 스크롤 위치 저장
-let currentLevel = null;
-let currentSamples = [];
-let selectedSampleIndex = null;
 
 // 그리드 초기화
 function initializeGrid(size) {
@@ -354,93 +274,45 @@ function toggleCell(row, col) {
 
 // DOM 로드 완료 후 초기화
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM 로드 완료!');
-    
     // 전체 지우기
-    const clearGridBtn = document.getElementById('clearGrid');
-    if (clearGridBtn) {
-        clearGridBtn.addEventListener('click', () => {
-            for (let i = 0; i < gridSize; i++) {
-                for (let j = 0; j < gridSize; j++) {
-                    currentGrid[i][j] = 1; // 흰색 칸 (빈 공간)
-                }
+    document.getElementById('clearGrid').addEventListener('click', () => {
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                currentGrid[i][j] = 1; // 흰색 칸 (빈 공간)
             }
-            renderGrid();
-            checkConditions();
-        });
-    }
+        }
+        renderGrid();
+        checkConditions();
+    });
 
     // 전체 채우기
-    const fillGridBtn = document.getElementById('fillGrid');
-    if (fillGridBtn) {
-        fillGridBtn.addEventListener('click', () => {
-            for (let i = 0; i < gridSize; i++) {
-                for (let j = 0; j < gridSize; j++) {
-                    currentGrid[i][j] = 2; // 검은색 칸 (단어 입력 공간)
-                }
+    document.getElementById('fillGrid').addEventListener('click', () => {
+        for (let i = 0; i < gridSize; i++) {
+            for (let j = 0; j < gridSize; j++) {
+                currentGrid[i][j] = 2; // 검은색 칸 (단어 입력 공간)
             }
-            renderGrid();
-            checkConditions();
-        });
-    }
+        }
+        renderGrid();
+        checkConditions();
+    });
 
     // 그리드 크기 변경
-    const gridSizeInput = document.getElementById('grid_size');
-    if (gridSizeInput) {
-        gridSizeInput.addEventListener('change', (e) => {
-            initializeGrid(parseInt(e.target.value));
-        });
-    }
+    document.getElementById('grid_size').addEventListener('change', (e) => {
+        initializeGrid(parseInt(e.target.value));
+    });
 
     // 레벨 선택
-    const levelSelect = document.getElementById('level_id');
-    if (levelSelect) {
-        levelSelect.addEventListener('change', (e) => {
-            const levelId = e.target.value;
-            console.log('레벨 선택됨:', levelId);
-            
-            if (levelId) {
-                currentLevel = levelId;
-                console.log('currentLevel 설정됨:', currentLevel);
-                fetchLevelConditions(levelId);
-            } else {
-                currentLevel = null;
-                console.log('currentLevel 초기화됨');
-                hideLevelInfo();
-            }
-        });
-    }
+    document.getElementById('level_id').addEventListener('change', (e) => {
+        const levelId = e.target.value;
+        if (levelId) {
+            fetchLevelConditions(levelId);
+        } else {
+            hideLevelInfo();
+        }
+    });
 
     // 초기 그리드 생성
     initializeGrid(5);
-    
-    // 샘플보기 버튼 이벤트 연결
-    const showSamplesBtn = document.getElementById('showSamples');
-    console.log('showSamples 버튼 찾기:', showSamplesBtn);
-    
-    if (showSamplesBtn) {
-        console.log('showSamples 버튼에 이벤트 리스너 추가');
-        showSamplesBtn.addEventListener('click', function() {
-            console.log('샘플보기 버튼 클릭됨!');
-            console.log('currentLevel:', currentLevel);
-            
-            if (!currentLevel) {
-                alert('먼저 레벨을 선택해주세요.');
-                return;
-            }
-            
-            console.log('샘플 템플릿 로드 시작...');
-            loadSampleTemplates(currentLevel);
-        });
-    } else {
-        console.log('showSamples 버튼을 찾을 수 없습니다!');
-    }
-    
-    // 테스트 버튼 제거 (나중에 삭제할 예정)
-    const testButton = document.getElementById('testButton');
-    if (testButton) {
-        testButton.style.display = 'none';
-    }
 });
 
 // 레벨 조건 가져오기
@@ -481,14 +353,6 @@ function showLevelInfo(level, templates) {
     document.getElementById('wordDifficulty').textContent = level.word_difficulty;
     document.getElementById('hintDifficulty').textContent = level.hint_difficulty;
     document.getElementById('levelConditions').style.display = 'block';
-    
-    // 샘플보기 버튼 표시
-    const showSamplesBtn = document.getElementById('showSamples');
-    if (showSamplesBtn) {
-        showSamplesBtn.style.display = 'block';
-        currentLevel = level.id;
-    }
-    
     window.existingTemplates = templates || [];
     
     // 기존 템플릿 목록 표시
@@ -595,14 +459,6 @@ function showTemplateDetail(template) {
 function hideLevelInfo() {
     document.getElementById('levelConditions').style.display = 'none';
     document.getElementById('existingTemplates').style.display = 'none';
-    
-    // 샘플보기 버튼 숨기기
-    const showSamplesBtn = document.getElementById('showSamples');
-    if (showSamplesBtn) {
-        showSamplesBtn.style.display = 'none';
-        currentLevel = null;
-    }
-    
     levelConditions = null;
 }
 
@@ -643,11 +499,11 @@ function checkConditions() {
         isValid = false;
     }
     
-    // 교차점 개수 확인
+    // 교차점 개수 확인 (최소값 체크)
     if (intersectionCount >= levelConditions.intersection_count) {
-        details.push(`✅ 교차점 개수: ${intersectionCount} / 최소 ${levelConditions.intersection_count}`);
+        details.push(`✅ 교차점 개수: ${intersectionCount}개 (최소 ${levelConditions.intersection_count}개 필요)`);
     } else {
-        details.push(`❌ 교차점 개수: ${intersectionCount} / 최소 ${levelConditions.intersection_count}`);
+        details.push(`❌ 교차점 개수: ${intersectionCount}개 (최소 ${levelConditions.intersection_count}개 필요)`);
         isValid = false;
     }
     
@@ -721,50 +577,47 @@ function updateWordPositionsList(wordPositions) {
     container.innerHTML = html;
     
     // 번호 선택 이벤트 추가
-    const numberSelects = document.querySelectorAll('.word-number-select');
-    if (numberSelects.length > 0) {
-        numberSelects.forEach(select => {
-            select.addEventListener('change', function() {
-                const wordId = this.dataset.wordId;
-                const selectedNumber = this.value;
-                
-                // 다른 번호와 중복 체크
-                if (selectedNumber && isDuplicateNumber(selectedNumber, wordId)) {
-                    alert('이미 사용된 번호입니다.');
-                    this.value = '';
-                    return;
-                }
-                
-                // 그리드에서 해당 단어 하이라이트
-                highlightWordInGrid(parseInt(wordId), selectedNumber);
-                
-                // 저장 버튼 상태 업데이트 (단어 위치 정보는 다시 업데이트하지 않음)
-                updateSaveButtonState();
-            });
+    document.querySelectorAll('.word-number-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const wordId = this.dataset.wordId;
+            const selectedNumber = this.value;
             
-            // 포커스 시 하이라이트
-            select.addEventListener('focus', function() {
-                const wordId = this.dataset.wordId;
-                highlightWordInGrid(parseInt(wordId), this.value || 'focus');
-            });
+            // 다른 번호와 중복 체크
+            if (selectedNumber && isDuplicateNumber(selectedNumber, wordId)) {
+                alert('이미 사용된 번호입니다.');
+                this.value = '';
+                return;
+            }
             
-            // 포커스 아웃 시 하이라이트 제거
-            select.addEventListener('blur', function() {
-                const wordId = this.dataset.wordId;
-                if (!this.value) {
-                    removeWordHighlight(parseInt(wordId));
-                }
-            });
+            // 그리드에서 해당 단어 하이라이트
+            highlightWordInGrid(parseInt(wordId), selectedNumber);
             
-            // 단어 위치 아이템 클릭 시에도 포커스
-            const wordItem = select.closest('.word-position-item');
-            if (wordItem) {
-                wordItem.addEventListener('click', function() {
-                    select.focus();
-                });
+            // 저장 버튼 상태 업데이트 (단어 위치 정보는 다시 업데이트하지 않음)
+            updateSaveButtonState();
+        });
+        
+        // 포커스 시 하이라이트
+        select.addEventListener('focus', function() {
+            const wordId = this.dataset.wordId;
+            highlightWordInGrid(parseInt(wordId), this.value || 'focus');
+        });
+        
+        // 포커스 아웃 시 하이라이트 제거
+        select.addEventListener('blur', function() {
+            const wordId = this.dataset.wordId;
+            if (!this.value) {
+                removeWordHighlight(parseInt(wordId));
             }
         });
-    }
+        
+        // 단어 위치 아이템 클릭 시에도 포커스
+        const wordItem = select.closest('.word-position-item');
+        if (wordItem) {
+            wordItem.addEventListener('click', function() {
+                select.focus();
+            });
+        }
+    });
 }
 
 // 번호 옵션 생성 (word_positions의 id 값 사용)
@@ -1015,8 +868,7 @@ function isSameTemplate(existingTemplates, gridPattern) {
 
 // 폼 제출
 const gridTemplateForm = document.getElementById('gridTemplateForm');
-if (gridTemplateForm) {
-    gridTemplateForm.addEventListener('submit', (e) => {
+gridTemplateForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (!levelConditions) {
         alert('레벨을 선택해주세요.');
@@ -1137,8 +989,7 @@ if (gridTemplateForm) {
         console.error('Error:', error);
         alert('템플릿 저장 중 오류가 발생했습니다.');
     });
-    });
-}
+});
 
 // 마우스 드래그 이벤트
 document.addEventListener('mousedown', () => {
@@ -1205,18 +1056,10 @@ function extractWords(templateId) {
 function closeWordExtractionModalAndFocus() {
     const modalEl = document.getElementById('wordExtractionModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) {
-        modal.hide();
-        // 모달 backdrop 제거
-        const backdrop = document.querySelector('.modal-backdrop');
-        if (backdrop) {
-            backdrop.remove();
-        }
-        // body에서 modal-open 클래스 제거
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
-    }
+    if (modal) modal.hide();
+    
+    // 페이지 새로고침 제거 - 스크롤 위치 유지를 위해
+    // window.location.reload();
     
     // 모달 닫힌 후 포커스 복원 및 스크롤 위치 복원
     setTimeout(() => {
@@ -1499,18 +1342,8 @@ function renderGridWithWordOrder(gridPattern, wordOrder) {
             if (cellValue === 2) { // 검은색칸 (단어가 있는 칸)
                 cellClass += ' bg-dark text-white';
                 if (wordInfo) {
-                    if (wordInfo.isIntersection) {
-                        // 교차점인 경우: 가로 단어는 큰 번호, 세로 단어는 작은 번호로 표시
-                        cellContent = `
-                            <div style="position: relative; width: 100%; height: 100%;">
-                                <span class="word-number" style="position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; font-size: 8px; background: #ff6b6b;">${wordInfo.horizontalWord.word_id}</span>
-                                <span class="word-number" style="position: absolute; bottom: 2px; right: 2px; width: 16px; height: 16px; font-size: 8px; background: #4ecdc4;">${wordInfo.verticalWord.word_id}</span>
-                            </div>
-                        `;
-                    } else {
-                        // 단일 단어인 경우
-                        cellContent = `<span class="word-number">${wordInfo.word_id}</span>`;
-                    }
+                    // word_positions의 id 값으로 표시
+                    cellContent = `<span class="word-number">${wordInfo.word_id}</span>`;
                 }
             } else { // 흰색칸 (빈 칸)
                 cellClass += ' bg-light';
@@ -1526,11 +1359,8 @@ function renderGridWithWordOrder(gridPattern, wordOrder) {
     return html;
 }
 
-// 특정 위치의 단어 정보 찾기 (교차점 우선순위 적용)
+// 특정 위치의 단어 정보 찾기
 function getWordInfoAtPosition(x, y, wordOrder) {
-    let horizontalWord = null;
-    let verticalWord = null;
-    
     for (const wordInfo of wordOrder) {
         const word = wordInfo.position;
         
@@ -1539,7 +1369,7 @@ function getWordInfoAtPosition(x, y, wordOrder) {
             if (y === word.start_y && x >= word.start_x && x <= word.end_x) {
                 // 단어의 시작 위치인지 확인
                 if (x === word.start_x) {
-                    horizontalWord = wordInfo;
+                    return wordInfo;
                 }
             }
         }
@@ -1548,25 +1378,13 @@ function getWordInfoAtPosition(x, y, wordOrder) {
             if (x === word.start_x && y >= word.start_y && y <= word.end_y) {
                 // 단어의 시작 위치인지 확인
                 if (y === word.start_y) {
-                    verticalWord = wordInfo;
+                    return wordInfo;
                 }
             }
         }
     }
     
-    // 교차점인 경우: 가로 단어 우선, 세로 단어는 작은 번호로 표시
-    if (horizontalWord && verticalWord) {
-        // 가로 단어를 메인으로 반환하되, 교차점 정보 포함
-        return {
-            ...horizontalWord,
-            isIntersection: true,
-            horizontalWord: horizontalWord,
-            verticalWord: verticalWord
-        };
-    }
-    
-    // 단일 단어인 경우
-    return horizontalWord || verticalWord;
+    return null;
 }
 
 // 저장 버튼 상태만 업데이트 (단어 위치 정보는 다시 생성하지 않음)
@@ -1606,11 +1424,11 @@ function updateSaveButtonState() {
         isValid = false;
     }
     
-    // 교차점 개수 확인
+    // 교차점 개수 확인 (최소값 체크)
     if (intersectionCount >= levelConditions.intersection_count) {
-        details.push(`✅ 교차점 개수: ${intersectionCount} / 최소 ${levelConditions.intersection_count}`);
+        details.push(`✅ 교차점 개수: ${intersectionCount}개 (최소 ${levelConditions.intersection_count}개 필요)`);
     } else {
-        details.push(`❌ 교차점 개수: ${intersectionCount} / 최소 ${levelConditions.intersection_count}`);
+        details.push(`❌ 교차점 개수: ${intersectionCount}개 (최소 ${levelConditions.intersection_count}개 필요)`);
         isValid = false;
     }
     
@@ -1655,479 +1473,124 @@ document.addEventListener('DOMContentLoaded', function() {
 function showHint(hint) {
     alert('힌트: ' + hint);
 }
-
-// 레벨 선택 시 샘플보기 버튼 표시
-const levelSelectForSamples = document.getElementById('level_id');
-if (levelSelectForSamples) {
-    levelSelectForSamples.addEventListener('change', function() {
-        const levelId = this.value;
-        const showSamplesBtn = document.getElementById('showSamples');
-        
-        if (levelId) {
-            showSamplesBtn.style.display = 'block';
-            currentLevel = levelId;
-        } else {
-            showSamplesBtn.style.display = 'none';
-            currentLevel = null;
-        }
-    });
-}
-
-// URL 파라미터에서 레벨 ID 확인 및 자동 선택
-document.addEventListener('DOMContentLoaded', function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const levelId = urlParams.get('level_id');
-    
-    if (levelId) {
-        const levelSelect = document.getElementById('level_id');
-        levelSelect.value = levelId;
-        currentLevel = levelId;
-        
-        // 샘플보기 버튼 표시
-        const showSamplesBtn = document.getElementById('showSamples');
-        if (showSamplesBtn) {
-            showSamplesBtn.style.display = 'block';
-        }
-        
-        // 레벨 조건 정보 로드
-        fetchLevelConditions(levelId);
-    }
-});
-
-// 샘플보기 버튼 클릭 (기존 이벤트 리스너는 DOMContentLoaded에서 처리)
-
-// 샘플 템플릿 로드
-function loadSampleTemplates(levelId) {
-    console.log('loadSampleTemplates 호출됨, levelId:', levelId);
-    
-    fetch('/puzzle/grid-templates/sample-templates', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            level_id: levelId
-        })
-    })
-    .then(response => {
-        console.log('서버 응답:', response);
-        return response.json();
-    })
-    .then(data => {
-        console.log('서버 데이터:', data);
-        if (data.success) {
-            currentSamples = data.samples;
-            displaySampleTemplates(data.level, data.samples);
-            const modal = new bootstrap.Modal(document.getElementById('sampleTemplatesModal'));
-            modal.show();
-        } else {
-            alert('샘플 템플릿 로드 실패: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('샘플 템플릿 로드 중 오류가 발생했습니다.');
-    });
-}
-
-// 샘플 템플릿 표시
-function displaySampleTemplates(level, samples) {
-    // 레벨 정보 업데이트
-    document.getElementById('sampleLevelInfo').textContent = `레벨 ${level.level} - ${level.level_name}`;
-    document.getElementById('sampleWordCount').textContent = level.word_count;
-    document.getElementById('sampleIntersectionCount').textContent = level.intersection_count;
-    document.getElementById('sampleDifficulty').textContent = `${level.word_difficulty} (${level.hint_difficulty})`;
-    
-    // 샘플 컨테이너 초기화
-    const container = document.getElementById('samplesContainer');
-    container.innerHTML = '';
-    
-    // 샘플 템플릿들 생성
-    samples.forEach((sample, index) => {
-        const sampleDiv = document.createElement('div');
-        sampleDiv.className = 'col-md-4 mb-3';
-        
-        // 검은색/흰색 칸 정보 계산
-        let blackCells = 0, whiteCells = 0;
-        if (sample.black_cells && sample.white_cells) {
-            blackCells = sample.black_cells;
-            whiteCells = sample.white_cells;
-        } else {
-            // 기존 방식으로 계산
-            for (let i = 0; i < sample.grid.length; i++) {
-                for (let j = 0; j < sample.grid[i].length; j++) {
-                    if (sample.grid[i][j] === 2) blackCells++;
-                    else whiteCells++;
-                }
-            }
-        }
-        
-        sampleDiv.innerHTML = `
-            <div class="card h-100 sample-card" data-index="${index}">
-                <div class="card-header">
-                    <h6 class="card-title mb-0">${sample.name}</h6>
-                </div>
-                <div class="card-body">
-                    <p class="card-text small">${sample.description}</p>
-                    <div class="sample-grid-container mb-2">
-                        ${generateSampleGridHTML(sample.grid)}
-                    </div>
-                    <div class="sample-info small text-muted mb-2">
-                        <div class="row">
-                            <div class="col-6">
-                                <i class="fas fa-square text-dark"></i> 검은색: ${blackCells}칸
-                            </div>
-                            <div class="col-6">
-                                <i class="fas fa-square text-light"></i> 흰색: ${whiteCells}칸
-                            </div>
-                        </div>
-                        <div class="row mt-1">
-                            <div class="col-12">
-                                <small>비율: ${whiteCells}:${blackCells} (${(whiteCells/blackCells).toFixed(1)}:1)</small>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="text-center">
-                        <button type="button" class="btn btn-sm btn-primary select-sample-btn" data-index="${index}">
-                            이 샘플 선택
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(sampleDiv);
-    });
-    
-    // 샘플 선택 이벤트 추가
-    document.querySelectorAll('.select-sample-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const index = parseInt(this.getAttribute('data-index'));
-            selectSample(index);
-        });
-    });
-}
-
-// 샘플 그리드 HTML 생성
-function generateSampleGridHTML(grid) {
-    const size = grid.length;
-    let html = `<div class="sample-grid" style="display: inline-grid; grid-template-columns: repeat(${size}, 1fr); gap: 1px; background: #ccc; padding: 2px; border-radius: 4px;">`;
-    
-    for (let i = 0; i < size; i++) {
-        for (let j = 0; j < size; j++) {
-            const cellClass = grid[i][j] === 1 ? 'bg-dark' : 'bg-light';
-            html += `<div class="sample-cell ${cellClass}" style="width: 20px; height: 20px; border-radius: 2px;"></div>`;
-        }
-    }
-    
-    html += '</div>';
-    return html;
-}
-
-// 샘플 선택
-function selectSample(index) {
-    selectedSampleIndex = index;
-    const sample = currentSamples[index];
-    
-    // 선택된 샘플 정보 표시
-    document.getElementById('selectedSampleInfo').innerHTML = `
-        <strong>${sample.name}</strong><br>
-        <small>${sample.description}</small>
-    `;
-    
-    // 기본 템플릿 이름 설정
-    const level = document.getElementById('level_id');
-    const levelText = level.options[level.selectedIndex].text;
-    document.getElementById('templateName').value = `${levelText} - ${sample.name}`;
-    
-    // 샘플 선택 모달 닫기
-    const sampleModal = bootstrap.Modal.getInstance(document.getElementById('sampleTemplatesModal'));
-    sampleModal.hide();
-    
-    // 템플릿 생성 모달 열기
-    const createModal = new bootstrap.Modal(document.getElementById('createFromSampleModal'));
-    createModal.show();
-}
-
-// 템플릿 생성 버튼 클릭
-const createTemplateBtn = document.getElementById('createTemplateBtn');
-if (createTemplateBtn) {
-    createTemplateBtn.addEventListener('click', function() {
-        const templateName = document.getElementById('templateName').value.trim();
-        
-        if (!templateName) {
-            alert('템플릿 이름을 입력해주세요.');
-            return;
-        }
-        
-        if (selectedSampleIndex === null) {
-            alert('샘플을 선택해주세요.');
-            return;
-        }
-        
-        createTemplateFromSample(templateName, selectedSampleIndex);
-    });
-}
-
-// 샘플로부터 템플릿 생성
-function createTemplateFromSample(templateName, sampleIndex) {
-    fetch('/puzzle/grid-templates/create-from-sample', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            level_id: currentLevel,
-            sample_index: sampleIndex,
-            template_name: templateName
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // 성공 메시지 표시
-            const toast = document.createElement('div');
-            toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
-            toast.style.zIndex = '9999';
-            toast.innerHTML = `
-                <div class="d-flex">
-                    <div class="toast-body">
-                        <i class="fas fa-check-circle"></i> ${data.message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                </div>
-            `;
-            document.body.appendChild(toast);
-            
-            const bsToast = new bootstrap.Toast(toast);
-            bsToast.show();
-            
-            // 모달 닫기
-            const createModal = bootstrap.Modal.getInstance(document.getElementById('createFromSampleModal'));
-            createModal.hide();
-            
-            // 템플릿 목록 페이지로 이동
-            setTimeout(() => {
-                window.location.href = '/puzzle/grid-templates';
-            }, 1500);
-        } else {
-            alert('템플릿 생성 실패: ' + data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('템플릿 생성 중 오류가 발생했습니다.');
-    });
-}
 </script>
 
-@push('styles')
 <style>
-    .grid-cell {
-        width: 40px;
-        height: 40px;
-        border: 1px solid #ccc;
-        display: inline-block;
-        margin: 1px;
-        cursor: pointer;
-        text-align: center;
-        line-height: 40px;
-        font-weight: bold;
-        transition: background-color 0.2s;
-    }
-    
-    .grid-cell:hover {
-        background-color: #e9ecef !important;
-    }
-    
-    .grid-cell.black {
-        background-color: #343a40;
-        color: white;
-    }
-    
-    .grid-cell.white {
-        background-color: #ffffff;
-        color: #343a40;
-    }
-    
-    /* 그리드 넘버링 스타일 - 기존 스타일 복원 */
-    .grid-cell-number {
-        position: relative;
-        transition: all 0.2s ease;
-    }
-    
-    .grid-cell-number:hover {
-        transform: scale(1.05);
-        z-index: 10;
-    }
-    
-    .word-number {
-        background: #ff6b6b;
-        color: white;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        font-weight: bold;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    
-    /* 교차점 번호 스타일 */
-    .word-number.intersection-horizontal {
-        background: #ff6b6b;
-        width: 16px;
-        height: 16px;
-        font-size: 8px;
-    }
-    
-    .word-number.intersection-vertical {
-        background: #4ecdc4;
-        width: 16px;
-        height: 16px;
-        font-size: 8px;
-    }
-    
-    .grid-container {
-        background: white;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .word-order-list {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    
-    .word-order-list .card {
-        transition: all 0.2s ease;
-    }
-    
-    .word-order-list .card:hover {
-        transform: translateX(5px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    /* 단어 위치 정보 스타일 */
-    .word-position-item {
-        transition: all 0.2s ease;
-        border: 1px solid #dee2e6 !important;
-    }
-    
-    .word-position-item:hover {
-        border-color: #007bff !important;
-        box-shadow: 0 2px 4px rgba(0,123,255,0.1);
-    }
-    
-    .word-position-item.selected {
-        border-color: #28a745 !important;
-        background-color: #f8fff9;
-    }
-    
-    .word-number-select {
-        transition: all 0.2s ease;
-    }
-    
-    .word-number-select:focus {
-        border-color: #007bff;
-        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-    }
-    
-    /* 그리드 하이라이트 효과 */
-    .grid-cell.highlighted {
-        border: 2px solid red !important;
-        box-shadow: 0 0 8px rgba(255,0,0,0.3);
-        z-index: 5;
-    }
-    
-    .grid-cell.highlighted-focus {
-        border: 2px solid #ff6b6b !important;
-        background-color: #ffebee !important;
-        box-shadow: 0 0 8px rgba(255,107,107,0.3);
-        z-index: 5;
-    }
-    
-    /* 단어 위치 정보 카드 스타일 */
-    #wordPositionsList {
-        scrollbar-width: thin;
-        scrollbar-color: #007bff #f8f9fa;
-    }
-    
-    #wordPositionsList::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    #wordPositionsList::-webkit-scrollbar-track {
-        background: #f8f9fa;
-        border-radius: 3px;
-    }
-    
-    #wordPositionsList::-webkit-scrollbar-thumb {
-        background: #007bff;
-        border-radius: 3px;
-    }
-    
-    #wordPositionsList::-webkit-scrollbar-thumb:hover {
-        background: #0056b3;
-    }
-    
-    .condition-check {
-        margin: 4px 0;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.9em;
-    }
-    
-    .condition-check.success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-    
-    .condition-check.warning {
-        background-color: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-    
-    .condition-check.danger {
-        background-color: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-    
-    .sample-grid {
-        max-width: 100%;
-        overflow: hidden;
-    }
-    
-    .sample-cell {
-        transition: transform 0.2s;
-    }
-    
-    .sample-card:hover .sample-cell {
-        transform: scale(1.1);
-    }
-    
-    .sample-card {
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-    
-    .sample-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    
-    .sample-grid-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 120px;
-    }
+.grid-cell:hover {
+    opacity: 0.8;
+}
+
+.grid-cell:active {
+    opacity: 0.6;
+}
+
+/* 그리드 넘버링 스타일 */
+.grid-cell-number {
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.grid-cell-number:hover {
+    transform: scale(1.05);
+    z-index: 10;
+}
+
+.word-number {
+    background: #ff6b6b;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.grid-container {
+    background: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.word-order-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.word-order-list .card {
+    transition: all 0.2s ease;
+}
+
+.word-order-list .card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* 단어 위치 정보 스타일 */
+.word-position-item {
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6 !important;
+}
+
+.word-position-item:hover {
+    border-color: #007bff !important;
+    box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+}
+
+.word-position-item.selected {
+    border-color: #28a745 !important;
+    background-color: #f8fff9;
+}
+
+.word-number-select {
+    transition: all 0.2s ease;
+}
+
+.word-number-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* 그리드 하이라이트 효과 */
+.grid-cell.highlighted {
+    border: 2px solid red !important;
+    box-shadow: 0 0 8px rgba(255,0,0,0.3);
+    z-index: 5;
+}
+
+.grid-cell.highlighted-focus {
+    border: 2px solid #ff6b6b !important;
+    background-color: #ffebee !important;
+    box-shadow: 0 0 8px rgba(255,107,107,0.3);
+    z-index: 5;
+}
+
+/* 단어 위치 정보 카드 스타일 */
+#wordPositionsList {
+    scrollbar-width: thin;
+    scrollbar-color: #007bff #f8f9fa;
+}
+
+#wordPositionsList::-webkit-scrollbar {
+    width: 6px;
+}
+
+#wordPositionsList::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 3px;
+}
+
+#wordPositionsList::-webkit-scrollbar-thumb {
+    background: #007bff;
+    border-radius: 3px;
+}
+
+#wordPositionsList::-webkit-scrollbar-thumb:hover {
+    background: #0056b3;
+}
 </style>
 @endpush 
