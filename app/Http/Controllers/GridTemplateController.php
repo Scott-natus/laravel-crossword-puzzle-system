@@ -978,150 +978,101 @@ class GridTemplateController extends Controller
         // 레벨별 최적화된 샘플들 (단어 수, 교차점, 그리드 크기 계산 기반)
         if ($level->level == 1) {
             // 레벨 1: 5단어, 2교차점, 5x5 그리드 (검은색 13-15칸)
-            // 샘플 1: 기본 십자형 (실제 템플릿 #19 기반)
+            // 샘플 1: 기본 십자형 (보강된 버전)
+            $crossGrid = $this->generateCrossPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '기본 십자형',
                 'description' => '가로와 세로가 교차하는 기본적인 형태 (검은색 13칸, 흰색 12칸)',
-                'grid' => [
-                    [2,1,1,1,1],
-                    [2,2,2,2,1],
-                    [2,1,1,2,1],
-                    [1,1,1,1,2],
-                    [2,2,2,1,2]
-                ],
-                'word_positions' => [
-                    ['id' => 2, 'start_x' => 0, 'start_y' => 1, 'end_x' => 3, 'end_y' => 1, 'direction' => 'horizontal', 'length' => 4],
-                    ['id' => 5, 'start_x' => 0, 'start_y' => 4, 'end_x' => 2, 'end_y' => 4, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 1, 'start_x' => 0, 'start_y' => 0, 'end_x' => 0, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 3, 'start_x' => 3, 'start_y' => 1, 'end_x' => 3, 'end_y' => 2, 'direction' => 'vertical', 'length' => 2],
-                    ['id' => 4, 'start_x' => 4, 'start_y' => 3, 'end_x' => 4, 'end_y' => 4, 'direction' => 'vertical', 'length' => 2]
-                ],
+                'grid' => $crossGrid,
+                'word_positions' => $this->extractWordPositions($crossGrid),
                 'pattern' => 'cross_basic',
-                'black_cells' => 13,
-                'white_cells' => 12
+                'black_cells' => $this->countBlackCells($crossGrid),
+                'white_cells' => $this->countWhiteCells($crossGrid)
             ];
             
-            // 샘플 2: L자형 패턴 (실제 템플릿 #18 기반)
+            // 샘플 2: L자형 패턴 (보강된 버전)
+            $lGrid = $this->generateLPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => 'L자형 패턴',
                 'description' => 'L자 모양으로 배치된 단어들 (검은색 14칸, 흰색 11칸)',
-                'grid' => [
-                    [1,1,1,1,2],
-                    [2,2,2,1,2],
-                    [1,1,2,1,2],
-                    [1,1,1,2,1],
-                    [2,2,2,2,1]
-                ],
-                'word_positions' => [
-                    ['id' => 1, 'start_x' => 0, 'start_y' => 1, 'end_x' => 2, 'end_y' => 1, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 5, 'start_x' => 0, 'start_y' => 4, 'end_x' => 3, 'end_y' => 4, 'direction' => 'horizontal', 'length' => 4],
-                    ['id' => 2, 'start_x' => 2, 'start_y' => 1, 'end_x' => 2, 'end_y' => 2, 'direction' => 'vertical', 'length' => 2],
-                    ['id' => 4, 'start_x' => 3, 'start_y' => 3, 'end_x' => 3, 'end_y' => 4, 'direction' => 'vertical', 'length' => 2],
-                    ['id' => 3, 'start_x' => 4, 'start_y' => 0, 'end_x' => 4, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3]
-                ],
+                'grid' => $lGrid,
+                'word_positions' => $this->extractWordPositions($lGrid),
                 'pattern' => 'l_shape',
-                'black_cells' => 14,
-                'white_cells' => 11
+                'black_cells' => $this->countBlackCells($lGrid),
+                'white_cells' => $this->countWhiteCells($lGrid)
             ];
             
-            // 샘플 3: 그물형 패턴 (실제 템플릿 #17 기반)
+            // 샘플 3: 그물형 패턴 (보강된 버전)
+            $netGrid = $this->generateNetPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '그물형 패턴',
                 'description' => '여러 교차점을 가진 복합형 패턴 (검은색 15칸, 흰색 10칸)',
-                'grid' => [
-                    [1,2,1,1,1],
-                    [1,2,2,2,2],
-                    [1,2,1,1,2],
-                    [2,1,1,1,2],
-                    [2,1,2,2,1]
-                ],
-                'word_positions' => [
-                    ['id' => 2, 'start_x' => 1, 'start_y' => 1, 'end_x' => 4, 'end_y' => 1, 'direction' => 'horizontal', 'length' => 4],
-                    ['id' => 5, 'start_x' => 2, 'start_y' => 4, 'end_x' => 3, 'end_y' => 4, 'direction' => 'horizontal', 'length' => 2],
-                    ['id' => 4, 'start_x' => 0, 'start_y' => 3, 'end_x' => 0, 'end_y' => 4, 'direction' => 'vertical', 'length' => 2],
-                    ['id' => 1, 'start_x' => 1, 'start_y' => 0, 'end_x' => 1, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 3, 'start_x' => 4, 'start_y' => 1, 'end_x' => 4, 'end_y' => 3, 'direction' => 'vertical', 'length' => 3]
-                ],
+                'grid' => $netGrid,
+                'word_positions' => $this->extractWordPositions($netGrid),
                 'pattern' => 'net',
-                'black_cells' => 15,
-                'white_cells' => 10
+                'black_cells' => $this->countBlackCells($netGrid),
+                'white_cells' => $this->countWhiteCells($netGrid)
             ];
             
         } elseif ($level->level == 2) {
             // 레벨 2: 6단어, 2교차점, 6x6 그리드 (검은색 16-18칸)
+            $crossGrid = $this->generateCrossPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '레벨 2 기본형',
                 'description' => '6단어 2교차점 기본 패턴 (검은색 16칸, 흰색 20칸)',
-                'grid' => [
-                    [2,1,1,1,1,1],
-                    [2,2,2,1,1,1],
-                    [2,1,1,2,1,1],
-                    [1,1,1,2,1,1],
-                    [1,1,1,1,2,1],
-                    [2,2,2,1,2,1]
-                ],
-                'word_positions' => [
-                    ['id' => 1, 'start_x' => 0, 'start_y' => 0, 'end_x' => 0, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 2, 'start_x' => 0, 'start_y' => 1, 'end_x' => 2, 'end_y' => 1, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 3, 'start_x' => 3, 'start_y' => 1, 'end_x' => 3, 'end_y' => 3, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 4, 'start_x' => 4, 'start_y' => 2, 'end_x' => 4, 'end_y' => 4, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 5, 'start_x' => 0, 'start_y' => 5, 'end_x' => 2, 'end_y' => 5, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 6, 'start_x' => 4, 'start_y' => 5, 'end_x' => 4, 'end_y' => 5, 'direction' => 'vertical', 'length' => 1]
-                ],
+                'grid' => $crossGrid,
+                'word_positions' => $this->extractWordPositions($crossGrid),
                 'pattern' => 'level2_basic',
-                'black_cells' => 16,
-                'white_cells' => 20
+                'black_cells' => $this->countBlackCells($crossGrid),
+                'white_cells' => $this->countWhiteCells($crossGrid)
             ];
             
         } elseif ($level->level == 3) {
             // 레벨 3: 8단어, 3교차점, 6x6 그리드 (검은색 21-25칸)
+            $netGrid = $this->generateNetPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '레벨 3 복합형',
                 'description' => '8단어 3교차점 복합 패턴 (검은색 22칸, 흰색 14칸)',
-                'grid' => [
-                    [2,1,2,1,1,1],
-                    [2,2,2,1,1,1],
-                    [2,1,2,2,1,1],
-                    [1,1,1,2,1,1],
-                    [1,1,1,1,2,1],
-                    [2,2,2,1,2,1]
-                ],
-                'word_positions' => [
-                    ['id' => 1, 'start_x' => 0, 'start_y' => 0, 'end_x' => 0, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 2, 'start_x' => 2, 'start_y' => 0, 'end_x' => 2, 'end_y' => 2, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 3, 'start_x' => 0, 'start_y' => 1, 'end_x' => 2, 'end_y' => 1, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 4, 'start_x' => 2, 'start_y' => 2, 'end_x' => 3, 'end_y' => 2, 'direction' => 'horizontal', 'length' => 2],
-                    ['id' => 5, 'start_x' => 3, 'start_y' => 2, 'end_x' => 3, 'end_y' => 4, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 6, 'start_x' => 4, 'start_y' => 3, 'end_x' => 4, 'end_y' => 5, 'direction' => 'vertical', 'length' => 3],
-                    ['id' => 7, 'start_x' => 0, 'start_y' => 5, 'end_x' => 2, 'end_y' => 5, 'direction' => 'horizontal', 'length' => 3],
-                    ['id' => 8, 'start_x' => 4, 'start_y' => 5, 'end_x' => 4, 'end_y' => 5, 'direction' => 'vertical', 'length' => 1]
-                ],
+                'grid' => $netGrid,
+                'word_positions' => $this->extractWordPositions($netGrid),
                 'pattern' => 'level3_complex',
-                'black_cells' => 22,
-                'white_cells' => 14
+                'black_cells' => $this->countBlackCells($netGrid),
+                'white_cells' => $this->countWhiteCells($netGrid)
             ];
             
         } else {
-            // 기타 레벨용 기본 샘플들
+            // 기타 레벨용 기본 샘플들 (보강된 버전)
+            $crossGrid = $this->generateCrossPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '기본 십자형',
                 'description' => '가로와 세로가 교차하는 기본적인 형태',
-                'grid' => $this->generateCrossPattern($wordCount, $intersectionCount),
-                'pattern' => 'cross'
+                'grid' => $crossGrid,
+                'word_positions' => $this->extractWordPositions($crossGrid),
+                'pattern' => 'cross',
+                'black_cells' => $this->countBlackCells($crossGrid),
+                'white_cells' => $this->countWhiteCells($crossGrid)
             ];
             
+            $lGrid = $this->generateLPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => 'L자형 패턴',
                 'description' => 'L자 모양으로 배치된 단어들',
-                'grid' => $this->generateLPattern($wordCount, $intersectionCount),
-                'pattern' => 'l_shape'
+                'grid' => $lGrid,
+                'word_positions' => $this->extractWordPositions($lGrid),
+                'pattern' => 'l_shape',
+                'black_cells' => $this->countBlackCells($lGrid),
+                'white_cells' => $this->countWhiteCells($lGrid)
             ];
             
+            $netGrid = $this->generateNetPattern($wordCount, $intersectionCount);
             $samples[] = [
                 'name' => '그물형 패턴',
                 'description' => '여러 교차점을 가진 복합형 패턴',
-                'grid' => $this->generateNetPattern($wordCount, $intersectionCount),
-                'pattern' => 'net'
+                'grid' => $netGrid,
+                'word_positions' => $this->extractWordPositions($netGrid),
+                'pattern' => 'net',
+                'black_cells' => $this->countBlackCells($netGrid),
+                'white_cells' => $this->countWhiteCells($netGrid)
             ];
         }
         
@@ -1129,147 +1080,101 @@ class GridTemplateController extends Controller
     }
     
     /**
-     * 십자형 패턴 생성
+     * 그리드에서 단어 위치 정보 추출
      */
-    private function generateCrossPattern($wordCount, $intersectionCount)
+    private function extractWordPositions($grid)
     {
-        $size = max(8, ceil(sqrt($wordCount * 2)));
-        $grid = array_fill(0, $size, array_fill(0, $size, 0));
+        $size = count($grid);
+        $wordPositions = [];
+        $wordId = 1;
+        $visited = array_fill(0, $size, array_fill(0, $size, false));
         
-        // 중앙 십자형 생성
-        $center = intval($size / 2);
-        
-        // 가로 단어 (중앙 행)
+        // 가로 단어 찾기
         for ($i = 0; $i < $size; $i++) {
-            $grid[$center][$i] = 1;
-        }
-        
-        // 세로 단어 (중앙 열)
-        for ($i = 0; $i < $size; $i++) {
-            $grid[$i][$center] = 1;
-        }
-        
-        // 추가 단어들 (가로 방향)
-        $wordCount -= 2; // 중앙 십자 제외
-        $rows = [0, $size - 1];
-        $rowIndex = 0;
-        
-        while ($wordCount > 0 && $rowIndex < count($rows)) {
-            $row = $rows[$rowIndex];
-            for ($col = 0; $col < $size && $wordCount > 0; $col++) {
-                if ($grid[$row][$col] == 0) {
-                    $grid[$row][$col] = 1;
-                    $wordCount--;
-                }
-            }
-            $rowIndex++;
-        }
-        
-        return $grid;
-    }
-    
-    /**
-     * L자형 패턴 생성
-     */
-    private function generateLPattern($wordCount, $intersectionCount)
-    {
-        $size = max(8, ceil(sqrt($wordCount * 2)));
-        $grid = array_fill(0, $size, array_fill(0, $size, 0));
-        
-        // L자 기본 구조
-        $startRow = 1;
-        $startCol = 1;
-        $lWidth = min(5, $size - 2);
-        $lHeight = min(5, $size - 2);
-        
-        // 가로 부분
-        for ($i = 0; $i < $lWidth; $i++) {
-            $grid[$startRow][$startCol + $i] = 1;
-        }
-        
-        // 세로 부분
-        for ($i = 0; $i < $lHeight; $i++) {
-            $grid[$startRow + $i][$startCol] = 1;
-        }
-        
-        // 추가 단어들
-        $wordCount -= ($lWidth + $lHeight - 1); // 교차점 제외
-        
-        // 대각선 방향 추가 단어
-        for ($i = 1; $i < min($lWidth, $lHeight) && $wordCount > 0; $i++) {
-            $grid[$startRow + $i][$startCol + $i] = 1;
-            $wordCount--;
-        }
-        
-        // 나머지 공간에 랜덤 배치
-        while ($wordCount > 0) {
-            $row = rand(0, $size - 1);
-            $col = rand(0, $size - 1);
-            if ($grid[$row][$col] == 0) {
-                $grid[$row][$col] = 1;
-                $wordCount--;
-            }
-        }
-        
-        return $grid;
-    }
-    
-    /**
-     * 그물형 패턴 생성
-     */
-    private function generateNetPattern($wordCount, $intersectionCount)
-    {
-        $size = max(10, ceil(sqrt($wordCount * 3)));
-        $grid = array_fill(0, $size, array_fill(0, $size, 0));
-        
-        // 그물형 기본 구조 (격자 패턴)
-        for ($i = 1; $i < $size - 1; $i += 2) {
-            for ($j = 1; $j < $size - 1; $j += 2) {
-                $grid[$i][$j] = 1;
-            }
-        }
-        
-        // 가로 연결선
-        for ($i = 1; $i < $size - 1; $i += 2) {
             for ($j = 0; $j < $size; $j++) {
-                if ($j % 2 == 0) {
-                    $grid[$i][$j] = 1;
+                if ($grid[$i][$j] == 2 && !$visited[$i][$j]) {
+                    // 가로 방향으로 연속된 검은색 칸 확인
+                    $startJ = $j;
+                    $endJ = $j;
+                    $k = $j;
+                    while ($k < $size && $grid[$i][$k] == 2) {
+                        $visited[$i][$k] = true;
+                        $endJ = $k;
+                        $k++;
+                    }
+                    
+                    // 2칸 이상이면 단어로 인정
+                    if ($endJ - $startJ + 1 >= 2) {
+                        $wordPositions[] = [
+                            'id' => $wordId++,
+                            'start_x' => $startJ,
+                            'start_y' => $i,
+                            'end_x' => $endJ,
+                            'end_y' => $i,
+                            'direction' => 'horizontal',
+                            'length' => $endJ - $startJ + 1
+                        ];
+                    }
                 }
             }
         }
         
-        // 세로 연결선
-        for ($i = 0; $i < $size; $i++) {
-            for ($j = 1; $j < $size - 1; $j += 2) {
-                if ($i % 2 == 0) {
-                    $grid[$i][$j] = 1;
+        // 세로 단어 찾기
+        for ($j = 0; $j < $size; $j++) {
+            for ($i = 0; $i < $size; $i++) {
+                if ($grid[$i][$j] == 2 && !$visited[$i][$j]) {
+                    // 세로 방향으로 연속된 검은색 칸 확인
+                    $startI = $i;
+                    $endI = $i;
+                    $k = $i;
+                    while ($k < $size && $grid[$k][$j] == 2) {
+                        $visited[$k][$j] = true;
+                        $endI = $k;
+                        $k++;
+                    }
+                    
+                    // 2칸 이상이면 단어로 인정
+                    if ($endI - $startI + 1 >= 2) {
+                        $wordPositions[] = [
+                            'id' => $wordId++,
+                            'start_x' => $j,
+                            'start_y' => $startI,
+                            'end_x' => $j,
+                            'end_y' => $endI,
+                            'direction' => 'vertical',
+                            'length' => $endI - $startI + 1
+                        ];
+                    }
                 }
             }
         }
         
-        // 단어 수 조정
-        $currentWords = $this->countWords($grid);
-        if ($currentWords > $wordCount) {
-            // 단어 수를 줄임
-            $excess = $currentWords - $wordCount;
-            $removed = 0;
-            while ($removed < $excess) {
-                $row = rand(0, $size - 1);
-                $col = rand(0, $size - 1);
-                if ($grid[$row][$col] == 1) {
-                    $grid[$row][$col] = 0;
-                    $removed++;
-                }
-            }
-        }
-        
-        return $grid;
+        return $wordPositions;
     }
     
     /**
-     * 그리드에서 단어 수 계산
+     * 검은색 칸 개수 계산
      */
-    private function countWords($grid)
+    private function countBlackCells($grid)
+    {
+        $count = 0;
+        $size = count($grid);
+        
+        for ($i = 0; $i < $size; $i++) {
+            for ($j = 0; $j < $size; $j++) {
+                if ($grid[$i][$j] == 2) {
+                    $count++;
+                }
+            }
+        }
+        
+        return $count;
+    }
+    
+    /**
+     * 흰색 칸 개수 계산
+     */
+    private function countWhiteCells($grid)
     {
         $count = 0;
         $size = count($grid);
