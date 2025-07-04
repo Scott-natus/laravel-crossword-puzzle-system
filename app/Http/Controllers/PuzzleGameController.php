@@ -211,10 +211,17 @@ class PuzzleGameController extends Controller
             $message = '정답입니다!';
         } else {
             $game->incrementWrongAnswer();
-            $message = '오답입니다. 누적 오답: ' . $game->current_level_wrong_answers . '회';
+            $wrongCount = $game->current_level_wrong_answers;
+            
+            // 오답 4회일 때 특별한 메시지
+            if ($wrongCount == 4) {
+                $message = '현재 오답이 4회 입니다, 5회 오답시 레벨을 재시작합니다';
+            } else {
+                $message = '오답입니다. 누적 오답: ' . $wrongCount . '회';
+            }
             
             // 오답 5회 초과 체크
-            if ($game->current_level_wrong_answers >= 5) {
+            if ($wrongCount >= 5) {
                 // 게임 상태 초기화
                 $game->current_level_correct_answers = 0;
                 $game->current_level_wrong_answers = 0;
@@ -234,6 +241,8 @@ class PuzzleGameController extends Controller
             'is_correct' => $isCorrect,
             'message' => $message,
             'correct_answer' => $word->word, // 디버깅용으로 정답도 반환
+            'correct_count' => $game->current_level_correct_answers,
+            'wrong_count' => $game->current_level_wrong_answers
         ]);
     }
 
@@ -360,7 +369,8 @@ class PuzzleGameController extends Controller
         return response()->json([
             'success' => true,
             'answer' => $word->word,
-            'message' => '정답을 확인합니다.'
+            'message' => '정답: ' . $word->word,
+            'show_answer' => true
         ]);
     }
 }

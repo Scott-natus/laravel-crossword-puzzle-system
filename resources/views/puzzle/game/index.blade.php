@@ -35,7 +35,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">정답 입력:</label>
-                            <input type="text" id="answer-input" class="form-control" placeholder="단어를 입력하세요">
+                            <input type="text" id="answer-input" class="form-control" placeholder="단어를 입력하세요" autocomplete="off">
                         </div>
                         <div class="d-flex gap-2">
                             <button type="button" id="check-answer-btn" class="btn btn-primary">확인</button>
@@ -120,27 +120,7 @@
     </div>
 </div>
 
-<!-- 정답보기 모달 -->
-<div class="modal fade" id="showAnswerModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-eye me-2"></i>정답 확인
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body text-center">
-                <div class="alert alert-info">
-                    <h4 id="answerText"></h4>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 @endsection
 
 @push('styles')
@@ -222,6 +202,23 @@
     box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     border-radius: 8px;
     overflow: hidden;
+}
+
+/* 자동완성 비활성화 */
+#answer-input {
+    -webkit-autocomplete: none;
+    -moz-autocomplete: none;
+    -ms-autocomplete: none;
+    autocomplete: none;
+}
+
+/* 브라우저별 자동완성 스타일 숨기기 */
+#answer-input:-webkit-autofill,
+#answer-input:-webkit-autofill:hover,
+#answer-input:-webkit-autofill:focus,
+#answer-input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #000 !important;
 }
 </style>
 @endpush
@@ -440,10 +437,14 @@ $('#check-answer-btn').click(function() {
         _token: '{{ csrf_token() }}'
     })
     .done(function(data) {
-        $('#result-message').html(`<div class="alert alert-${data.is_correct ? 'success' : 'danger'}">${data.message}</div>`);
+        // 실시간 카운트 업데이트
+        if (data.correct_count !== undefined && data.wrong_count !== undefined) {
+            updateGameCounts(data.correct_count, data.wrong_count);
+        }
         
         if (data.is_correct) {
             // 정답인 경우
+            $('#result-message').html(`<div class="alert alert-success">${data.message}</div>`);
             
             // 그리드에 정답 표시
             updateGridWithAnswer(data.correct_answer);
@@ -459,16 +460,21 @@ $('#check-answer-btn').click(function() {
             // 레벨 완료 체크 (모든 단어를 맞췄는지 확인)
             checkLevelCompletion();
         } else {
-            // 오답인 경우 입력 필드 초기화
-            $('#answer-input').val('').focus();
-            
-            // 오답 5회 초과 체크
+            // 오답인 경우
             if (data.wrong_count_exceeded) {
+                // 오답 5회 초과 시 메시지 표시
+                $('#result-message').html(`<div class="alert alert-danger">${data.message}</div>`);
                 // 2초 후 모달 표시
                 setTimeout(function() {
                     $('#wrongCountExceededModal').modal('show');
                 }, 2000);
+            } else {
+                // 일반 오답 시 메시지 표시 (4회일 때는 특별 메시지)
+                $('#result-message').html(`<div class="alert alert-danger">${data.message}</div>`);
             }
+            
+            // 입력 필드 초기화
+            $('#answer-input').val('').focus();
         }
     })
     .fail(function(xhr) {
@@ -551,6 +557,13 @@ function checkLevelCompletion() {
     }
 }
 
+// 실시간 게임 카운트 업데이트
+function updateGameCounts(correctCount, wrongCount) {
+    // 정답/오답 카운트 업데이트
+    $('.badge.bg-primary').text('정답: ' + correctCount);
+    $('.badge.bg-danger').text('오답: ' + wrongCount);
+}
+
 $('#show-hint-btn').click(function() {
     if (!currentWordId) return;
     
@@ -596,8 +609,7 @@ $('#show-answer-btn').click(function() {
     })
     .done(function(data) {
         if (data.success) {
-            $('#answerText').text(data.answer);
-            $('#showAnswerModal').modal('show');
+            $('#result-message').html(`<div class="alert alert-info"><i class="fas fa-eye me-2"></i>${data.message}</div>`);
         } else {
             alert(data.message || '정답을 불러올 수 없습니다.');
         }
