@@ -365,6 +365,9 @@ function handleCellClick(row, col, words) {
     $('#hints-list').empty(); // 기존 힌트 목록 삭제
     $('#additional-hints').hide(); // 힌트 영역 숨기기
     
+    // 힌트보기 버튼 재활성화 (새로운 단어 선택 시)
+    $('#show-hint-btn').prop('disabled', false).text('힌트보기');
+    
     // 우측 힌트 영역에 기본 힌트만 표시
     $('#current-hint').html(`
         <strong>힌트:</strong> ${selectedWord.hint || '힌트가 없습니다.'}
@@ -496,6 +499,9 @@ function checkLevelCompletion() {
 $('#show-hint-btn').click(function() {
     if (!currentWordId) return;
     
+    // 버튼 비활성화 (한 번만 클릭 가능)
+    $(this).prop('disabled', true).text('힌트 사용됨');
+    
     $.get('{{ route("puzzle-game.get-hints") }}', {
         word_id: currentWordId,
         current_hint_id: currentHintId, // 현재 힌트 ID 전달
@@ -515,10 +521,14 @@ $('#show-hint-btn').click(function() {
         } else {
             // 더 이상 힌트가 없는 경우
             alert(data.message || '더 이상 사용할 수 있는 힌트가 없습니다.');
+            // 힌트가 없으면 버튼 다시 활성화
+            $('#show-hint-btn').prop('disabled', false).text('힌트보기');
         }
     })
     .fail(function(xhr) {
         alert('힌트를 불러올 수 없습니다.');
+        // 오류 발생 시 버튼 다시 활성화
+        $('#show-hint-btn').prop('disabled', false).text('힌트보기');
     });
 });
 

@@ -243,14 +243,12 @@ class PuzzleGameController extends Controller
             'has_base_hint_id' => $request->has('base_hint_id')
         ]);
 
-        // 사용자가 요청한 쿼리 방식으로 수정
-        // 기본 힌트 ID를 사용하여 같은 word_id를 가진 다른 힌트를 찾되, 기본 힌트 ID는 제외
-        $query = DB::table('pz_hints as h1')
-            ->join('pz_hints as h2', 'h1.word_id', '=', 'h2.word_id')
-            ->where('h1.id', $request->base_hint_id)
-            ->where('h2.id', '<>', $request->base_hint_id)
-            ->select('h2.hint_text as hint', 'h2.id')
-            ->orderByRaw('RANDOM()')
+        // 요구사항: 기본 힌트 제외한 2개 중 ID가 최대값인 힌트만 선택
+        $query = DB::table('pz_hints')
+            ->where('word_id', $request->word_id)
+            ->where('id', '<>', $request->base_hint_id) // 기본 힌트 제외
+            ->select('hint_text as hint', 'id')
+            ->orderBy('id', 'desc') // ID 최대값 우선
             ->limit(1);
 
         // 실제 실행되는 SQL 쿼리를 로그에 출력
