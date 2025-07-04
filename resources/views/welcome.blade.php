@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>게시판</title>
+        <!-- Favicon -->
+        <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,600&display=swap" rel="stylesheet" />
@@ -209,7 +212,7 @@
                             <a href="{{ route('puzzle-game.index') }}" class="btn btn-light btn-lg me-3">퍼즐게임 시작</a>
                             @if(Auth::user()->isSpecificAdmin('rainynux@gmail.com') || Auth::user()->isAdmin())
                                 <a href="http://222.100.103.227/puzzle/words" class="btn btn-light btn-lg me-3">퍼즐관리</a>
-                                <a href="http://222.100.103.227/pgadmin4/" class="btn btn-light btn-lg">DB관리</a>
+                                <a href="{{ route('admin.users.index') }}" class="btn btn-light btn-lg">회원관리</a>
                             @endif
                         </div>
                     @endguest

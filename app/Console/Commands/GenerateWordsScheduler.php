@@ -63,6 +63,10 @@ class GenerateWordsScheduler extends Command
         // 카테고리 선택
         $targetCategory = $category ?: $this->selectRandomCategory();
         $this->info("🎯 선택된 카테고리: {$targetCategory}");
+        
+        // 음절 조건 표시
+        $syllableCondition = $this->getSyllableCondition(now()->minute);
+        $this->info("🔤 음절 조건: {$syllableCondition}");
 
         // 재미나이 API로 단어 생성 요청
         $prompt = $this->buildPrompt($targetCategory, $limit);
@@ -147,32 +151,35 @@ class GenerateWordsScheduler extends Command
     }
 
     /**
-     * 재미나이 API용 프롬프트 생성
+     * 십자낱말 퍼즐용 단어 생성 프롬프트
      */
     private function buildPrompt($category, $limit)
     {
-        return "다음 조건에 맞는 {$limit}개의 단어를 추천해주세요:
+        return "십자낱말 퍼즐을 만들기 위한 단어를 제안해줘
 
-분야: {$category}
-조건:
-1. 명사, 고유명사 포함
-2. 영어 제외 (한글만)
-3. 한 음절 단어 제외, 두 음절에서 다섯 음절 사이
+단어는 '명사,고유명사, 신조어' 로 이루어진 2음절과 5음절 사이의 단어를 {$limit}개 정도 추천해줘
 
-응답 형식:
-[{$category},단어1]
-[{$category},단어2]
-[{$category},단어3]
-...
+그리고 그 단어가 가장 연관된다고 생각되는 카테고리와 쌍으로 추천해줬으면 좋겠어
+
+한줄에 [카테고리,단어] 형태로 보여줘
 
 예시:
-[{$category},단어]
-[{$category},용어]
-[{$category},개념]
+[동물,강아지]
+[음식,김치찌개]
+[직업,의사]
+[스포츠,축구공]
 
 각 줄에 하나씩, 총 {$limit}개를 제시해주세요.
 
 주의: 반드시 [카테고리,단어] 형식으로만 응답해주세요.";
+    }
+
+    /**
+     * 십자낱말 퍼즐용 음절 조건 반환
+     */
+    private function getSyllableCondition($minute)
+    {
+        return "2음절에서 5음절 사이의 단어";
     }
 
     /**
@@ -184,12 +191,11 @@ class GenerateWordsScheduler extends Command
         
         foreach ($suggestedWords as $wordData) {
             $word = $wordData['word'] ?? '';
-            $isDuplicate = PzWord::where('word', $word)
-                ->where('category', $category)
-                ->exists();
+            $wordCategory = $wordData['category'] ?? $category;
+            $isDuplicate = PzWord::where('word', $word)->exists();
                 
             $result[] = [
-                $category,
+                $wordCategory,
                 $word,
                 mb_strlen($word),
                 $isDuplicate ? '중복' : '신규'
@@ -208,16 +214,15 @@ class GenerateWordsScheduler extends Command
         
         foreach ($suggestedWords as $wordData) {
             $word = trim($wordData['word'] ?? '');
+            $category = trim($wordData['category'] ?? $category);
             
-            // 유효성 검사
-            if (empty($word) || mb_strlen($word) < 2 || mb_strlen($word) > 4) {
+            // 유효성 검사 (2~5음절)
+            if (empty($word) || mb_strlen($word) < 2 || mb_strlen($word) > 5) {
                 continue;
             }
             
-            // 중복 체크
-            $exists = PzWord::where('word', $word)
-                ->where('category', $category)
-                ->exists();
+            // 중복 체크 (전체 카테고리에서)
+            $exists = PzWord::where('word', $word)->exists();
                 
             if ($exists) {
                 $this->writeToLog("중복 단어 스킵: [{$category}, {$word}]");

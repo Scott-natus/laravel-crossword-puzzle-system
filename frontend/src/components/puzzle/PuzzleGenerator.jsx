@@ -483,29 +483,77 @@ const PuzzleGenerator = () => {
 
     const renderGrid = (grid) => {
         const gridSize = grid.length;
+        
+        // 동적 셀 크기 계산
+        const calculateCellSize = () => {
+            const isMobile = window.innerWidth <= 480;
+            const isPortrait = window.innerHeight > window.innerWidth;
+            
+            let availableWidth, availableHeight;
+            
+            if (isMobile && isPortrait) {
+                // 모바일 세로 화면: 화면의 90% 사용
+                availableWidth = window.innerWidth * 0.9;
+                availableHeight = window.innerHeight * 0.9;
+            } else if (isMobile) {
+                // 모바일 가로 화면: 화면의 85% 사용
+                availableWidth = window.innerWidth * 0.85;
+                availableHeight = window.innerHeight * 0.8;
+            } else {
+                // 데스크톱/태블릿: 기본 크기 유지
+                availableWidth = Math.min(600, window.innerWidth * 0.8);
+                availableHeight = Math.min(600, window.innerHeight * 0.8);
+            }
+
+            // border와 gap 고려하여 실제 사용 가능한 크기 계산
+            const borderWidth = 2; // 그리드 테두리
+            const cellBorder = 1; // 셀 테두리
+            const gap = 1; // 셀 간격
+            
+            const totalBorderWidth = borderWidth * 2 + (gridSize - 1) * cellBorder * 2;
+            const totalGapWidth = (gridSize - 1) * gap;
+            
+            const maxCellWidth = (availableWidth - totalBorderWidth - totalGapWidth) / gridSize;
+            const maxCellHeight = (availableHeight - totalBorderWidth - totalGapWidth) / gridSize;
+            
+            // 더 작은 값으로 통일 (정사각형 유지)
+            const calculatedSize = Math.min(maxCellWidth, maxCellHeight);
+            
+            // 최소/최대 크기 제한
+            const minSize = isMobile ? 12 : 20;
+            const maxSize = isMobile ? 35 : 50;
+            
+            return Math.max(minSize, Math.min(maxSize, calculatedSize));
+        };
+        
+        const cellSize = calculateCellSize();
+        
         return (
             <div className="crossword-grid" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: `repeat(${gridSize}, 30px)`, 
+                gridTemplateColumns: `repeat(${gridSize}, ${cellSize}px)`, 
                 gap: '1px',
                 border: '2px solid #333',
                 backgroundColor: '#fff',
-                margin: '20px 0'
+                margin: '20px auto',
+                maxWidth: '90vw',
+                maxHeight: '90vh'
             }}>
                 {grid.map((row, rowIndex) =>
                     row.map((cell, colIndex) => (
                         <div
                             key={`${rowIndex}-${colIndex}`}
                             style={{
-                                width: '30px',
-                                height: '30px',
+                                width: `${cellSize}px`,
+                                height: `${cellSize}px`,
                                 border: '1px solid #ccc',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 backgroundColor: cell ? '#fff' : '#f0f0f0',
-                                fontSize: '14px',
-                                fontWeight: 'bold'
+                                fontSize: `${Math.max(8, Math.min(14, cellSize * 0.4))}px`,
+                                fontWeight: 'bold',
+                                boxSizing: 'border-box'
                             }}
                         >
                             {cell || ''}

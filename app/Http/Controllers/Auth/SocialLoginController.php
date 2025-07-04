@@ -34,6 +34,9 @@ class SocialLoginController extends Controller
             
             $user = $this->findOrCreateUser($googleUser, 'google');
             
+            // 최종 접속일 업데이트
+            $user->update(['last_login_at' => now()]);
+            
             Auth::login($user);
             
             // 세션에서 리다이렉션 URL 가져오기
@@ -70,6 +73,9 @@ class SocialLoginController extends Controller
             
             $user = $this->findOrCreateUser($kakaoUser, 'kakao');
             
+            // 최종 접속일 업데이트
+            $user->update(['last_login_at' => now()]);
+            
             Auth::login($user);
             
             // 세션에서 리다이렉션 URL 가져오기
@@ -105,6 +111,9 @@ class SocialLoginController extends Controller
             $naverUser = Socialite::driver('naver')->user();
             
             $user = $this->findOrCreateUser($naverUser, 'naver');
+            
+            // 최종 접속일 업데이트
+            $user->update(['last_login_at' => now()]);
             
             Auth::login($user);
             

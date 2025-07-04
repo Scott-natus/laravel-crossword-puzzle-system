@@ -200,8 +200,8 @@
       </div>
       <div class="modal-body">
         회원가입 또는 로그인 후 이용하실 수 있습니다.<br>
-        <a href="{{ route('register') }}" class="btn btn-primary mt-3">회원가입</a>
-        <a href="{{ route('login') }}" class="btn btn-outline-primary mt-3 ms-2">로그인</a>
+        <a href="{{ route('register') }}?redirect={{ urlencode(request()->url()) }}" class="btn btn-primary mt-3">회원가입</a>
+        <a href="{{ route('login') }}?redirect={{ urlencode(request()->url()) }}" class="btn btn-outline-primary mt-3 ms-2">로그인</a>
       </div>
     </div>
   </div>

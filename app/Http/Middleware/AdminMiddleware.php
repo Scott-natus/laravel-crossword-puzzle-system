@@ -18,6 +18,8 @@ class AdminMiddleware
     {
         // 로그인 확인
         if (!Auth::check()) {
+            // 리다이렉션 URL을 세션에 저장하고 로그인 페이지로 이동
+            session(['redirect_url' => $request->url()]);
             return redirect()->route('login')->with('error', '로그인이 필요합니다.');
         }
 
@@ -25,7 +27,7 @@ class AdminMiddleware
 
         // 관리자 권한 확인 (rainynux@gmail.com 또는 is_admin = true)
         if (!$user->isSpecificAdmin('rainynux@gmail.com') && !$user->isAdmin()) {
-            return redirect()->back()->with('error', '관리자 권한이 필요합니다.');
+            return redirect()->route('main')->with('error', '관리자 권한이 필요합니다.');
         }
 
         return $next($request);

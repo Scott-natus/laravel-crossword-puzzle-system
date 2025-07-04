@@ -3,6 +3,10 @@
     border: 2px solid #333;
     background: #fff;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    /* 동적 크기 조정을 위한 설정 */
+    max-width: 90vw;
+    max-height: 90vh;
+    margin: 0 auto;
 }
 
 .grid-row {
@@ -10,6 +14,7 @@
 }
 
 .grid-cell {
+    /* 기본 크기 (데스크톱) */
     width: 40px;
     height: 40px;
     border: 1px solid #ccc;
@@ -20,6 +25,10 @@
     position: relative;
     background: #fff;
     transition: all 0.2s ease;
+    /* 동적 크기 조정을 위한 설정 */
+    min-width: 20px;
+    min-height: 20px;
+    box-sizing: border-box;
 }
 
 .grid-cell:hover {
@@ -64,27 +73,67 @@
     font-weight: bold;
     color: #333;
     user-select: none;
+    /* 동적 폰트 크기 조정 */
+    font-size: clamp(8px, 2.5vw, 18px);
 }
 
-/* 그리드 크기 조정 */
+/* 태블릿 크기 조정 */
 @media (max-width: 768px) {
+    .crossword-grid {
+        max-width: 95vw;
+        max-height: 85vh;
+    }
+    
     .grid-cell {
         width: 30px;
         height: 30px;
+        min-width: 15px;
+        min-height: 15px;
     }
     
     .cell-content {
-        font-size: 14px;
+        font-size: clamp(6px, 2vw, 14px);
     }
 }
 
-@media (max-width: 480px) {
+/* 모바일 세로 화면 최적화 */
+@media (max-width: 480px) and (orientation: portrait) {
+    .crossword-grid {
+        max-width: 90vw;
+        max-height: 90vh;
+        /* 그리드 크기에 따른 동적 조정 */
+        width: calc(90vw - 4px); /* border 고려 */
+        height: calc(90vh - 4px);
+    }
+    
     .grid-cell {
+        /* 동적 크기 계산을 위한 기본값 */
         width: 25px;
         height: 25px;
+        min-width: 12px;
+        min-height: 12px;
     }
     
     .cell-content {
-        font-size: 12px;
+        font-size: clamp(4px, 1.8vw, 12px);
+    }
+}
+
+/* 모바일 가로 화면 */
+@media (max-width: 768px) and (orientation: landscape) {
+    .crossword-grid {
+        max-width: 85vw;
+        max-height: 80vh;
+    }
+    
+    .grid-cell {
+        width: 28px;
+        height: 28px;
+        min-width: 14px;
+        min-height: 14px;
+    }
+    
+    .cell-content {
+        font-size: clamp(5px, 1.5vw, 10px);
     }
 } 

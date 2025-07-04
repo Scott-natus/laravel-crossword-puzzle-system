@@ -6,6 +6,10 @@
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 
     <!-- title>{{ config('app.name', 'Laravel') }}</title -->
     <title> Home server BBS </title>
@@ -22,7 +26,30 @@
     <!-- jQuery CDN -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     
+    <!-- Bootstrap JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
     @stack('styles')
+    
+    <style>
+    /* 드롭다운 강제 스타일 */
+    .dropdown-menu {
+        display: none !important;
+    }
+    .dropdown-menu.show {
+        display: block !important;
+    }
+    .dropdown-toggle::after {
+        display: inline-block;
+        margin-left: 0.255em;
+        vertical-align: 0.255em;
+        content: "";
+        border-top: 0.3em solid;
+        border-right: 0.3em solid transparent;
+        border-bottom: 0;
+        border-left: 0.3em solid transparent;
+    }
+    </style>
 </head>
 <body class="custom-board">
     <!-- 네비게이션: 로고, 로그인/사용자명 -->
@@ -32,48 +59,59 @@
                 <i class="fas fa-brain me-2"></i>natus 작업소
             </a>
 
-            <!-- Board Navigation Dropdown -->
-            <div class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownBoard" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    게시판 바로가기
-                </a>
-                <ul class="dropdown-menu" aria-labelledby="navbarDropdownBoard">
-                    @if(isset($sharedBoardTypes))
-                        @foreach ($sharedBoardTypes as $boardType)
-                            <li>
-                                <a class="dropdown-item" href="{{ route('board.index', ['boardType' => $boardType->slug]) }}">
-                                    {{ $boardType->name }}
-                                </a>
-                            </li>
-                        @endforeach
-                    @endif
-
-                    @auth
-                        @if(Auth::user()->is_admin)
-                            <li><hr class="dropdown-divider"></li>
-                            <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
-                            <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">단어 관리</a></li>
-                            <li><a class="dropdown-item" href="{{ route('puzzle.hint-generator.index') }}">AI 힌트 생성</a></li>
-                            <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">레벨 관리</a></li>
-                            <li><a class="dropdown-item" href="{{ route('puzzle.grid-templates.index') }}">그리드 템플릿 관리</a></li>
-                        @endif
-                    @endauth
-                </ul>
-            </div>
-
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto"></ul>
+                <ul class="navbar-nav me-auto">
+                    <!-- Board Navigation Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownBoard" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            게시판 바로가기
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownBoard">
+                            @if(isset($sharedBoardTypes) && $sharedBoardTypes->count() > 0)
+                                @foreach ($sharedBoardTypes as $boardType)
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('board.index', ['boardType' => $boardType->slug]) }}">
+                                            {{ $boardType->name }}
+                                        </a>
+                                    </li>
+                                @endforeach
+                            @else
+                                <li><span class="dropdown-item-text">게시판이 없습니다</span></li>
+                            @endif
+
+                            @auth
+                                @if(Auth::user()->is_admin)
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
+                                    <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">단어 관리</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('puzzle.hint-generator.index') }}">AI 힌트 생성</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">레벨 관리</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('puzzle.grid-templates.index') }}">그리드 템플릿 관리</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">회원 관리</a></li>
+                                @endif
+                            @endauth
+                        </ul>
+                    </li>
+                </ul>
+                
                 <div class="d-flex align-items-center">
                     @auth
                         <span class="me-3 fw-bold">{{ Auth::user()->name }}</span>
                         <a href="{{ route('logout') }}" class="btn btn-outline-primary btn-sm" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">Logout</a>
                         <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">@csrf</form>
                     @else
-                        <a href="{{ route('login') }}" class="btn btn-outline-primary me-2">Login</a>
-                        <a href="{{ route('register') }}" class="btn btn-primary-custom">Register</a>
+                        @php
+                            $currentUrl = request()->url();
+                            $encodedUrl = urlencode($currentUrl);
+                        @endphp
+                        <!-- Debug: Current URL: {{ $currentUrl }} -->
+                        <!-- Debug: Encoded URL: {{ $encodedUrl }} -->
+                        <a href="{{ route('login') }}?redirect={{ $encodedUrl }}" class="btn btn-outline-primary me-2">Login</a>
+                        <a href="{{ route('register') }}?redirect={{ $encodedUrl }}" class="btn btn-primary-custom">Register</a>
                     @endauth
                 </div>
             </div>
@@ -198,5 +236,39 @@
         </div>
     </footer>
     @stack('scripts')
+    
+    <script>
+    // 드롭다운 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropdownElement = document.getElementById('navbarDropdownBoard');
+        if (dropdownElement && typeof bootstrap !== 'undefined') {
+            // Bootstrap 드롭다운 초기화
+            const dropdown = new bootstrap.Dropdown(dropdownElement);
+            
+            // 드롭다운 메뉴 요소
+            const dropdownMenu = dropdownElement.nextElementSibling;
+            if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+                // 수동 토글 기능 (Bootstrap이 작동하지 않을 경우 대비)
+                dropdownElement.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (dropdownMenu.classList.contains('show')) {
+                        dropdownMenu.classList.remove('show');
+                    } else {
+                        dropdownMenu.classList.add('show');
+                    }
+                });
+                
+                // 메뉴 외부 클릭 시 닫기
+                document.addEventListener('click', function(e) {
+                    if (!dropdownElement.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                        dropdownMenu.classList.remove('show');
+                    }
+                });
+            }
+        }
+    });
+    </script>
 </body>
 </html>

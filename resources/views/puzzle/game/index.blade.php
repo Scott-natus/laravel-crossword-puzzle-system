@@ -229,7 +229,9 @@ let currentWordId = null;
 let currentHintId = null;
 let baseHintId = null;
 let currentTemplateWords = [];
+let currentTemplate = null; // 현재 템플릿 저장
 let answeredWords = new Set();
+let answeredWordsData = new Map(); // 정답 데이터 저장 (wordId -> answer)
 let gameTimer = null;
 let timeLeft = {{ $level ? $level->time_limit : 0 }};
 
@@ -244,6 +246,7 @@ $(document).ready(function() {
 function loadTemplate() {
     $.get('{{ route("puzzle-game.get-template") }}')
         .done(function(data) {
+            currentTemplate = data.template; // 템플릿 저장
             currentTemplateWords = data.template.words;
             renderPuzzleGrid(data.template);
         })
@@ -252,14 +255,72 @@ function loadTemplate() {
         });
 }
 
+// 동적 셀 크기 계산 함수
+function calculateCellSize(gridSize) {
+    const isMobile = window.innerWidth <= 480;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    
+    let availableWidth, availableHeight;
+    
+    if (isMobile && isPortrait) {
+        // 모바일 세로 화면: 화면의 90% 사용
+        availableWidth = window.innerWidth * 0.9;
+        availableHeight = window.innerHeight * 0.9;
+    } else if (isMobile) {
+        // 모바일 가로 화면: 화면의 85% 사용
+        availableWidth = window.innerWidth * 0.85;
+        availableHeight = window.innerHeight * 0.8;
+    } else {
+        // 데스크톱/태블릿: 기본 크기 유지
+        availableWidth = Math.min(600, window.innerWidth * 0.8);
+        availableHeight = Math.min(600, window.innerHeight * 0.8);
+    }
+
+    // border와 gap 고려하여 실제 사용 가능한 크기 계산
+    const borderWidth = 2; // 그리드 테두리
+    const cellBorder = 1; // 셀 테두리
+    const gap = 0; // 셀 간격 (현재는 0)
+    
+    const totalBorderWidth = borderWidth * 2 + (gridSize - 1) * cellBorder * 2;
+    const totalGapWidth = (gridSize - 1) * gap;
+    
+    const maxCellWidth = (availableWidth - totalBorderWidth - totalGapWidth) / gridSize;
+    const maxCellHeight = (availableHeight - totalBorderWidth - totalGapWidth) / gridSize;
+    
+    // 더 작은 값으로 통일 (정사각형 유지)
+    const calculatedSize = Math.min(maxCellWidth, maxCellHeight);
+    
+    // 최소/최대 크기 제한
+    const minSize = isMobile ? 12 : 20;
+    const maxSize = isMobile ? 35 : 50;
+    
+    const finalSize = Math.max(minSize, Math.min(maxSize, calculatedSize));
+    
+    console.log('셀 크기 계산:', {
+        gridSize,
+        availableWidth,
+        availableHeight,
+        calculatedSize,
+        finalSize,
+        isMobile,
+        isPortrait
+    });
+    
+    return finalSize;
+}
+
 function renderPuzzleGrid(template) {
     const grid = $('#puzzle-grid');
     grid.empty();
     
     const gridData = template.grid_pattern;
     const words = template.words;
+    const gridSize = gridData.length;
     
-    let html = '<div class="grid-container" style="display: inline-block; border: 2px solid #333;">';
+    // 동적 셀 크기 계산
+    const cellSize = calculateCellSize(gridSize);
+    
+    let html = `<div class="grid-container" style="display: inline-block; border: 2px solid #333; max-width: 90vw; max-height: 90vh; margin: 0 auto;">`;
     
     for (let y = 0; y < gridData.length; y++) {
         html += '<div class="grid-row" style="display: flex;">';
@@ -279,10 +340,12 @@ function renderPuzzleGrid(template) {
                 if (wordInfo) {
                     if (wordInfo.isIntersection) {
                         // 교차점인 경우: 가로 단어는 큰 번호, 세로 단어는 작은 번호로 표시
+                        const badgeSize = Math.max(8, Math.min(16, cellSize * 0.3));
+                        const fontSize = Math.max(6, Math.min(10, cellSize * 0.2));
                         cellContent = `
                             <div style="position: relative; width: 100%; height: 100%;">
-                                <span class="word-number" style="position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; font-size: 8px; background: #ff6b6b;">${wordInfo.horizontalWord.word_id}</span>
-                                <span class="word-number" style="position: absolute; bottom: 2px; right: 2px; width: 16px; height: 16px; font-size: 8px; background: #4ecdc4;">${wordInfo.verticalWord.word_id}</span>
+                                <span class="word-number" style="position: absolute; top: 2px; left: 2px; width: ${badgeSize}px; height: ${badgeSize}px; font-size: ${fontSize}px; background: #ff6b6b; border-radius: 2px; display: flex; align-items: center; justify-content: center;">${wordInfo.horizontalWord.word_id}</span>
+                                <span class="word-number" style="position: absolute; bottom: 2px; right: 2px; width: ${badgeSize}px; height: ${badgeSize}px; font-size: ${fontSize}px; background: #4ecdc4; border-radius: 2px; display: flex; align-items: center; justify-content: center;">${wordInfo.verticalWord.word_id}</span>
                             </div>
                         `;
                     } else {
@@ -300,13 +363,38 @@ function renderPuzzleGrid(template) {
                 cellContent = '□';
             }
             
-            html += `<div class="${cellClass}" style="width: 40px; height: 40px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;"${clickEvent}>${cellContent}</div>`;
+            const fontSize = Math.max(8, Math.min(14, cellSize * 0.3));
+            html += `<div class="${cellClass}" style="width: ${cellSize}px; height: ${cellSize}px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}px; font-weight: bold; box-sizing: border-box;"${clickEvent}>${cellContent}</div>`;
         }
         html += '</div>';
     }
     
     html += '</div>';
     grid.html(html);
+    
+    // 그리드 렌더링 후 정답 상태 복원
+    restoreAnsweredCells();
+}
+
+// 정답 상태 복원 함수
+function restoreAnsweredCells() {
+    if (!answeredWords || answeredWords.size === 0) return;
+    
+    // answeredWords에서 정답 정보 복원
+    answeredWords.forEach(function(wordId) {
+        const correctWord = answeredWordsData.get(wordId);
+        if (correctWord) {
+            // 임시로 currentWordId 설정
+            const originalWordId = currentWordId;
+            currentWordId = wordId;
+            
+            // 정답 표시
+            updateGridWithAnswer(correctWord);
+            
+            // currentWordId 복원
+            currentWordId = originalWordId;
+        }
+    });
 }
 
 // 특정 위치의 단어 정보 찾기 (교차점 우선순위 적용 - 템플릿 관리와 동일)
@@ -444,6 +532,7 @@ $('#check-answer-btn').click(function() {
         
         if (data.is_correct) {
             // 정답인 경우
+            console.log('정답 확인됨:', data);
             $('#result-message').html(`<div class="alert alert-success">${data.message}</div>`);
             
             // 그리드에 정답 표시
@@ -483,8 +572,13 @@ $('#check-answer-btn').click(function() {
 });
 
 function updateGridWithAnswer(correctWord) {
+    console.log('updateGridWithAnswer 호출됨:', { correctWord, currentWordId, currentTemplate });
+    
     // 현재 선택된 단어의 위치 정보를 사용하여 그리드에 정답 표시
-    if (!currentWordId) return;
+    if (!currentWordId) {
+        console.log('currentWordId가 없음');
+        return;
+    }
     
     // 현재 선택된 단어 정보 찾기
     let selectedWord = null;
@@ -495,10 +589,16 @@ function updateGridWithAnswer(correctWord) {
         }
     }
     
-    if (!selectedWord) return;
+    if (!selectedWord) {
+        console.log('selectedWord를 찾을 수 없음');
+        return;
+    }
+    
+    console.log('selectedWord:', selectedWord);
     
     // 정답을 맞춘 단어를 추적에 추가
     answeredWords.add(currentWordId);
+    answeredWordsData.set(currentWordId, correctWord); // 정답 데이터 저장
     
     const position = selectedWord.position;
     const direction = position.direction;
@@ -506,6 +606,14 @@ function updateGridWithAnswer(correctWord) {
     const startY = position.start_y;
     const endX = position.end_x;
     const endY = position.end_y;
+    
+    // 현재 그리드 크기에 따른 동적 크기 계산
+    const gridSize = currentTemplate.grid_pattern.length;
+    const cellSize = calculateCellSize(gridSize);
+    const answerFontSize = Math.max(10, Math.min(18, cellSize * 0.4));
+    const answerPadding = Math.max(2, Math.min(6, cellSize * 0.1));
+    const badgeSize = Math.max(8, Math.min(16, cellSize * 0.3));
+    const badgeFontSize = Math.max(6, Math.min(10, cellSize * 0.2));
     
     // 그리드에서 해당 단어 위치에 정답 표시
     for (let i = 0; i < correctWord.length; i++) {
@@ -527,13 +635,13 @@ function updateGridWithAnswer(correctWord) {
             if (isStartPosition) {
                 // 시작 위치: 배지를 정답 뒤로 숨기고 정답만 표시
                 cell.html(`
-                    <div style="background-color: #6c757d; color: white; padding: 2px 4px; border-radius: 2px; font-size: 10px; font-weight: bold; z-index: 10;">${correctWord[i]}</div>
-                    <span class="word-number" style="position: absolute; top: 2px; left: 2px; z-index: 5; opacity: 0.3;">${selectedWord.word_id}</span>
+                    <div style="background-color: #6c757d; color: white; padding: ${answerPadding}px ${answerPadding * 2}px; border-radius: 2px; font-size: ${answerFontSize}px; font-weight: bold; z-index: 10;">${correctWord[i]}</div>
+                    <span class="word-number" style="position: absolute; top: 2px; left: 2px; z-index: 5; opacity: 0.3; width: ${badgeSize}px; height: ${badgeSize}px; font-size: ${badgeFontSize}px; display: flex; align-items: center; justify-content: center;">${selectedWord.word_id}</span>
                 `);
             } else {
                 // 중간 위치: 정답 문자만 표시
                 cell.html(`
-                    <div style="background-color: #6c757d; color: white; padding: 2px 4px; border-radius: 2px; font-size: 10px; font-weight: bold;">${correctWord[i]}</div>
+                    <div style="background-color: #6c757d; color: white; padding: ${answerPadding}px ${answerPadding * 2}px; border-radius: 2px; font-size: ${answerFontSize}px; font-weight: bold;">${correctWord[i]}</div>
                 `);
             }
             
@@ -659,5 +767,13 @@ function gameOver() {
         alert('오류가 발생했습니다.');
     });
 }
+
+// 화면 크기 변경 시 그리드 재렌더링 (정답 표시 유지)
+$(window).on('resize', function() {
+    if (currentTemplate) {
+        // 그리드 재렌더링 (정답 상태는 restoreAnsweredCells에서 복원됨)
+        renderPuzzleGrid(currentTemplate);
+    }
+});
 </script>
 @endpush 

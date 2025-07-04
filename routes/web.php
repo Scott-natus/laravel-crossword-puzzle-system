@@ -10,6 +10,7 @@ use App\Http\Controllers\PuzzleGridController;
 use App\Http\Controllers\GridTemplateController;
 use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\PuzzleGameController;
+use App\Http\Controllers\UserManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -162,4 +163,12 @@ Route::prefix('puzzle-game')->name('puzzle-game.')->group(function () {
         Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
         Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
     });
+});
+
+// 회원 관리 (관리자만 접근)
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    Route::get('/users', [UserManagementController::class, 'index'])->name('users.index');
+    Route::get('/users/{userId}/puzzle-info', [UserManagementController::class, 'getPuzzleGameInfo'])->name('users.puzzle-info');
+    Route::post('/users/{userId}/toggle-admin', [UserManagementController::class, 'toggleAdmin'])->name('users.toggle-admin');
+    Route::post('/users/{userId}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
 });

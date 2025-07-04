@@ -41,6 +41,9 @@
 
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
+                        @if(request()->get('redirect'))
+                            <input type="hidden" name="redirect" value="{{ request()->get('redirect') }}">
+                        @endif
 
                         <div class="row mb-3">
                             <label for="email" class="col-md-4 col-form-label text-md-end">이메일 주소</label>

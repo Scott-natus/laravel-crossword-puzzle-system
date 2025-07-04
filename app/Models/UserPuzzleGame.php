@@ -27,8 +27,8 @@ class UserPuzzleGame extends Model
     protected $casts = [
         'first_attempt_at' => 'datetime',
         'last_played_at' => 'datetime',
-        'accuracy_rate' => 'decimal:2',
         'is_active' => 'boolean',
+        'accuracy_rate' => 'decimal:2',
     ];
 
     public function user()

@@ -290,7 +290,7 @@ class GeminiService
                     } else {
                         continue;
                     }
-                    if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 4) {
+                    if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
                         $words[] = [
                             'category' => $category,
                             'word' => $word

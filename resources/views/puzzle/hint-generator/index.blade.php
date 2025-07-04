@@ -35,6 +35,9 @@
                             <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">
                                 <i class="fas fa-layer-group me-2"></i>레벨 관리
                             </a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">
+                                <i class="fas fa-users me-2"></i>회원 관리
+                            </a></li>
                         </ul>
                     </div>
                 </div>

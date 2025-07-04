@@ -48,6 +48,9 @@ class LoginController extends Controller
      */
     protected function authenticated(Request $request, $user)
     {
+        // 최종 접속일 업데이트
+        $user->update(['last_login_at' => now()]);
+        
         // 로그인 환영 메시지 설정
         session(['welcome_message' => $user->name . '님, 다시 오신 것을 환영합니다! 👋']);
         
@@ -62,9 +65,22 @@ class LoginController extends Controller
         }
         
         // 리다이렉션 URL이 있으면 해당 URL로, 없으면 기본 경로로
-        $redirectUrl = $request->get('redirect', $this->redirectPath());
+        $redirectUrl = $request->get('redirect');
         
-        return redirect()->intended($redirectUrl);
+        // redirect 파라미터가 없거나 현재 로그인 페이지 URL과 같으면 기본 경로로
+        if (!$redirectUrl || $redirectUrl === request()->url()) {
+            $redirectUrl = $this->redirectPath();
+        }
+        
+        // 디버깅 로그 추가
+        \Log::info('Login redirect debug', [
+            'get_redirect' => $request->get('redirect'),
+            'current_url' => request()->url(),
+            'redirectPath' => $this->redirectPath(),
+            'final_redirect' => $redirectUrl
+        ]);
+        
+        return redirect($redirectUrl);
     }
 
     /**
