@@ -211,7 +211,7 @@
                         <div class="mt-4">
                             <a href="{{ route('puzzle-game.index') }}" class="btn btn-light btn-lg me-3">퍼즐게임 시작</a>
                             @if(Auth::user()->isSpecificAdmin('rainynux@gmail.com') || Auth::user()->isAdmin())
-                                <a href="http://222.100.103.227/puzzle/words" class="btn btn-light btn-lg me-3">퍼즐관리</a>
+                                <a href="{{ route('puzzle.words.index') }}" class="btn btn-light btn-lg me-3">퍼즐관리</a>
                                 <a href="{{ route('admin.users.index') }}" class="btn btn-light btn-lg">회원관리</a>
                             @endif
                         </div>
