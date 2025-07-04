@@ -212,6 +212,22 @@ class PuzzleGameController extends Controller
         } else {
             $game->incrementWrongAnswer();
             $message = '오답입니다. 누적 오답: ' . $game->current_level_wrong_answers . '회';
+            
+            // 오답 5회 초과 체크
+            if ($game->current_level_wrong_answers >= 5) {
+                // 게임 상태 초기화
+                $game->current_level_correct_answers = 0;
+                $game->current_level_wrong_answers = 0;
+                $game->save();
+                
+                return response()->json([
+                    'is_correct' => false,
+                    'message' => '오답회수가 초과했습니다, 레벨을 다시 시작합니다.',
+                    'correct_answer' => $word->word,
+                    'restart_level' => true,
+                    'wrong_count_exceeded' => true
+                ]);
+            }
         }
 
         return response()->json([
@@ -315,6 +331,36 @@ class PuzzleGameController extends Controller
 
         return response()->json([
             'message' => '게임오버! 5분 후 재시도 가능합니다.',
+        ]);
+    }
+
+    public function showAnswer(Request $request)
+    {
+        $request->validate([
+            'word_id' => 'required|integer',
+        ]);
+
+        $user = Auth::user();
+        
+        // 관리자 권한 체크
+        if (!$user->is_admin) {
+            return response()->json(['error' => '관리자만 접근 가능합니다.'], 403);
+        }
+
+        // 단어 정보 가져오기
+        $word = DB::table('pz_words')
+            ->where('id', $request->word_id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$word) {
+            return response()->json(['error' => '단어를 찾을 수 없습니다.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'answer' => $word->word,
+            'message' => '정답을 확인합니다.'
         ]);
     }
 }

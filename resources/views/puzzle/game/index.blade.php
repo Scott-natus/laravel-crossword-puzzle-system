@@ -40,6 +40,9 @@
                         <div class="d-flex gap-2">
                             <button type="button" id="check-answer-btn" class="btn btn-primary">확인</button>
                             <button type="button" id="show-hint-btn" class="btn btn-secondary">힌트보기</button>
+                            @if(Auth::user()->is_admin)
+                                <button type="button" id="show-answer-btn" class="btn btn-warning">정답보기</button>
+                            @endif
                         </div>
                         <div id="result-message" class="mt-3"></div>
                         <div id="additional-hints" class="mt-3" style="display: none;">
@@ -90,6 +93,50 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" onclick="location.href='{{ route('main') }}'">메인으로</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 오답 초과 모달 -->
+<div class="modal fade" id="wrongCountExceededModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>오답 회수 초과
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="alert alert-danger">
+                    <h4>오답회수가 초과했습니다!</h4>
+                    <p class="mb-0">레벨을 다시 시작합니다.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="location.reload()">레벨 재시작</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 정답보기 모달 -->
+<div class="modal fade" id="showAnswerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>정답 확인
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="alert alert-info">
+                    <h4 id="answerText"></h4>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
             </div>
         </div>
     </div>
@@ -414,6 +461,14 @@ $('#check-answer-btn').click(function() {
         } else {
             // 오답인 경우 입력 필드 초기화
             $('#answer-input').val('').focus();
+            
+            // 오답 5회 초과 체크
+            if (data.wrong_count_exceeded) {
+                // 2초 후 모달 표시
+                setTimeout(function() {
+                    $('#wrongCountExceededModal').modal('show');
+                }, 2000);
+            }
         }
     })
     .fail(function(xhr) {
@@ -529,6 +584,30 @@ $('#show-hint-btn').click(function() {
         alert('힌트를 불러올 수 없습니다.');
         // 오류 발생 시 버튼 다시 활성화
         $('#show-hint-btn').prop('disabled', false).text('힌트보기');
+    });
+});
+
+// 정답보기 버튼 (관리자만)
+$('#show-answer-btn').click(function() {
+    if (!currentWordId) return;
+    
+    $.get('{{ route("puzzle-game.show-answer") }}', {
+        word_id: currentWordId
+    })
+    .done(function(data) {
+        if (data.success) {
+            $('#answerText').text(data.answer);
+            $('#showAnswerModal').modal('show');
+        } else {
+            alert(data.message || '정답을 불러올 수 없습니다.');
+        }
+    })
+    .fail(function(xhr) {
+        if (xhr.status === 403) {
+            alert('관리자만 접근 가능합니다.');
+        } else {
+            alert('정답을 불러올 수 없습니다.');
+        }
     });
 });
 
