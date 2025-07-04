@@ -111,6 +111,40 @@ class GridTemplateController extends Controller
                 ]);
             }
 
+            // 동일한 그리드 패턴의 활성화된 템플릿이 있는지 체크
+            $existingTemplates = DB::table('puzzle_grid_templates')
+                ->where('level_id', $request->level_id)
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($existingTemplates as $existingTemplate) {
+                $existingGridPattern = json_decode($existingTemplate->grid_pattern, true);
+                $newGridPattern = $request->grid_pattern;
+                
+                // 그리드 크기가 다르면 건너뛰기
+                if (count($existingGridPattern) !== count($newGridPattern)) {
+                    continue;
+                }
+                
+                // 그리드 패턴 비교
+                $isSame = true;
+                for ($i = 0; $i < count($existingGridPattern) && $isSame; $i++) {
+                    for ($j = 0; $j < count($existingGridPattern[$i]); $j++) {
+                        if ($existingGridPattern[$i][$j] !== $newGridPattern[$i][$j]) {
+                            $isSame = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if ($isSame) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => "동일한 그리드 패턴의 템플릿이 이미 존재합니다.\n\n템플릿명: {$existingTemplate->template_name}\n템플릿 ID: {$existingTemplate->id}\n\n다른 그리드 패턴을 사용하거나 기존 템플릿을 수정해주세요."
+                    ]);
+                }
+            }
+
             // 템플릿 이름 자동 생성
             $templateCount = DB::table('puzzle_grid_templates')
                 ->where('level_id', $request->level_id)

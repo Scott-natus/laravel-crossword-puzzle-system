@@ -454,3 +454,8 @@ php artisan tinker --execute="echo config('database.default');"
 - 참고: storage/app/public/attachments 경로에 파일이 실제로 존재하는지, 퍼미션(권한)도 함께 점검 
 
 - 만약 storage:link 후에도 미노출이면 public/storage, storage/app/public, attachments 폴더 및 파일 권한이 www-data(웹서버)로 되어 있는지 확인 
+
+## 2025-07-01 삭제 기능 JS 이벤트 연결 문제
+- 증상: 삭제 버튼 클릭 시 아무 반응 없음, 네트워크 요청도 발생하지 않음
+- 원인: confirmDelete 버튼에 JS 이벤트가 DOMContentLoaded 전에 연결되어 실제로 연결되지 않음
+- 해결: 이벤트 연결을 document.addEventListener('DOMContentLoaded', ...) 내부로 이동 

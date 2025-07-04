@@ -78,6 +78,9 @@
                                     <div>
                                         <button type="button" class="btn btn-sm btn-outline-primary" id="clearGrid">전체 지우기 (흰색)</button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" id="fillGrid">전체 채우기 (검은색)</button>
+                                        <button type="button" class="btn btn-sm btn-outline-success" id="sortWordPositions" title="단어 위치 정보를 번호 순서대로 정렬">
+                                            <i class="fas fa-sort-numeric-up"></i> 번호순 정렬
+                                        </button>
                                     </div>
                                     <div>
                                         <span class="badge bg-dark">■ 검은색 칸 (단어 입력 공간)</span>
@@ -847,11 +850,17 @@ function countIntersections(wordPositions) {
     return intersections;
 }
 
-// 기존 템플릿과 동일한지 체크
+// 기존 템플릿과 동일한지 체크 (활성화된 템플릿만 체크)
 function isSameTemplate(existingTemplates, gridPattern) {
     for (const template of existingTemplates) {
+        // 활성화된 템플릿만 체크 (is_active = true)
+        if (template.is_active !== true && template.is_active !== 1) {
+            continue;
+        }
+        
         const tGrid = JSON.parse(template.grid_pattern);
         if (tGrid.length !== gridPattern.length) continue;
+        
         let same = true;
         for (let i = 0; i < tGrid.length && same; i++) {
             for (let j = 0; j < tGrid.length; j++) {
@@ -861,9 +870,15 @@ function isSameTemplate(existingTemplates, gridPattern) {
                 }
             }
         }
-        if (same) return true;
+        if (same) {
+            return {
+                isSame: true,
+                templateName: template.template_name,
+                templateId: template.id
+            };
+        }
     }
-    return false;
+    return { isSame: false };
 }
 
 // 폼 제출
@@ -929,9 +944,12 @@ gridTemplateForm.addEventListener('submit', (e) => {
     };
     
     // 수정 모드가 아닐 때만 동일 템플릿 체크
-    if (!isEditMode && window.existingTemplates && isSameTemplate(window.existingTemplates, currentGrid)) {
-        alert('동일한 템플릿이 이미 존재합니다.');
-        return;
+    if (!isEditMode && window.existingTemplates) {
+        const duplicateCheck = isSameTemplate(window.existingTemplates, currentGrid);
+        if (duplicateCheck.isSame) {
+            alert(`동일한 템플릿이 이미 존재합니다.\n\n템플릿명: ${duplicateCheck.templateName}\n템플릿 ID: ${duplicateCheck.templateId}\n\n다른 그리드 패턴을 사용하거나 기존 템플릿을 수정해주세요.`);
+            return;
+        }
     }
     
     // 요청 URL 결정 (수정 모드인지 신규 생성인지)
@@ -1432,6 +1450,15 @@ function updateSaveButtonState() {
         isValid = false;
     }
     
+    // 동일 템플릿 체크 (신규 생성 모드에서만)
+    if (!isEditMode && window.existingTemplates) {
+        const duplicateCheck = isSameTemplate(window.existingTemplates, currentGrid);
+        if (duplicateCheck.isSame) {
+            details.push(`⚠️ 동일한 템플릿이 이미 존재합니다 (ID: ${duplicateCheck.templateId})`);
+            isValid = false;
+        }
+    }
+    
     conditionDetails.innerHTML = details.join('<br>');
     conditionCheck.className = `alert ${isValid ? 'alert-success' : 'alert-danger'}`;
     conditionCheck.style.display = 'block';
@@ -1467,7 +1494,72 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+    
+    // 번호순 정렬 버튼 이벤트 리스너 추가
+    const sortButton = document.getElementById('sortWordPositions');
+    if (sortButton) {
+        sortButton.addEventListener('click', function() {
+            sortWordPositionsByNumber();
+        });
+    }
 });
+
+// 단어 위치 정보를 번호 순서대로 정렬하는 함수
+function sortWordPositionsByNumber() {
+    const wordPositionsList = document.getElementById('wordPositionsList');
+    const wordItems = wordPositionsList.querySelectorAll('.word-position-item');
+    
+    if (wordItems.length === 0) {
+        alert('정렬할 단어 위치 정보가 없습니다.');
+        return;
+    }
+    
+    // 현재 선택된 번호들을 수집
+    const wordData = [];
+    wordItems.forEach(item => {
+        const wordId = item.dataset.wordId;
+        const select = item.querySelector('.word-number-select');
+        const selectedNumber = select ? select.value : '';
+        
+        // 좌표 정보 추출
+        const text = item.querySelector('small').textContent;
+        const match = text.match(/\((\d+),(\d+)\) 에서 \((\d+),(\d+)\)/);
+        const direction = item.querySelector('strong').textContent;
+        
+        wordData.push({
+            element: item,
+            wordId: wordId,
+            selectedNumber: selectedNumber,
+            startX: match ? parseInt(match[1]) : 0,
+            startY: match ? parseInt(match[2]) : 0,
+            endX: match ? parseInt(match[3]) : 0,
+            endY: match ? parseInt(match[4]) : 0,
+            direction: direction
+        });
+    });
+    
+    // 번호가 선택된 항목들을 번호 순서대로 정렬
+    const sortedData = wordData.sort((a, b) => {
+        const aNum = a.selectedNumber ? parseInt(a.selectedNumber) : 999;
+        const bNum = b.selectedNumber ? parseInt(b.selectedNumber) : 999;
+        return aNum - bNum;
+    });
+    
+    // 정렬된 순서로 DOM 재구성
+    wordItems.forEach(item => item.remove());
+    
+    sortedData.forEach(data => {
+        wordPositionsList.appendChild(data.element);
+    });
+    
+    // 정렬 완료 메시지
+    const sortedCount = sortedData.filter(item => item.selectedNumber).length;
+    if (sortedCount > 0) {
+        alert(`${sortedCount}개의 단어 위치 정보가 번호 순서대로 정렬되었습니다.`);
+    } else {
+        alert('선택된 번호가 없어 정렬할 수 없습니다. 번호를 먼저 선택해주세요.');
+    }
+}
 
 // 힌트 보기 함수
 function showHint(hint) {

@@ -24,7 +24,6 @@ class Kernel extends ConsoleKernel
         // 매시간 5,15,25,35,45,55분마다 새로운 단어 20개씩 자동 생성 (힌트는 기존 스케줄러가 자동 생성)
         $schedule->command('puzzle:generate-words-scheduler --limit=20')
                 ->cron('5,15,25,35,45,55 * * * *')
-                ->withoutOverlapping()
                 ->runInBackground()
                 ->appendOutputTo(storage_path('logs/word-scheduler.log'));
     }

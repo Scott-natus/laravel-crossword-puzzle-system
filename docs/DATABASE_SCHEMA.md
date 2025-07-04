@@ -261,3 +261,6 @@ pg_dump -h 127.0.0.1 -U myuser -t boards -t board_types mydb > boards_backup.sql
 - puzzle_grid_template_word pivot 테이블 생성
 - 퍼즐 정답/진행상황 저장 로직 반영
 - 불필요한 컬럼/관계 정리 
+
+## 2025-07-01
+- 퍼즐 그리드 템플릿 저장 시 교차점 개수 validation을 '최소값' 기준으로 변경 (기존: 정확히 일치 → 변경: 최소값 이상) 

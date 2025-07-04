@@ -157,7 +157,7 @@ class GenerateWordsScheduler extends Command
 조건:
 1. 명사, 고유명사 포함
 2. 영어 제외 (한글만)
-3. 한 글자 제외, 두 글자에서 네 글자 사이
+3. 한 음절 단어 제외, 두 음절에서 다섯 음절 사이
 
 응답 형식:
 [{$category},단어1]
