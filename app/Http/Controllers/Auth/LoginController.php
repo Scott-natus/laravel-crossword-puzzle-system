@@ -61,7 +61,10 @@ class LoginController extends Controller
             cookie()->queue(cookie()->forget('remember_me'));
         }
         
-        return redirect()->intended($this->redirectPath());
+        // 리다이렉션 URL이 있으면 해당 URL로, 없으면 기본 경로로
+        $redirectUrl = $request->get('redirect', $this->redirectPath());
+        
+        return redirect()->intended($redirectUrl);
     }
 
     /**

@@ -16,6 +16,11 @@ class PuzzleGameController extends Controller
     public function index()
     {
         $user = Auth::user();
+        if (!$user) {
+            // 비로그인 상태일 때 안내 페이지 표시
+            return view('puzzle.game.guest');
+        }
+
         $game = UserPuzzleGame::where('user_id', $user->id)
             ->where('is_active', true)
             ->first();

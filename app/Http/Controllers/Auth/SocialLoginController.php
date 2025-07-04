@@ -16,6 +16,11 @@ class SocialLoginController extends Controller
      */
     public function redirectToGoogle()
     {
+        // 리다이렉션 URL을 세션에 저장
+        if (request()->has('redirect')) {
+            session(['redirect_url' => request()->get('redirect')]);
+        }
+        
         return Socialite::driver('google')->redirect();
     }
 
@@ -31,7 +36,11 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/main');
+            // 세션에서 리다이렉션 URL 가져오기
+            $redirectUrl = session('redirect_url', '/main');
+            session()->forget('redirect_url');
+            
+            return redirect()->intended($redirectUrl);
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Google 로그인 중 오류가 발생했습니다.');
@@ -43,6 +52,11 @@ class SocialLoginController extends Controller
      */
     public function redirectToKakao()
     {
+        // 리다이렉션 URL을 세션에 저장
+        if (request()->has('redirect')) {
+            session(['redirect_url' => request()->get('redirect')]);
+        }
+        
         return Socialite::driver('kakao')->redirect();
     }
 
@@ -58,7 +72,11 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/main');
+            // 세션에서 리다이렉션 URL 가져오기
+            $redirectUrl = session('redirect_url', '/main');
+            session()->forget('redirect_url');
+            
+            return redirect()->intended($redirectUrl);
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Kakao 로그인 중 오류가 발생했습니다.');
@@ -70,6 +88,11 @@ class SocialLoginController extends Controller
      */
     public function redirectToNaver()
     {
+        // 리다이렉션 URL을 세션에 저장
+        if (request()->has('redirect')) {
+            session(['redirect_url' => request()->get('redirect')]);
+        }
+        
         return Socialite::driver('naver')->redirect();
     }
 
@@ -85,7 +108,11 @@ class SocialLoginController extends Controller
             
             Auth::login($user);
             
-            return redirect()->intended('/main');
+            // 세션에서 리다이렉션 URL 가져오기
+            $redirectUrl = session('redirect_url', '/main');
+            session()->forget('redirect_url');
+            
+            return redirect()->intended($redirectUrl);
             
         } catch (\Exception $e) {
             return redirect('/login')->with('error', 'Naver 로그인 중 오류가 발생했습니다.');

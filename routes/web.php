@@ -152,12 +152,14 @@ Route::get('/crossword-test', function () {
 })->name('crossword.test');
 
 // 크로스워드 퍼즐 게임 (모든 사용자)
-Route::prefix('puzzle-game')->name('puzzle-game.')->middleware(['auth'])->group(function () {
+Route::prefix('puzzle-game')->name('puzzle-game.')->group(function () {
     Route::get('/', [PuzzleGameController::class, 'index'])->name('index');
-    Route::get('/template', [PuzzleGameController::class, 'getTemplate'])->name('get-template');
-    Route::post('/check-answer', [PuzzleGameController::class, 'checkAnswer'])->name('check-answer');
-    Route::get('/hints', [PuzzleGameController::class, 'getHints'])->name('get-hints');
-    Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer'])->name('show-answer');
-    Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
-    Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
+    Route::middleware(['auth'])->group(function () {
+        Route::get('/template', [PuzzleGameController::class, 'getTemplate'])->name('get-template');
+        Route::post('/check-answer', [PuzzleGameController::class, 'checkAnswer'])->name('check-answer');
+        Route::get('/hints', [PuzzleGameController::class, 'getHints'])->name('get-hints');
+        Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer'])->name('show-answer');
+        Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
+        Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
+    });
 });

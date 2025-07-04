@@ -83,6 +83,9 @@ class RegisterController extends Controller
         // 회원가입 환영 메시지 설정
         session(['welcome_message' => $user->name . '님, 회원가입을 축하합니다! 🎉']);
         
-        return redirect($this->redirectPath());
+        // 리다이렉션 URL이 있으면 해당 URL로, 없으면 기본 경로로
+        $redirectUrl = $request->get('redirect', $this->redirectPath());
+        
+        return redirect($redirectUrl);
     }
 }
