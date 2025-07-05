@@ -111,17 +111,17 @@ class GenerateHintsScheduler extends Command
                     // 세 가지 난이도의 힌트를 모두 저장
                     foreach ($result['hints'] as $difficulty => $hintData) {
                         if ($hintData['success']) {
-                            // 난이도 매핑 (1,2,3 -> easy,medium,hard)
+                            // 난이도 매핑 (1,2,3 -> 1,2,3)
                             $difficultyMap = [
-                                1 => 'easy',
-                                2 => 'medium', 
-                                3 => 'hard'
+                                1 => 1,
+                                2 => 2, 
+                                3 => 3
                             ];
                             
                             $word->hints()->create([
                                 'hint_text' => $hintData['hint'],
                                 'hint_type' => 'text',
-                                'difficulty' => $difficultyMap[$difficulty] ?? 'medium',
+                                'difficulty' => $difficultyMap[$difficulty] ?? 2,
                                 'is_primary' => ($difficulty == $word->difficulty),
                             ]);
                         }

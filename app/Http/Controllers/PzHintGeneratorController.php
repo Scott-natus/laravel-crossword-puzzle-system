@@ -133,18 +133,18 @@ class PzHintGeneratorController extends Controller
                 // 세 가지 난이도의 힌트를 모두 저장
                 foreach ($result['hints'] as $difficulty => $hintData) {
                     if ($hintData['success']) {
-                        // 난이도 매핑 (1,2,3 -> easy,medium,hard)
+                        // 난이도 매핑 (1,2,3 -> 1,2,3)
                         $difficultyMap = [
-                            1 => 'easy',
-                            2 => 'medium', 
-                            3 => 'hard'
+                            1 => 1,
+                            2 => 2, 
+                            3 => 3
                         ];
                         
                         $hint = PzHint::create([
                             'word_id' => $word->id,
                             'hint_text' => $hintData['hint'],
                             'hint_type' => 'text',
-                            'difficulty' => $difficultyMap[$difficulty] ?? 'medium',
+                            'difficulty' => $difficultyMap[$difficulty] ?? 2,
                             'is_primary' => ($difficulty == $word->difficulty), // 단어의 난이도와 일치하는 힌트를 primary로 설정
                         ]);
                         
@@ -240,18 +240,18 @@ class PzHintGeneratorController extends Controller
                     // 세 가지 난이도의 힌트를 모두 저장
                     foreach ($result['hints'] as $difficulty => $hintData) {
                         if ($hintData['success']) {
-                            // 난이도 매핑 (1,2,3 -> easy,medium,hard)
+                            // 난이도 매핑 (1,2,3 -> 1,2,3)
                             $difficultyMap = [
-                                1 => 'easy',
-                                2 => 'medium', 
-                                3 => 'hard'
+                                1 => 1,
+                                2 => 2, 
+                                3 => 3
                             ];
                             
                             $hint = PzHint::create([
                                 'word_id' => $word->id,
                                 'hint_text' => $hintData['hint'],
                                 'hint_type' => 'text',
-                                'difficulty' => $difficultyMap[$difficulty] ?? 'medium',
+                                'difficulty' => $difficultyMap[$difficulty] ?? 2,
                                 'is_primary' => ($difficulty == $word->difficulty), // 단어의 난이도와 일치하는 힌트를 primary로 설정
                             ]);
                             

@@ -129,8 +129,8 @@ function renderHintsList(hints, wordId) {
             <div class="d-flex justify-content-between align-items-start">
                 <div class="hint-content flex-grow-1">
                     <div class="d-flex align-items-center mb-2">
-                        <span class="badge bg-${hint.difficulty === 'easy' ? 'success' : (hint.difficulty === 'medium' ? 'warning' : 'danger')} me-2">
-                            ${hint.difficulty === 'easy' ? '쉬움' : (hint.difficulty === 'medium' ? '보통' : '어려움')}
+                        <span class="badge bg-${hint.difficulty === 1 ? 'success' : (hint.difficulty === 2 ? 'warning' : 'danger')} me-2">
+                            ${hint.difficulty === 1 ? '쉬움' : (hint.difficulty === 2 ? '보통' : '어려움')}
                         </span>
                         ${hint.is_primary ? '<span class="badge bg-primary me-2">Primary</span>' : ''}
                     </div>
@@ -160,7 +160,7 @@ function renderHintsList(hints, wordId) {
                 </div>
             </div>
             <div class="hint-meta">
-                타입: ${hint.hint_type} | 난이도: ${hint.difficulty === 'easy' ? '쉬움' : (hint.difficulty === 'medium' ? '보통' : '어려움')} | 
+                타입: ${hint.hint_type} | 난이도: ${hint.difficulty === 1 ? '쉬움' : (hint.difficulty === 2 ? '보통' : '어려움')} | 
                 입력일: ${new Date(hint.created_at).toLocaleDateString()} | 
                 수정일: ${new Date(hint.updated_at).toLocaleDateString()}
             </div>
@@ -191,7 +191,7 @@ function editHint(hintId, wordId) {
             document.getElementById('hintWordId').value = wordId;
             document.getElementById('hintId').value = hintId;
             document.getElementById('hintType').value = hint.hint_type;
-            document.getElementById('hintDifficulty').value = hint.difficulty || 'medium';
+            document.getElementById('hintDifficulty').value = hint.difficulty || 2;
             document.getElementById('hintContent').value = hint.hint_text;
             
             // 힌트 타입에 따른 섹션 표시

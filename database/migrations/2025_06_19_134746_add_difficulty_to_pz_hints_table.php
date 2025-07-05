@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pz_hints', function (Blueprint $table) {
-            $table->enum('difficulty', ['easy', 'medium', 'hard'])->default('medium')->after('type')->comment('힌트 난이도');
+            $table->integer('difficulty')->default(2)->after('type')->comment('힌트 난이도 (1: 쉬움, 2: 보통, 3: 어려움)');
             $table->index('difficulty');
         });
     }

@@ -291,8 +291,8 @@ function showResultModal(data) {
                             <div class="mt-2">
                                 ${result.hints.map(hint => `
                                     <div class="small">
-                                        <span class="badge bg-${hint.difficulty === 'easy' ? 'success' : (hint.difficulty === 'medium' ? 'warning' : 'danger')} me-1">
-                                            ${hint.difficulty === 'easy' ? '쉬움' : (hint.difficulty === 'medium' ? '보통' : '어려움')}
+                                        <span class="badge bg-${hint.difficulty === 1 ? 'success' : (hint.difficulty === 2 ? 'warning' : 'danger')} me-1">
+                                            ${hint.difficulty === 1 ? '쉬움' : (hint.difficulty === 2 ? '보통' : '어려움')}
                                         </span>
                                         ${hint.hint_text}
                                     </div>
@@ -417,10 +417,10 @@ function showSingleHintResultModal(data, word, category) {
     
     if (data.hints && data.hints.length > 0) {
         const hintsHtml = data.hints.map(hint => {
-            const difficultyClass = hint.difficulty === 'easy' ? 'success' : 
-                                   hint.difficulty === 'medium' ? 'warning' : 'danger';
-            const difficultyText = hint.difficulty === 'easy' ? '쉬움' : 
-                                  hint.difficulty === 'medium' ? '보통' : '어려움';
+            const difficultyClass = hint.difficulty === 1 ? 'success' : 
+                                   hint.difficulty === 2 ? 'warning' : 'danger';
+            const difficultyText = hint.difficulty === 1 ? '쉬움' : 
+                                  hint.difficulty === 2 ? '보통' : '어려움';
             
             return `
                 <div class="hint-result-item ${hint.is_primary ? 'primary' : ''}">

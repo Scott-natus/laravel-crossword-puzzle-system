@@ -583,7 +583,7 @@ class CrosswordGeneratorService
                     'word' => $word['word'],
                     'hint' => "단어: {$word['word']}",
                     'type' => 'text',
-                    'difficulty' => 'easy'
+                    'difficulty' => 1
                 ];
             }
         }

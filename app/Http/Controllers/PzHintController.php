@@ -35,7 +35,7 @@ class PzHintController extends Controller
         $validated = $request->validate([
             'content' => 'required|string',
             'type' => 'required|in:text,image,sound',
-            'difficulty' => 'nullable|in:easy,medium,hard',
+            'difficulty' => 'nullable|integer|between:1,3',
             'file' => 'nullable|file|max:10240', // 10MB
         ]);
 
@@ -48,7 +48,7 @@ class PzHintController extends Controller
                 'word_id' => $wordId,
                 'hint_text' => $validated['content'],
                 'hint_type' => $validated['type'],
-                'difficulty' => $validated['difficulty'] ?? 'medium',
+                'difficulty' => $validated['difficulty'] ?? 2,
             ];
 
             // 파일 업로드 처리

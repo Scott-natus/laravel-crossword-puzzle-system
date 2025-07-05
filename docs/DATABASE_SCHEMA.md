@@ -28,7 +28,7 @@ CREATE TABLE puzzle_hints (
     word_id BIGINT REFERENCES puzzle_words(id) ON DELETE CASCADE,
     hint_text TEXT NOT NULL,
     hint_type VARCHAR(50) DEFAULT 'ai_generated',
-    difficulty VARCHAR(20) NOT NULL, -- 'easy', 'medium', 'hard'
+    difficulty INTEGER NOT NULL, -- 1: 쉬움, 2: 보통, 3: 어려움
     is_primary BOOLEAN DEFAULT false,
     created_at TIMESTAMP,
     updated_at TIMESTAMP
@@ -43,7 +43,7 @@ CREATE TABLE puzzle_levels (
     level_name VARCHAR(255) NOT NULL,
     word_count INTEGER NOT NULL,
     word_difficulty INTEGER NOT NULL, -- 1-5
-    hint_difficulty VARCHAR(20) NOT NULL, -- 'easy', 'medium', 'hard'
+    hint_difficulty INTEGER NOT NULL, -- 1: 쉬움, 2: 보통, 3: 어려움
     intersection_count INTEGER NOT NULL,
     time_limit INTEGER NOT NULL, -- 초 단위
     created_at TIMESTAMP,

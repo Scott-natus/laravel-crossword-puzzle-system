@@ -205,7 +205,7 @@
                                                 <h6 class="mb-2"><strong>'{{ $word->word }}'</strong> 힌트 목록</h6>
                                                 <ul class="list-group">
                                                     @php
-                                                        $difficultyOrder = ['easy' => 1, 'medium' => 2, 'hard' => 3];
+                                                        $difficultyOrder = [1 => 1, 2 => 2, 3 => 3];
                                                         $sortedHints = $word->hints->sortBy(function($hint) use ($difficultyOrder) {
                                                             return $difficultyOrder[$hint->difficulty] ?? 99;
                                                         });
@@ -214,13 +214,13 @@
                                                         @php
                                                             $badgeColor = 'bg-info';
                                                             $iconClass = 'fa-question-circle';
-                                                            if ($hint->difficulty === 'easy') {
+                                                            if ($hint->difficulty === 1) {
                                                                 $badgeColor = 'bg-primary';
                                                                 $iconClass = 'fa-laugh-beam';
-                                                            } elseif ($hint->difficulty === 'medium') {
+                                                            } elseif ($hint->difficulty === 2) {
                                                                 $badgeColor = 'bg-success';
                                                                 $iconClass = 'fa-meh';
-                                                            } elseif ($hint->difficulty === 'hard') {
+                                                            } elseif ($hint->difficulty === 3) {
                                                                 $badgeColor = 'bg-danger';
                                                                 $iconClass = 'fa-dizzy';
                                                             }

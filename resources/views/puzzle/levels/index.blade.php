@@ -106,9 +106,9 @@
                                     <td>
                                         <select class="form-select form-select-sm hint-difficulty" 
                                                 data-original="{{ $level->hint_difficulty }}">
-                                            <option value="easy" {{ $level->hint_difficulty == 'easy' ? 'selected' : '' }}>쉬움</option>
-                                            <option value="medium" {{ $level->hint_difficulty == 'medium' ? 'selected' : '' }}>보통</option>
-                                            <option value="hard" {{ $level->hint_difficulty == 'hard' ? 'selected' : '' }}>어려움</option>
+                                            <option value="1" {{ $level->hint_difficulty == 1 ? 'selected' : '' }}>쉬움</option>
+                                            <option value="2" {{ $level->hint_difficulty == 2 ? 'selected' : '' }}>보통</option>
+                                            <option value="3" {{ $level->hint_difficulty == 3 ? 'selected' : '' }}>어려움</option>
                                         </select>
                                     </td>
                                     <td>

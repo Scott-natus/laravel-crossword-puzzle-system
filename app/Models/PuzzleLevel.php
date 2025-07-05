@@ -22,6 +22,7 @@ class PuzzleLevel extends Model
 
     protected $casts = [
         'word_difficulty' => 'integer',
+        'hint_difficulty' => 'integer',
         'intersection_count' => 'integer',
         'time_limit' => 'integer',
     ];
@@ -64,7 +65,7 @@ class PuzzleLevel extends Model
         return [
             'word_count' => 'required|integer|min:1',
             'word_difficulty' => 'required|integer|between:1,5',
-            'hint_difficulty' => 'required|in:easy,medium,hard',
+            'hint_difficulty' => 'required|integer|between:1,3',
             'intersection_count' => 'required|integer|min:1',
             'time_limit' => 'required|integer|min:1',
         ];

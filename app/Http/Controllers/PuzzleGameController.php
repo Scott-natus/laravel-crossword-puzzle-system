@@ -140,6 +140,7 @@ class PuzzleGameController extends Controller
                 ->first();
             
             $wordInfo['pz_word_id'] = $pzWord ? $pzWord->id : null;
+            $wordInfo['category'] = $pzWord ? $pzWord->category : '일반';
             
             // 기본 힌트 ID 추가
             if ($pzWord) {

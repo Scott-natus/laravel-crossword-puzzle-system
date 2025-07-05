@@ -50,9 +50,9 @@ class PzHint extends Model
     public function getDifficultyTextAttribute()
     {
         $difficultyMap = [
-            'easy' => '쉬움',
-            'medium' => '보통',
-            'hard' => '어려움'
+            1 => '쉬움',
+            2 => '보통',
+            3 => '어려움'
         ];
         
         return $difficultyMap[$this->difficulty] ?? '보통';

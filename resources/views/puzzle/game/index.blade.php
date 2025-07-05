@@ -500,9 +500,9 @@ function handleCellClick(row, col, words) {
     // 힌트보기 버튼 재활성화 (새로운 단어 선택 시)
     $('#show-hint-btn').prop('disabled', false).text('힌트보기');
     
-    // 우측 힌트 영역에 기본 힌트만 표시
+    // 우측 힌트 영역에 기본 힌트만 표시 (카테고리 포함)
     $('#current-hint').html(`
-        <strong>힌트:</strong> ${selectedWord.hint || '힌트가 없습니다.'}
+        <strong>힌트:</strong> [${selectedWord.category || '일반'}] ${selectedWord.hint || '힌트가 없습니다.'}
     `);
     
     $('#answer-input').val('').focus();
@@ -555,7 +555,15 @@ $('#check-answer-btn').click(function() {
                 $('#result-message').html(`<div class="alert alert-danger">${data.message}</div>`);
                 // 2초 후 모달 표시
                 setTimeout(function() {
-                    $('#wrongCountExceededModal').modal('show');
+                    console.log('오답 초과 모달 표시 시도');
+                    const modalElement = document.getElementById('wrongCountExceededModal');
+                    if (modalElement) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                        console.log('오답 초과 모달 표시됨');
+                    } else {
+                        console.error('오답 초과 모달을 찾을 수 없음');
+                    }
                 }, 2000);
             } else {
                 // 일반 오답 시 메시지 표시 (4회일 때는 특별 메시지)
@@ -773,6 +781,13 @@ $(window).on('resize', function() {
     if (currentTemplate) {
         // 그리드 재렌더링 (정답 상태는 restoreAnsweredCells에서 복원됨)
         renderPuzzleGrid(currentTemplate);
+    }
+});
+
+$('#answer-input').on('keydown', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        $('#check-answer-btn').click();
     }
 });
 </script>

@@ -21,7 +21,7 @@ class PuzzleLevelSeeder extends Seeder
                 'level_name' => 'Level ' . $i,
                 'word_count' => 10, // 기본값
                 'word_difficulty' => 1, // 기본값
-                'hint_difficulty' => 'easy', // 기본값
+                'hint_difficulty' => 1, // 기본값
                 'intersection_count' => 2, // 기본값
                 'time_limit' => 300, // 기본값 (5분)
                 'updated_by' => 1, // 기본 관리자 ID

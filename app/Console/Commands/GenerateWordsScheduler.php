@@ -27,12 +27,15 @@ class GenerateWordsScheduler extends Command
     private $geminiService;
 
     /**
-     * 생성 가능한 카테고리 목록
+     * 생성 가능한 카테고리 목록 (데이터베이스에서 가져옴)
      */
-    private $availableCategories = [
-        'IT', '자연과학', '의학/보건', '예술', '정치', '체육', 
-        '사자성어', '사회', '인문', '문화', '공학', '경제'
-    ];
+    private function getAvailableCategories()
+    {
+        return DB::table('pz_base_categories')
+            ->where('is_active', true)
+            ->pluck('category')
+            ->toArray();
+    }
 
     /**
      * Create a new command instance.
@@ -70,6 +73,11 @@ class GenerateWordsScheduler extends Command
 
         // 재미나이 API로 단어 생성 요청
         $prompt = $this->buildPrompt($targetCategory, $limit);
+        
+        // 선택된 요구사항 로그 기록
+        $selectedRequirement = $this->getSelectedRequirement();
+        $this->writeToLog("선택된 카테고리: {$targetCategory}");
+        $this->writeToLog("생성 요구사항: " . $selectedRequirement);
         
         try {
             $result = $this->geminiService->generateWords($prompt);
@@ -147,7 +155,8 @@ class GenerateWordsScheduler extends Command
      */
     private function selectRandomCategory()
     {
-        return $this->availableCategories[array_rand($this->availableCategories)];
+        $categories = $this->getAvailableCategories();
+        return $categories[array_rand($categories)];
     }
 
     /**
@@ -155,19 +164,25 @@ class GenerateWordsScheduler extends Command
      */
     private function buildPrompt($category, $limit)
     {
-        return "십자낱말 퍼즐을 만들기 위한 단어를 제안해줘
+        $selectedRequirement = $this->getSelectedRequirement();
+        
+        return "{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$category},단어의 형식으로 {$limit}개 추천해줘
 
-단어는 '명사,고유명사, 신조어' 로 이루어진 2음절과 5음절 사이의 단어를 {$limit}개 정도 추천해줘
+**중요: 다음 품사에 해당하는 단어만 생성해주세요:**
+- 명사 (일반명사)
+- 대명사
+- 고유명사 (인명, 지명, 회사명 등)
+- 외래어 (영어, 일본어, 중국어 등에서 유래한 단어)
+- 신조어 (새로 만들어진 단어나 최근 유행하는 단어)
 
-그리고 그 단어가 가장 연관된다고 생각되는 카테고리와 쌍으로 추천해줬으면 좋겠어
+동사, 형용사, 부사, 조사 등은 제외하고 위의 품사에 해당하는 단어만 생성해주세요.
 
 한줄에 [카테고리,단어] 형태로 보여줘
 
 예시:
-[동물,강아지]
-[음식,김치찌개]
-[직업,의사]
-[스포츠,축구공]
+[{$category},단어1]
+[{$category},단어2]
+[{$category},단어3]
 
 각 줄에 하나씩, 총 {$limit}개를 제시해주세요.
 
@@ -183,6 +198,23 @@ class GenerateWordsScheduler extends Command
     }
 
     /**
+     * 선택된 요구사항 반환 (로깅용)
+     */
+    private function getSelectedRequirement()
+    {
+        $requirements = [
+            '명사, 대명사, 고유명사, 외래어, 신조어 중에서 2~5음절 단어',
+            '명사류 (일반명사, 고유명사) 2~5음절 단어',
+            '외래어나 신조어로 이루어진 2~5음절 단어',
+            '일상생활에서 사용되는 명사류 2~5음절 단어',
+            '비즈니스나 전문 분야의 명사류 2~5음절 단어',
+            '최근 유행하는 신조어나 외래어 2~5음절 단어'
+        ];
+        
+        return $requirements[array_rand($requirements)];
+    }
+
+    /**
      * 중복 체크 (테스트용)
      */
     private function checkDuplicates($suggestedWords, $category)
@@ -192,7 +224,9 @@ class GenerateWordsScheduler extends Command
         foreach ($suggestedWords as $wordData) {
             $word = $wordData['word'] ?? '';
             $wordCategory = $wordData['category'] ?? $category;
-            $isDuplicate = PzWord::where('word', $word)->exists();
+            $isDuplicate = PzWord::where('word', $word)
+                ->where('category', $wordCategory)
+                ->exists();
                 
             $result[] = [
                 $wordCategory,
@@ -221,8 +255,10 @@ class GenerateWordsScheduler extends Command
                 continue;
             }
             
-            // 중복 체크 (전체 카테고리에서)
-            $exists = PzWord::where('word', $word)->exists();
+            // 중복 체크 (카테고리와 단어 조합으로)
+            $exists = PzWord::where('word', $word)
+                ->where('category', $category)
+                ->exists();
                 
             if ($exists) {
                 $this->writeToLog("중복 단어 스킵: [{$category}, {$word}]");

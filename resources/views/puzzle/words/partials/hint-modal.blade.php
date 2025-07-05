@@ -25,9 +25,9 @@
                         <label for="hintDifficulty" class="form-label">난이도</label>
                         <select class="form-select" id="hintDifficulty" name="difficulty" required>
                             <option value="">선택하세요</option>
-                            <option value="easy">쉬움</option>
-                            <option value="medium">보통</option>
-                            <option value="hard">어려움</option>
+                            <option value="1">쉬움</option>
+                            <option value="2">보통</option>
+                            <option value="3">어려움</option>
                         </select>
                     </div>
                     

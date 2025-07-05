@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('level_name'); // 레벨 명칭
             $table->integer('word_count'); // 퍼즐(단어)의 개수
             $table->integer('word_difficulty'); // 단어의 난이도 (1-5)
-            $table->string('hint_difficulty'); // 힌트의 난이도 (easy, medium, hard)
+            $table->integer('hint_difficulty'); // 힌트의 난이도 (1: 쉬움, 2: 보통, 3: 어려움)
             $table->integer('intersection_count'); // 퍼즐내 교차점의 개수
             $table->integer('time_limit'); // 실행시간 (초)
             $table->timestamps();
