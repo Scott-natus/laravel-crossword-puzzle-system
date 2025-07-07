@@ -26,6 +26,9 @@ class PuzzleLevelController extends Controller
     {
         $level = PuzzleLevel::findOrFail($id);
         
+        // 받은 데이터 로그 출력
+        \Log::info('PuzzleLevel update request data:', $request->all());
+        
         $validator = Validator::make($request->all(), PuzzleLevel::getValidationRules());
         
         if ($validator->fails()) {

@@ -417,7 +417,7 @@ class GridTemplateController extends Controller
                         }
                         
                         // 3-3. 확정된 음절들과 매칭되는 단어를 추출하여 확정한다.
-                        $extractedWord = $this->extractWordWithConfirmedSyllables($word, $template, $confirmedIntersectionSyllables, $queryLog);
+                        $extractedWord = $this->extractWordWithConfirmedSyllables($word, $template, $confirmedIntersectionSyllables, $queryLog, $confirmedWords);
                         
                         if ($extractedWord['success']) {
                             $extractedWords[] = [
@@ -809,11 +809,15 @@ class GridTemplateController extends Controller
     {
         $length = $word['length'];
         
+        // 레벨에 설정된 단어 난이도 사용
+        $wordDifficulty = $template->word_difficulty;
+        
         // 2.5 단어 추출의 쿼리는 랜덤을 기본으로 한다.
         $query = DB::table('pz_words as a')
             ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
             ->select('a.word', 'b.hint_text as hint')
             ->where('a.length', $length)
+            ->where('a.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
             ->where('a.is_active', true)
             ->orderByRaw('RANDOM()');
         
@@ -822,7 +826,7 @@ class GridTemplateController extends Controller
             'type' => 'independent_word',
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
-            'description' => "독립 단어 추출 (길이: {$length})"
+            'description' => "독립 단어 추출 (길이: {$length}, 난이도: <= {$wordDifficulty})"
         ];
         
         $result = $query->first();
@@ -915,7 +919,7 @@ class GridTemplateController extends Controller
     /**
      * 확정된 음절 정보를 기반으로 단어 추출
      */
-    private function extractWordWithConfirmedSyllables($word, $template, $confirmedSyllables, &$queryLog)
+    private function extractWordWithConfirmedSyllables($word, $template, $confirmedSyllables, &$queryLog, $confirmedWords = [])
     {
         $length = $word['length'];
         
@@ -928,12 +932,22 @@ class GridTemplateController extends Controller
             ];
         }
         
+        // 레벨에 설정된 단어 난이도 사용
+        $wordDifficulty = $template->word_difficulty;
+        
         // 확정된 음절들을 기반으로 조건 생성
         $query = DB::table('pz_words as a')
             ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
             ->select('a.word', 'b.hint_text as hint')
             ->where('a.length', $length)
+            ->where('a.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
             ->where('a.is_active', true);
+        
+        // 교차점을 공유하는 다른 단어들과 같은 단어 제외
+        if (!empty($confirmedWords)) {
+            $excludedWords = array_values($confirmedWords);
+            $query->whereNotIn('a.word', $excludedWords);
+        }
         
         // 각 확정된 음절에 대한 조건 추가
         foreach ($confirmedSyllables as $syllableInfo) {
@@ -951,11 +965,16 @@ class GridTemplateController extends Controller
         }
         $syllableDesc = implode(', ', $syllableConditions);
         
+        $excludedWordsDesc = '';
+        if (!empty($confirmedWords)) {
+            $excludedWordsDesc = ', 제외단어: ' . implode(', ', array_values($confirmedWords));
+        }
+        
         $queryLog[] = [
             'type' => 'intersection_word',
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
-            'description' => "교차점 단어 추출 (길이: {$length}, 확정음절: {$syllableDesc})"
+            'description' => "교차점 단어 추출 (길이: {$length}, 난이도: <= {$wordDifficulty}, 확정음절: {$syllableDesc}{$excludedWordsDesc})"
         ];
         
         $result = $query->first();

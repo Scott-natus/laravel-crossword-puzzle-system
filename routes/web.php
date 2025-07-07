@@ -104,6 +104,10 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
         Route::post('/category', [PzHintGeneratorController::class, 'generateByCategory'])->name('generate-category');
         Route::get('/test-connection', [PzHintGeneratorController::class, 'testConnection'])->name('test-connection');
         Route::get('/stats', [PzHintGeneratorController::class, 'getStats'])->name('stats');
+        
+        // 힌트 수정 관련
+        Route::post('/regenerate-hints', [PzHintGeneratorController::class, 'regenerateHints'])->name('regenerate-hints');
+        Route::get('/hints-for-correction', [PzHintGeneratorController::class, 'getHintsForCorrection'])->name('hints-for-correction');
     });
 
     // 퍼즐 레벨 관리

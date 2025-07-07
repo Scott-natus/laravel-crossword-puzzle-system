@@ -98,6 +98,9 @@
                         <button type="button" class="btn btn-info me-2" onclick="testConnection()">
                             <i class="fas fa-wifi"></i> API 연결 테스트
                         </button>
+                        <button type="button" class="btn btn-warning me-2" onclick="showCorrectionModal()">
+                            <i class="fas fa-edit"></i> 힌트 보정
+                        </button>
                         <button type="button" class="btn btn-primary" onclick="showBatchModal()">
                             <i class="fas fa-magic"></i> 일괄 힌트 생성
                         </button>
@@ -357,6 +360,99 @@
             <div class="modal-body">
                 <div id="resultContent">
                     <!-- 결과가 여기에 표시됩니다 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 힌트 보정 모달 -->
+<div class="modal fade" id="correctionModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>힌트 보정 관리
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <select class="form-select" id="correctionDifficulty">
+                            <option value="">전체 난이도</option>
+                            <option value="1">쉬움</option>
+                            <option value="2">보통</option>
+                            <option value="3">어려움</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="correctionCategory">
+                            <option value="">전체 카테고리</option>
+                            @foreach($categories ?? [] as $category)
+                                <option value="{{ $category }}">{{ $category }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-primary" onclick="loadHintsForCorrection()">
+                            <i class="fas fa-search"></i> 조회
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <input type="checkbox" id="selectAllCorrection" onchange="toggleSelectAllCorrection()">
+                                </th>
+                                <th>단어</th>
+                                <th>카테고리</th>
+                                <th>난이도</th>
+                                <th>현재 힌트</th>
+                                <th>보정 상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="correctionTableBody">
+                            <!-- 보정할 힌트들이 여기에 표시됩니다 -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>
+                        <span class="text-muted">선택된 힌트: <span id="selectedCorrectionCount">0</span>개</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-warning" onclick="regenerateSelectedHints()">
+                            <i class="fas fa-redo"></i> 선택된 힌트 보정
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">닫기</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 힌트 보정 결과 모달 -->
+<div class="modal fade" id="correctionResultModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">힌트 보정 결과</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="correctionResultContent">
+                    <!-- 보정 결과가 여기에 표시됩니다 -->
                 </div>
             </div>
             <div class="modal-footer">

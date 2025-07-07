@@ -74,33 +74,23 @@ class GeminiService
      */
     private function buildPrompt(string $word, string $category): string
     {
-        return "당신은 한글의 십자낱말 퍼즐 전문가입니다.
+        return "당신은 한글 십자낱말 퍼즐을 위한 힌트를 만드는 전문가입니다.
 
-'{$category}' 카테고리에 속하는 단어 '{$word}'에 대한 일반적인 사용빈도 (1~5 , 낮을수록 자주 사용하는 빈도 ) 와
+단어 '{$word}' ({$category} 카테고리)에 대한 힌트를 3가지 난이도로 만들어주세요.
 
-낱말에 대한 힌트를 3가지 난이도(쉬움, 보통, 어려움)로 생성해주세요.
+**힌트 작성 규칙:**
+1. 정답 단어를 직접 언급하지 마세요
+2. 30자 내외로 연상되기 쉽게 설명해 주세요
+3. 초등학생도 이해할 수 있게 작성하세요
+4. 너무 어렵거나 추상적인 표현은 피하세요
 
+**응답 형식 (다른 설명 없이):**
 
+'{$word}' 의 사용빈도 : [1~5 숫자]
 
-**힌트 생성시 요구사항:**
-
-1. 각 힌트는 40자 미만의 한국어로 작성해주세요.
-
-2. 정답인 '{$word}'를 직접적으로 언급하지 마세요.
-
-3. 아래 형식을 반드시 지켜서 응답해주세요. 다른 부가 설명은 절대 포함하지 마세요.
-
-
-
-**응답 형식:**
-
-'{$word}' 의 사용빈도 : [여기에 빈도 작성]
-
-쉬움: [여기에 쉬운 난이도의 힌트 작성]
-
-보통: [여기에 보통 난이도의 힌트 작성]
-
-어려움: [여기에 어려운 난이도의 힌트 작성]";
+쉬움: [매우 쉬운 힌트]
+보통: [보통 난이도 힌트]  
+어려움: [조금 어려운 힌트]";
     }
 
     /**
@@ -345,6 +335,110 @@ class GeminiService
             $results[] = ['word_id' => $word['id'], 'word' => $word['word'], 'result' => $result];
         }
         return $results;
+    }
+
+    /**
+     * 단어 분석 (품사 판별)
+     */
+    public function analyzeWords(string $prompt): array
+    {
+        try {
+            Log::info('단어 분석 시작', ['prompt' => $prompt]);
+            
+            $requestData = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.3,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 1024,
+                ]
+            ];
+
+            $url = $this->baseUrl . '?key=' . $this->apiKey;
+            Log::info('Gemini API 호출', ['url' => $url]);
+            
+            $response = Http::timeout(60)->post($url, $requestData);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info('Gemini API 응답 성공', ['response' => $data]);
+                // 응답 텍스트 직접 확인
+                $raw_response = isset($data['candidates'][0]['content']['parts'][0]['text']) ? $data['candidates'][0]['content']['parts'][0]['text'] : '';
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    $responseText = $data['candidates'][0]['content']['parts'][0]['text'];
+                    Log::info('Gemini API 응답 텍스트', ['text' => $responseText]);
+                }
+                $words = $this->extractAnalyzedWordsFromResponse($data);
+                Log::info('단어 분석 결과', ['words' => $words]);
+
+                return [
+                    'success' => true,
+                    'words' => $words,
+                    'prompt' => $prompt,
+                    'raw_response' => $raw_response
+                ];
+            } else {
+                $error = 'API 요청 실패: ' . $response->status();
+                Log::error('Gemini API word analysis failed', [
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $error
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Gemini word analysis error', [
+                'error' => $e->getMessage(),
+                'prompt' => $prompt
+            ]);
+            return [
+                'success' => false,
+                'error' => '서비스 오류: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 응답에서 분석된 단어 추출 (줄 단위 파싱)
+     */
+    private function extractAnalyzedWordsFromResponse(array $response): array
+    {
+        $words = [];
+
+        try {
+            if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+                $text = $response['candidates'][0]['content']['parts'][0]['text'];
+                Log::info('분석 결과 파싱 직전 텍스트', ['text' => $text]);
+                $lines = preg_split('/\r?\n|\r/', $text);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (!$line || $line === '없음') continue;
+                    
+                    // 단순히 한 줄에 한 단어씩 추출
+                    $word = trim($line);
+                    if (!empty($word) && mb_strlen($word) >= 1) {
+                        $words[] = $word;
+                    }
+                }
+                return $words;
+            }
+            throw new \Exception('Invalid response structure');
+        } catch (\Exception $e) {
+            Log::error('Analyzed word extraction error', [
+                'response' => $response,
+                'error' => $e->getMessage()
+            ]);
+            return [];
+        }
     }
 
     /**

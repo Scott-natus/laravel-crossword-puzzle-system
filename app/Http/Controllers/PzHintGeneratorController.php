@@ -340,6 +340,113 @@ class PzHintGeneratorController extends Controller
     }
 
     /**
+     * 기존 힌트 수정 (더 쉽게)
+     */
+    public function regenerateHints(Request $request)
+    {
+        $validated = $request->validate([
+            'hint_ids' => 'required|array',
+            'hint_ids.*' => 'exists:pz_hints,id'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $hints = PzHint::whereIn('id', $validated['hint_ids'])->with('word')->get();
+            $results = [];
+            $successCount = 0;
+            $errorCount = 0;
+
+            foreach ($hints as $hint) {
+                $result = $this->geminiService->generateHint(
+                    $hint->word->word,
+                    $hint->word->category
+                );
+
+                if ($result['success'] && isset($result['hints'][$hint->difficulty])) {
+                    $newHintText = $result['hints'][$hint->difficulty]['hint'];
+                    
+                    $hint->update([
+                        'hint_text' => $newHintText,
+                        'correction_status' => 'y' // 보정 완료 표시
+                    ]);
+                    
+                    $results[] = [
+                        'hint_id' => $hint->id,
+                        'word' => $hint->word->word,
+                        'status' => 'success',
+                        'old_hint' => $hint->getOriginal('hint_text'),
+                        'new_hint' => $newHintText
+                    ];
+                    $successCount++;
+                } else {
+                    $results[] = [
+                        'hint_id' => $hint->id,
+                        'word' => $hint->word->word,
+                        'status' => 'error',
+                        'message' => '힌트 재생성 실패'
+                    ];
+                    $errorCount++;
+                }
+
+                // API 호출 간격 조절
+                sleep(1);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "힌트 수정 완료: 성공 {$successCount}개, 실패 {$errorCount}개",
+                'results' => $results,
+                'success_count' => $successCount,
+                'error_count' => $errorCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Hint regeneration error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => '힌트 수정 중 오류가 발생했습니다: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 보정이 필요한 힌트 목록 조회
+     */
+    public function getHintsForCorrection(Request $request)
+    {
+        $query = PzHint::with('word')
+            ->where('correction_status', '!=', 'y') // 보정되지 않은 힌트
+            ->orWhereNull('correction_status');
+
+        // 난이도별 필터링
+        $difficulty = $request->input('difficulty');
+        if ($difficulty) {
+            $query->where('difficulty', $difficulty);
+        }
+
+        // 카테고리별 필터링
+        $category = $request->input('category');
+        if ($category) {
+            $query->whereHas('word', function($q) use ($category) {
+                $q->where('category', $category);
+            });
+        }
+
+        $hints = $query->orderBy('created_at', 'desc')
+            ->paginate(20);
+
+        return response()->json($hints);
+    }
+
+    /**
      * API 연결 테스트
      */
     public function testConnection()

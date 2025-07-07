@@ -166,9 +166,15 @@ class GenerateWordsScheduler extends Command
     {
         $selectedRequirement = $this->getSelectedRequirement();
         
-        return "{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$category},단어의 형식으로 {$limit}개 추천해줘
+        return "{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$limit}개 추천해줘
 
-**중요: 다음 품사에 해당하는 단어만 생성해주세요:**
+**중요: 쉬운 단어만 생성해주세요!**
+- 초보자도 쉽게 알 수 있는 단어
+- 일상생활에서 자주 사용하는 단어
+- 어린이도 이해할 수 있는 단어
+- 복잡하거나 전문적인 단어는 제외
+
+다음 품사에 해당하는 단어만 생성해주세요:
 - 명사 (일반명사)
 - 대명사
 - 고유명사 (인명, 지명, 회사명 등)
@@ -190,6 +196,23 @@ class GenerateWordsScheduler extends Command
     }
 
     /**
+     * 난이도별 분포 설정
+     */
+    private function getDifficultyFocus()
+    {
+        $total = 20; // 기본 생성 개수
+        $easy = round($total * 0.3); // 30% 쉬운 단어
+        $medium = round($total * 0.5); // 50% 보통 단어
+        $hard = $total - $easy - $medium; // 20% 어려운 단어
+        
+        return [
+            'easy' => $easy,
+            'medium' => $medium,
+            'hard' => $hard
+        ];
+    }
+
+    /**
      * 십자낱말 퍼즐용 음절 조건 반환
      */
     private function getSyllableCondition($minute)
@@ -208,7 +231,10 @@ class GenerateWordsScheduler extends Command
             '외래어나 신조어로 이루어진 2~5음절 단어',
             '일상생활에서 사용되는 명사류 2~5음절 단어',
             '비즈니스나 전문 분야의 명사류 2~5음절 단어',
-            '최근 유행하는 신조어나 외래어 2~5음절 단어'
+            '최근 유행하는 신조어나 외래어 2~5음절 단어',
+            '초보자도 알 수 있는 기본적인 명사류 2~5음절 단어',
+            '전문가 수준의 고급 명사류 2~5음절 단어',
+            '다양한 난이도의 명사류 2~5음절 단어'
         ];
         
         return $requirements[array_rand($requirements)];
@@ -245,6 +271,7 @@ class GenerateWordsScheduler extends Command
     private function processAndSaveWords($suggestedWords, $category)
     {
         $newWords = [];
+        $difficultyCounts = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
         
         foreach ($suggestedWords as $wordData) {
             $word = trim($wordData['word'] ?? '');
@@ -265,29 +292,83 @@ class GenerateWordsScheduler extends Command
                 continue;
             }
             
+            // 난이도 결정 (단어 길이와 복잡성 기반)
+            $difficulty = $this->determineDifficulty($word);
+            
             // 새 단어 저장
             try {
                 $newWord = PzWord::create([
                     'word' => $word,
                     'category' => $category,
-                    'difficulty' => 2, // 기본 난이도
+                    'difficulty' => $difficulty,
                     'is_active' => true,
                 ]);
+                
+                $difficultyCounts[$difficulty]++;
                 
                 $newWords[] = [
                     'category' => $category,
                     'word' => $word,
-                    'id' => $newWord->id
+                    'id' => $newWord->id,
+                    'difficulty' => $difficulty
                 ];
                 
-                $this->writeToLog("새 단어 추가: [{$category}, {$word}] (ID: {$newWord->id})");
+                $this->writeToLog("새 단어 추가: [{$category}, {$word}] (ID: {$newWord->id}, 난이도: {$difficulty})");
                 
             } catch (\Exception $e) {
                 $this->writeToLog("단어 저장 실패: [{$category}, {$word}] - " . $e->getMessage());
             }
         }
         
+        // 난이도 분포 로그
+        $this->writeToLog("난이도 분포: " . json_encode($difficultyCounts));
+        
         return $newWords;
+    }
+
+    /**
+     * 단어 난이도 결정
+     */
+    private function determineDifficulty($word)
+    {
+        // 오늘은 모든 단어를 쉬운 단어로 설정
+        return 1; // 난이도 1 (쉬움)
+        
+        // 내일부터는 아래 로직 사용
+        /*
+        $length = mb_strlen($word);
+        
+        // 길이 기반 기본 난이도
+        if ($length <= 2) {
+            $baseDifficulty = 1;
+        } elseif ($length == 3) {
+            $baseDifficulty = 2;
+        } elseif ($length == 4) {
+            $baseDifficulty = 3;
+        } else {
+            $baseDifficulty = 4;
+        }
+        
+        // 특수 문자나 복잡한 조합 확인
+        $hasSpecialChars = preg_match('/[^가-힣]/', $word);
+        $hasComplexPattern = preg_match('/([가-힣])\1/', $word); // 같은 글자 반복
+        
+        // 난이도 조정
+        if ($hasSpecialChars) {
+            $baseDifficulty = min(5, $baseDifficulty + 1);
+        }
+        
+        if ($hasComplexPattern) {
+            $baseDifficulty = min(5, $baseDifficulty + 1);
+        }
+        
+        // 너무 어려운 단어는 난이도 조정
+        if ($baseDifficulty > 4) {
+            $baseDifficulty = 4;
+        }
+        
+        return $baseDifficulty;
+        */
     }
 
     /**

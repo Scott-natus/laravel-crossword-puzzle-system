@@ -517,4 +517,180 @@ function validateSearch() {
     }
     
     return true;
+}
+
+// 힌트 보정 모달 표시
+function showCorrectionModal() {
+    new bootstrap.Modal(document.getElementById('correctionModal')).show();
+    loadHintsForCorrection();
+}
+
+// 보정할 힌트 목록 로드
+function loadHintsForCorrection() {
+    const difficulty = document.getElementById('correctionDifficulty').value;
+    const category = document.getElementById('correctionCategory').value;
+    
+    let url = '/puzzle/hint-generator/hints-for-correction?';
+    if (difficulty) url += `difficulty=${difficulty}&`;
+    if (category) url += `category=${category}`;
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            displayCorrectionHints(data.data);
+        })
+        .catch(error => {
+            console.error('보정 힌트 로드 실패:', error);
+            showAlert('error', '보정할 힌트 목록을 불러오는데 실패했습니다.');
+        });
+}
+
+// 보정 힌트 목록 표시
+function displayCorrectionHints(hints) {
+    const tbody = document.getElementById('correctionTableBody');
+    tbody.innerHTML = '';
+    
+    if (hints.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">보정할 힌트가 없습니다.</td></tr>';
+        return;
+    }
+    
+    hints.forEach(hint => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <input type="checkbox" class="correction-checkbox" value="${hint.id}">
+            </td>
+            <td>${hint.word.word}</td>
+            <td>${hint.word.category}</td>
+            <td>
+                <span class="badge bg-${getDifficultyBadgeColor(hint.difficulty)}">
+                    ${getDifficultyText(hint.difficulty)}
+                </span>
+            </td>
+            <td>${hint.hint_text}</td>
+            <td>
+                <span class="badge bg-${hint.correction_status === 'y' ? 'success' : 'warning'}">
+                    ${hint.correction_status === 'y' ? '보정완료' : '보정필요'}
+                </span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // 체크박스 이벤트 리스너 추가
+    document.querySelectorAll('.correction-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCorrectionCount);
+    });
+}
+
+// 보정 전체 선택/해제
+function toggleSelectAllCorrection() {
+    const selectAll = document.getElementById('selectAllCorrection');
+    const checkboxes = document.querySelectorAll('.correction-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateSelectedCorrectionCount();
+}
+
+// 선택된 보정 힌트 수 업데이트
+function updateSelectedCorrectionCount() {
+    const checkboxes = document.querySelectorAll('.correction-checkbox:checked');
+    document.getElementById('selectedCorrectionCount').textContent = checkboxes.length;
+}
+
+// 선택된 힌트 보정
+function regenerateSelectedHints() {
+    const selectedHints = document.querySelectorAll('.correction-checkbox:checked');
+    
+    if (selectedHints.length === 0) {
+        showAlert('warning', '보정할 힌트를 선택해주세요.');
+        return;
+    }
+    
+    if (!confirm(`선택된 ${selectedHints.length}개의 힌트를 보정하시겠습니까?`)) {
+        return;
+    }
+    
+    const hintIds = Array.from(selectedHints).map(checkbox => checkbox.value);
+    
+    fetch('/puzzle/hint-generator/regenerate-hints', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({
+            hint_ids: hintIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showCorrectionResultModal(data);
+            loadHintsForCorrection(); // 목록 새로고침
+        } else {
+            showAlert('error', data.message || '힌트 보정에 실패했습니다.');
+        }
+    })
+    .catch(error => {
+        console.error('힌트 보정 실패:', error);
+        showAlert('error', '힌트 보정 중 오류가 발생했습니다.');
+    });
+}
+
+// 보정 결과 모달 표시
+function showCorrectionResultModal(data) {
+    const modal = document.getElementById('correctionResultModal');
+    const content = document.getElementById('correctionResultContent');
+    
+    let html = `
+        <div class="alert alert-success">
+            <h6 class="alert-heading">힌트 보정 완료!</h6>
+            <p>성공: ${data.success_count}개, 실패: ${data.error_count}개</p>
+        </div>
+    `;
+    
+    if (data.results && data.results.length > 0) {
+        html += '<div class="mt-3"><h6>보정 결과:</h6>';
+        data.results.forEach(result => {
+            const statusClass = result.status === 'success' ? 'success' : 'danger';
+            html += `
+                <div class="alert alert-${statusClass} mb-2">
+                    <strong>${result.word}</strong><br>
+                    ${result.status === 'success' ? 
+                        `이전: ${result.old_hint}<br>새로운: ${result.new_hint}` : 
+                        `오류: ${result.message}`
+                    }
+                </div>
+            `;
+        });
+        html += '</div>';
+    }
+    
+    content.innerHTML = html;
+    new bootstrap.Modal(modal).show();
+}
+
+// 난이도 배지 색상 반환
+function getDifficultyBadgeColor(difficulty) {
+    const colors = {
+        1: 'success',
+        2: 'warning', 
+        3: 'danger'
+    };
+    return colors[difficulty] || 'secondary';
+}
+
+// 난이도 텍스트 반환
+function getDifficultyText(difficulty) {
+    const texts = {
+        1: '쉬움',
+        2: '보통',
+        3: '어려움'
+    };
+    return texts[difficulty] || '알 수 없음';
 } 

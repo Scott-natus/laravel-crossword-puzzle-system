@@ -274,12 +274,12 @@ class PuzzleGameController extends Controller
             'has_base_hint_id' => $request->has('base_hint_id')
         ]);
 
-        // 요구사항: 기본 힌트 제외한 2개 중 ID가 최대값인 힌트만 선택
+        // 요구사항: 기본 힌트 제외하고 난이도 순서로 힌트 선택 (쉬운 것부터)
         $query = DB::table('pz_hints')
             ->where('word_id', $request->word_id)
             ->where('id', '<>', $request->base_hint_id) // 기본 힌트 제외
-            ->select('hint_text as hint', 'id')
-            ->orderBy('id', 'desc') // ID 최대값 우선
+            ->select('hint_text as hint', 'id', 'difficulty')
+            ->orderBy('difficulty', 'asc') // 난이도 낮은 것부터 (쉬운 것 우선)
             ->limit(1);
 
         // 실제 실행되는 SQL 쿼리를 로그에 출력
@@ -295,7 +295,8 @@ class PuzzleGameController extends Controller
         \Log::info('Query result', [
             'found_hint' => $additionalHint ? true : false,
             'hint_id' => $additionalHint ? $additionalHint->id : null,
-            'hint_text' => $additionalHint ? $additionalHint->hint : null
+            'hint_text' => $additionalHint ? $additionalHint->hint : null,
+            'difficulty' => $additionalHint ? $additionalHint->difficulty : null
         ]);
 
         if (!$additionalHint) {

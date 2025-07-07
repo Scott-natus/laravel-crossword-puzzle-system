@@ -78,12 +78,14 @@ function saveLevel(levelId, button) {
     button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     
     const data = {
-        word_count: parseInt(row.querySelector('.word-count').value),
-        word_difficulty: parseInt(row.querySelector('.word-difficulty').value),
-        hint_difficulty: row.querySelector('.hint-difficulty').value,
-        intersection_count: parseInt(row.querySelector('.intersection-count').value),
-        time_limit: parseInt(row.querySelector('.time-limit').value)
+        word_count: parseInt(row.querySelector('.word-count').value) || 0,
+        word_difficulty: parseInt(row.querySelector('.word-difficulty').value) || 1,
+        hint_difficulty: parseInt(row.querySelector('.hint-difficulty').value) || 1,
+        intersection_count: parseInt(row.querySelector('.intersection-count').value) || 0,
+        time_limit: parseInt(row.querySelector('.time-limit').value) || 0
     };
+    
+    console.log('Sending data:', data);
     
     fetch(`/puzzle/levels/${levelId}`, {
         method: 'PUT',
@@ -122,6 +124,7 @@ function saveLevel(levelId, button) {
             showAlert('error', data.message);
             if (data.errors) {
                 console.log('Validation errors:', data.errors);
+                console.log('Error details:', JSON.stringify(data.errors, null, 2));
             }
         }
     })

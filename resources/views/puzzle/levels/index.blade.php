@@ -118,7 +118,7 @@
                                     </td>
                                     <td>
                                         <input type="number" class="form-control form-control-sm time-limit" 
-                                               value="{{ $level->time_limit }}" min="1" 
+                                               value="{{ $level->time_limit }}" min="0" 
                                                data-original="{{ $level->time_limit }}">
                                     </td>
                                     <td class="text-muted small">

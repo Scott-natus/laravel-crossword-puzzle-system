@@ -65,28 +65,17 @@ class PuzzleGeneratorService
      */
     private function selectWordsForLevel(PuzzleLevel $level, $gridRules): Collection
     {
-        // 레벨에 맞는 난이도로 단어 선택
-        $difficulty = $this->mapLevelToDifficulty($level->level);
+        // 레벨에 설정된 word_difficulty 값을 사용
+        $wordDifficulty = $level->word_difficulty;
         
         $words = PzWord::active()
-            ->byDifficulty($difficulty)
+            ->where('difficulty', $wordDifficulty) // 레벨에 설정된 단어 난이도 사용
             ->whereBetween('length', [$gridRules->min_word_length, $gridRules->max_word_length])
             ->inRandomOrder()
             ->limit(10) // 최대 10개 단어 선택
             ->get();
 
         return $words;
-    }
-
-    private function mapLevelToDifficulty(int $levelNumber): string
-    {
-        if ($levelNumber <= 30) {
-            return 'easy';
-        } elseif ($levelNumber <= 70) {
-            return 'medium';
-        } else {
-            return 'hard';
-        }
     }
 
     /**
