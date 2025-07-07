@@ -125,11 +125,6 @@ class PzHintGeneratorController extends Controller
                 // 기존 힌트 삭제 (새로 생성할 것이므로)
                 $word->hints()->delete();
                 
-                // 사용빈도 정보로 단어 난이도 업데이트
-                if (isset($result['frequency']) && $result['frequency'] !== null) {
-                    $word->update(['difficulty' => $result['frequency']]);
-                }
-                
                 // 세 가지 난이도의 힌트를 모두 저장
                 foreach ($result['hints'] as $difficulty => $hintData) {
                     if ($hintData['success']) {
@@ -157,11 +152,9 @@ class PzHintGeneratorController extends Controller
 
                 return response()->json([
                     'success' => true,
-                    'message' => "힌트가 생성되었습니다. (성공: {$successCount}개, 실패: {$errorCount}개)" . 
-                                (isset($result['frequency']) ? " 단어 난이도가 {$result['frequency']}로 업데이트되었습니다." : ""),
+                    'message' => "힌트가 생성되었습니다. (성공: {$successCount}개, 실패: {$errorCount}개)",
                     'hints' => $createdHints,
                     'word' => $word->load('hints'),
-                    'frequency' => $result['frequency'] ?? null,
                     'summary' => [
                         'total' => 3,
                         'success' => $successCount,
@@ -229,11 +222,6 @@ class PzHintGeneratorController extends Controller
                         $word->hints()->delete();
                     }
                     
-                    // 사용빈도 정보로 단어 난이도 업데이트
-                    if (isset($result['frequency']) && $result['frequency'] !== null) {
-                        $word->update(['difficulty' => $result['frequency']]);
-                    }
-                    
                     $createdHints = [];
                     $hintCount = 0;
                     
@@ -265,8 +253,7 @@ class PzHintGeneratorController extends Controller
                         'word' => $word->word,
                         'status' => 'success',
                         'hint_count' => $hintCount,
-                        'hints' => $createdHints,
-                        'frequency' => $result['frequency'] ?? null
+                        'hints' => $createdHints
                     ];
                     $successCount++;
                 } else {
@@ -537,13 +524,7 @@ class PzHintGeneratorController extends Controller
         // 출제 가능한 단어 풀 생성 (힌트 존재 + 난이도 맞는 단어들)
         $availableWords = DB::table('pz_words as pw')
             ->join('pz_hints as ph', 'pw.id', '=', 'ph.word_id')
-            ->where(function($query) use ($wordDifficulty) {
-                if ($wordDifficulty == 3) {
-                    $query->where('pw.difficulty', '<=', 3);
-                } else {
-                    $query->where('pw.difficulty', $wordDifficulty);
-                }
-            })
+            ->where('pw.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
             ->where('pw.is_active', true)
             ->select('pw.id', 'pw.word', 'ph.hint_text', 'ph.difficulty as hint_difficulty')
             ->get();

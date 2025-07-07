@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use App\Models\PzWord;
 use App\Services\GeminiService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class GenerateWordsScheduler extends Command
@@ -168,11 +169,12 @@ class GenerateWordsScheduler extends Command
         
         return "{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$limit}개 추천해줘
 
-**중요: 쉬운 단어만 생성해주세요!**
-- 초보자도 쉽게 알 수 있는 단어
-- 일상생활에서 자주 사용하는 단어
-- 어린이도 이해할 수 있는 단어
-- 복잡하거나 전문적인 단어는 제외
+**중요: 다양한 난이도의 단어를 생성해주세요!**
+- 쉬운 단어: 초보자도 쉽게 알 수 있는 단어
+- 보통 단어: 일상생활에서 자주 사용하는 단어  
+- 어려운 단어: 전문적이거나 복잡한 단어
+- 매우 어려운 단어: 고급 전문 용어
+- 극도 어려운 단어: 매우 특수하거나 전문적인 단어
 
 다음 품사에 해당하는 단어만 생성해주세요:
 - 명사 (일반명사)
@@ -275,7 +277,7 @@ class GenerateWordsScheduler extends Command
         
         foreach ($suggestedWords as $wordData) {
             $word = trim($wordData['word'] ?? '');
-            $category = trim($wordData['category'] ?? $category);
+            $wordCategory = trim($wordData['category'] ?? $category);
             
             // 유효성 검사 (2~5음절)
             if (empty($word) || mb_strlen($word) < 2 || mb_strlen($word) > 5) {
@@ -284,22 +286,22 @@ class GenerateWordsScheduler extends Command
             
             // 중복 체크 (카테고리와 단어 조합으로)
             $exists = PzWord::where('word', $word)
-                ->where('category', $category)
+                ->where('category', $wordCategory)
                 ->exists();
                 
             if ($exists) {
-                $this->writeToLog("중복 단어 스킵: [{$category}, {$word}]");
+                $this->writeToLog("중복 단어 스킵: [{$wordCategory}, {$word}]");
                 continue;
             }
             
-            // 난이도 결정 (단어 길이와 복잡성 기반)
-            $difficulty = $this->determineDifficulty($word);
+            // 단어 난이도 별도 요청
+            $difficulty = $this->getWordDifficulty($word, $wordCategory);
             
             // 새 단어 저장
             try {
                 $newWord = PzWord::create([
                     'word' => $word,
-                    'category' => $category,
+                    'category' => $wordCategory,
                     'difficulty' => $difficulty,
                     'is_active' => true,
                 ]);
@@ -307,16 +309,16 @@ class GenerateWordsScheduler extends Command
                 $difficultyCounts[$difficulty]++;
                 
                 $newWords[] = [
-                    'category' => $category,
+                    'category' => $wordCategory,
                     'word' => $word,
                     'id' => $newWord->id,
                     'difficulty' => $difficulty
                 ];
                 
-                $this->writeToLog("새 단어 추가: [{$category}, {$word}] (ID: {$newWord->id}, 난이도: {$difficulty})");
+                $this->writeToLog("새 단어 추가: [{$wordCategory}, {$word}] (ID: {$newWord->id}, 난이도: {$difficulty})");
                 
             } catch (\Exception $e) {
-                $this->writeToLog("단어 저장 실패: [{$category}, {$word}] - " . $e->getMessage());
+                $this->writeToLog("단어 저장 실패: [{$wordCategory}, {$word}] - " . $e->getMessage());
             }
         }
         
@@ -327,48 +329,67 @@ class GenerateWordsScheduler extends Command
     }
 
     /**
-     * 단어 난이도 결정
+     * 단어 난이도 별도 요청
      */
-    private function determineDifficulty($word)
+    private function getWordDifficulty($word, $category)
     {
-        // 오늘은 모든 단어를 쉬운 단어로 설정
-        return 1; // 난이도 1 (쉬움)
-        
-        // 내일부터는 아래 로직 사용
-        /*
-        $length = mb_strlen($word);
-        
-        // 길이 기반 기본 난이도
-        if ($length <= 2) {
-            $baseDifficulty = 1;
-        } elseif ($length == 3) {
-            $baseDifficulty = 2;
-        } elseif ($length == 4) {
-            $baseDifficulty = 3;
-        } else {
-            $baseDifficulty = 4;
+        try {
+            $prompt = "단어 '{$word}' ({$category} 카테고리)를 십자낱말 퀴즈에 제출한다고 고려할 때, 단어의 난이도를 1~5 숫자로 평가해주세요.
+
+1: 매우 쉬움 (초등학생도 쉽게 알 수 있는 단어)
+2: 쉬움 (일반인들이 쉽게 알 수 있는 단어)
+3: 보통 (일반적인 지식을 가진 사람이 알 수 있는 단어)
+4: 어려움 (전문 지식이 필요한 단어)
+5: 매우 어려움 (전문가 수준의 고급 단어)
+
+응답 형식: [1~5 숫자만]
+
+예시:
+3";
+
+            $requestData = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.3,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 10,
+                ]
+            ];
+
+            $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=' . config('services.gemini.api_key');
+            $response = Http::timeout(30)->post($url, $requestData);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    $text = trim($data['candidates'][0]['content']['parts'][0]['text']);
+                    
+                    // 숫자만 추출
+                    if (preg_match('/(\d+)/', $text, $matches)) {
+                        $difficulty = (int)$matches[1];
+                        if ($difficulty >= 1 && $difficulty <= 5) {
+                            $this->writeToLog("단어 '{$word}' 난이도: {$difficulty}");
+                            return $difficulty;
+                        }
+                    }
+                }
+            }
+            
+            // 실패 시 기본값 반환
+            $this->writeToLog("단어 '{$word}' 난이도 요청 실패, 기본값 2 사용");
+            return 2;
+            
+        } catch (\Exception $e) {
+            $this->writeToLog("단어 '{$word}' 난이도 요청 중 오류: " . $e->getMessage());
+            return 2; // 기본값
         }
-        
-        // 특수 문자나 복잡한 조합 확인
-        $hasSpecialChars = preg_match('/[^가-힣]/', $word);
-        $hasComplexPattern = preg_match('/([가-힣])\1/', $word); // 같은 글자 반복
-        
-        // 난이도 조정
-        if ($hasSpecialChars) {
-            $baseDifficulty = min(5, $baseDifficulty + 1);
-        }
-        
-        if ($hasComplexPattern) {
-            $baseDifficulty = min(5, $baseDifficulty + 1);
-        }
-        
-        // 너무 어려운 단어는 난이도 조정
-        if ($baseDifficulty > 4) {
-            $baseDifficulty = 4;
-        }
-        
-        return $baseDifficulty;
-        */
     }
 
     /**

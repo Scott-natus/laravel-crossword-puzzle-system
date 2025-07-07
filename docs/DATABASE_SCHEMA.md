@@ -198,6 +198,24 @@ INSERT INTO board_types (name, slug, description) VALUES
 - **puzzle_hint_limits**: 레벨별 힌트 제한
 - **puzzle_scoring_rules**: 레벨별 점수 규칙
 - **puzzle_sessions**: 퍼즐 세션 기록
+- **tmp_pz_word_difficulty**: 단어 난이도 업데이트 임시 테이블 (2025-01-27 추가)
+
+## 임시 테이블
+
+### tmp_pz_word_difficulty (단어 난이도 업데이트 임시 테이블)
+```sql
+CREATE TABLE tmp_pz_word_difficulty (
+    id BIGSERIAL PRIMARY KEY,
+    word_id BIGINT NOT NULL,
+    word VARCHAR(255) NOT NULL,
+    update_yn CHAR(1) DEFAULT 'n', -- 'y': 업데이트 완료, 'n': 업데이트 대기
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**용도**: 기존 단어들의 난이도를 일괄 업데이트하기 위한 임시 테이블
+**관리 방식**: UpdateWordDifficultyScheduler artisan 명령어로 10분마다 update_yn='n'인 단어 50개씩 처리
 - **board_attachments**: 게시판 첨부파일
 - **board_comments**: 게시판 댓글
 

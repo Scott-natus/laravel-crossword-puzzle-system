@@ -103,11 +103,6 @@ class GenerateHintsScheduler extends Command
                     // 기존 힌트 삭제
                     $word->hints()->delete();
 
-                    // 사용빈도 정보로 단어 난이도 업데이트
-                    if (isset($result['frequency']) && $result['frequency'] !== null) {
-                        $word->update(['difficulty' => $result['frequency']]);
-                    }
-
                     // 세 가지 난이도의 힌트를 모두 저장
                     foreach ($result['hints'] as $difficulty => $hintData) {
                         if ($hintData['success']) {

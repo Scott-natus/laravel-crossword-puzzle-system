@@ -26,6 +26,13 @@ class Kernel extends ConsoleKernel
                 ->cron('5,15,25,35,45,55 * * * *')
                 ->runInBackground()
                 ->appendOutputTo(storage_path('logs/word-scheduler.log'));
+        
+        // 10분마다 기존 단어 난이도 50개씩 자동 업데이트
+        $schedule->command('puzzle:update-word-difficulty --limit=50')
+                ->everyTenMinutes()
+                ->withoutOverlapping()
+                ->runInBackground()
+                ->appendOutputTo(storage_path('logs/word-difficulty-update.log'));
     }
 
     /**

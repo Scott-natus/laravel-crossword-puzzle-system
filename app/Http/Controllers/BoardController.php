@@ -133,7 +133,7 @@ class BoardController extends Controller
             'password' => 'required',
             'attachments.*' => [
                 'file',
-                'max:102400', // 100MB
+                'max:512000', // 500MB
                 'mimes:jpg,jpeg,png,gif,bmp,webp,mp4,avi,mov,wmv,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar',
                 'mimetypes:image/jpeg,image/png,image/gif,image/bmp,image/webp,video/mp4,video/avi,video/quicktime,video/x-ms-wmv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,application/zip,application/x-rar-compressed'
             ],
@@ -359,7 +359,7 @@ class BoardController extends Controller
             'password' => 'required',
             'attachments.*' => [
                 'file',
-                'max:102400', // 100MB
+                'max:512000', // 500MB
                 'mimes:jpg,jpeg,png,gif,bmp,webp,mp4,avi,mov,wmv,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar',
                 'mimetypes:image/jpeg,image/png,image/gif,image/bmp,image/webp,video/mp4,video/avi,video/quicktime,video/x-ms-wmv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,application/zip,application/x-rar-compressed'
             ],

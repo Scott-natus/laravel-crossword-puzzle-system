@@ -198,6 +198,66 @@ public function saveTemplate($template)
                word.id = numberMapping[word.id];
            }
        });
+   ```
+
+## 5. 단어 난이도 업데이트 시스템 문제
+
+### 문제: 단어 난이도 업데이트가 힌트 생성과 함께 실행되어 성능 저하
+**원인:** 힌트 생성 API에서 단어 난이도도 함께 업데이트하여 API 응답 시간 증가
+
+**해결책:**
+1. 힌트 생성과 단어 난이도 업데이트 완전 분리
+2. 임시 테이블(tmp_pz_word_difficulty) 생성하여 업데이트 관리
+3. UpdateWordDifficultyScheduler artisan 명령어로 별도 처리
+
+### 문제: 단어 난이도 업데이트 스케줄러가 실행되지 않음
+**원인:** Laravel 스케줄러 등록 누락 또는 크론탭 설정 문제
+
+**해결책:**
+1. `app/Console/Kernel.php`에 스케줄러 등록 확인:
+   ```php
+   $schedule->command('puzzle:update-word-difficulty')->everyTenMinutes();
+   ```
+2. 크론탭 설정 확인:
+   ```bash
+   */10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+   ```
+3. 수동 실행으로 테스트:
+   ```bash
+   php artisan puzzle:update-word-difficulty
+   ```
+
+### 문제: Gemini API에서 난이도 평가 응답이 예상 형식과 다름
+**원인:** 프롬프트가 명확하지 않거나 응답 파싱 로직 오류
+
+**해결책:**
+1. GeminiService.php의 난이도 평가 프롬프트 확인
+2. 응답 형식이 `[단어,난이도]` 형태인지 확인
+3. 정규식 파싱 로직 점검:
+   ```php
+   preg_match_all('/\[([^,]+),(\d+)\]/', $response, $matches);
+   ```
+
+### 문제: 임시 테이블에 데이터가 없음
+**원인:** 기존 단어 데이터가 임시 테이블에 복사되지 않음
+
+**해결책:**
+1. 임시 테이블 생성 확인:
+   ```sql
+   CREATE TABLE tmp_pz_word_difficulty (
+       id BIGSERIAL PRIMARY KEY,
+       word_id BIGINT NOT NULL,
+       word VARCHAR(255) NOT NULL,
+       update_yn CHAR(1) DEFAULT 'n',
+       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+   );
+   ```
+2. 기존 단어 데이터 복사:
+   ```sql
+   INSERT INTO tmp_pz_word_difficulty (word_id, word)
+   SELECT id, word FROM puzzle_words WHERE is_active = true;
+   ```
    }
    ```
 
