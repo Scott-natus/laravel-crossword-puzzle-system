@@ -242,4 +242,47 @@
 - 추가: 향후 첨부파일 미노출 시 storage:link 상태 점검 필요
 
 - 모든 주요 장애/이슈 해결 후 반드시 docs/WORKFLOW.md, docs/TROUBLESHOOTING.md 등 문서화
+- git add/commit/push 필수
+
+## 2025-07-07 작업 내역
+
+## 1. 파일 업로드 용량 확장 (500MB)
+- **PHP 설정 변경**:
+  - `upload_max_filesize = 500M`
+  - `post_max_size = 500M`
+  - `memory_limit = 512M`
+  - `max_execution_time = 300`
+- **Laravel Validation 변경**:
+  - BoardController: `max:512000` (500MB)
+  - Api/BoardController: `max:512000` (500MB)
+- **Apache 설정 변경**:
+  - `LimitRequestBody 524288000` (500MB)
+
+## 2. WebDAV NAS 구축
+- **WebDAV 모듈 활성화**: `dav`, `dav_fs`, `auth_digest`
+- **SSL 설정 파일 수정**: `/etc/apache2/sites-available/natus-project-ssl.conf`
+- **인증 설정**: Basic 인증 (사용자: nas_user)
+- **비밀번호 파일**: `/etc/apache2/webdav.passwd`
+- **접근 URL**: https://natus250601.viewdns.net/webdav
+
+## 3. 추가 HDD 설정
+- **디스크 정보**: /dev/sdb3 (119G)
+- **파일 시스템**: NTFS → ext4로 포맷
+- **마운트 위치**: `/mnt/nas_storage/hdd_data`
+- **소유권 설정**: www-data:www-data
+- **사용량**: 117G 중 24K 사용 (1% 미만)
+
+## 4. 문제 해결 과정
+- **413 에러**: Apache LimitRequestBody 설정 추가
+- **Internal Server Error**: Digest → Basic 인증 변경
+- **중복 설정 충돌**: 000-default.conf에서 WebDAV 설정 제거
+- **NTFS 손상**: ntfsfix로 복구 후 ext4로 포맷
+
+## 5. 최종 결과
+- **파일 업로드**: 500MB까지 지원
+- **WebDAV NAS**: 인증 기반 접근 가능
+- **추가 스토리지**: 117G ext4 파티션 사용 가능
+- **권한 설정**: WebDAV에서 파일 읽기/쓰기 가능
+
+- 모든 주요 장애/이슈 해결 후 반드시 docs/WORKFLOW.md, docs/TROUBLESHOOTING.md 등 문서화
 - git add/commit/push 필수 

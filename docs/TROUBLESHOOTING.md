@@ -519,3 +519,97 @@ php artisan tinker --execute="echo config('database.default');"
 - 증상: 삭제 버튼 클릭 시 아무 반응 없음, 네트워크 요청도 발생하지 않음
 - 원인: confirmDelete 버튼에 JS 이벤트가 DOMContentLoaded 전에 연결되어 실제로 연결되지 않음
 - 해결: 이벤트 연결을 document.addEventListener('DOMContentLoaded', ...) 내부로 이동 
+
+# 2025-07-07 문제 해결 내역
+
+## 1. 파일 업로드 413 에러 (Content Too Large)
+### 문제
+- 300MB 파일 업로드 시 413 에러 발생
+- PHP 설정 제한: upload_max_filesize = 2M, post_max_size = 8M
+
+### 해결 방법
+1. **PHP 설정 변경** (/etc/php/8.2/fpm/php.ini):
+   ```ini
+   upload_max_filesize = 500M
+   post_max_size = 500M
+   memory_limit = 512M
+   max_execution_time = 300
+   ```
+
+2. **Apache 설정 변경** (/etc/apache2/apache2.conf):
+   ```
+   LimitRequestBody 524288000
+   ```
+
+3. **Laravel Validation 변경**:
+   ```php
+   'max:512000' // 500MB
+   ```
+
+## 2. WebDAV Internal Server Error
+### 문제
+- WebDAV 접속 시 500 Internal Server Error
+- "AuthType Digest configured without corresponding module" 에러
+
+### 해결 방법
+1. **Digest → Basic 인증 변경**:
+   ```apache
+   AuthType Basic
+   AuthName "WebDAV Restricted Access"
+   AuthUserFile /etc/apache2/webdav.passwd
+   Require valid-user
+   ```
+
+2. **중복 설정 제거**:
+   - `/etc/apache2/sites-available/000-default.conf`에서 WebDAV 설정 제거
+   - SSL 설정 파일(`natus-project-ssl.conf`)에만 WebDAV 설정 유지
+
+3. **모듈 활성화**:
+   ```bash
+   sudo a2enmod dav dav_fs auth_digest
+   sudo systemctl restart apache2
+   ```
+
+## 3. WebDAV 인증 팝업 미출현
+### 문제
+- 인증 팝업창이 뜨지 않고 바로 401 Unauthorized 발생
+
+### 해결 방법
+1. **인증 헤더 명시적 설정**:
+   ```apache
+   Header always set WWW-Authenticate 'Basic realm="WebDAV Restricted Access"'
+   ```
+
+2. **브라우저 캐시 삭제**
+3. **시크릿 모드로 테스트**
+
+## 4. NTFS 파티션 손상
+### 문제
+- /dev/sdb3 마운트 시 "NTFS is inconsistent" 에러
+
+### 해결 방법
+1. **NTFS 복구**:
+   ```bash
+   sudo ntfsfix /dev/sdb3
+   ```
+
+2. **ext4로 포맷** (권장):
+   ```bash
+   sudo mkfs.ext4 /dev/sdb3
+   sudo mount /dev/sdb3 /mnt/nas_storage/hdd_data
+   ```
+
+## 5. WebDAV 권한 문제
+### 문제
+- HDD 마운트 후 WebDAV에서 파일 읽기/쓰기 불가
+
+### 해결 방법
+1. **소유권 변경**:
+   ```bash
+   sudo chown -R www-data:www-data /mnt/nas_storage/hdd_data
+   ```
+
+## 주의사항
+- 파일 업로드 용량 변경 시 PHP-FPM과 Apache 모두 재시작 필요
+- WebDAV 설정 변경 시 인증 팝업 캐시 문제 가능성
+- NTFS → ext4 포맷 시 모든 데이터 삭제됨
