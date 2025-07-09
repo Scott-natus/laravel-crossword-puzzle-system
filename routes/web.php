@@ -99,7 +99,9 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
     // 힌트 생성 관리
     Route::prefix('hint-generator')->name('hint-generator.')->group(function () {
         Route::get('/', [PzHintGeneratorController::class, 'index'])->name('index');
+        Route::get('/words-ajax', [PzHintGeneratorController::class, 'getWordsAjax'])->name('words-ajax');
         Route::post('/word/{wordId}', [PzHintGeneratorController::class, 'generateForWord'])->name('generate-word');
+        Route::get('/word/{wordId}/hints', [PzHintGeneratorController::class, 'getWordHints'])->name('get-word-hints');
         Route::post('/batch', [PzHintGeneratorController::class, 'generateBatch'])->name('generate-batch');
         Route::post('/category', [PzHintGeneratorController::class, 'generateByCategory'])->name('generate-category');
         Route::get('/test-connection', [PzHintGeneratorController::class, 'testConnection'])->name('test-connection');

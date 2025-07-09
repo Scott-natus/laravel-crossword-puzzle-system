@@ -2,6 +2,14 @@
 
 @section('title', 'AI 힌트 생성 관리')
 
+@push('styles')
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/scroller/2.2.0/css/scroller.bootstrap5.min.css">
+@endpush
+
 @section('content')
 <!-- 퍼즐 관리 바로가기 네비게이션 -->
 <div class="container-fluid mb-4">
@@ -108,41 +116,17 @@
                 </div>
                 
                 <div class="card-body">
-                    <!-- 필터 -->
-                    <form action="{{ route('puzzle.hint-generator.index') }}" method="GET" id="searchForm">
-                        <div class="row mb-3">
-                            <div class="col-md-2">
-                                <select class="form-select" name="search_type" id="searchType">
-                                    <option value="keyword" {{ !isset($searchType) || $searchType == 'keyword' ? 'selected' : '' }}>키워드 검색</option>
-                                    <option value="category" {{ isset($searchType) && $searchType == 'category' ? 'selected' : '' }}>카테고리</option>
-                                    <option value="word" {{ isset($searchType) && $searchType == 'word' ? 'selected' : '' }}>단어검색</option>
-                                </select>
-                            </div>
-                            <div class="col-md-3" id="categoryDropdown" style="display: none;">
-                                <select class="form-select" name="search_category" id="searchCategory">
-                                    <option value="전체 카테고리" {{ (!isset($searchCategory) || $searchCategory == '' || $searchCategory == '전체 카테고리') ? 'selected' : '' }}>전체 카테고리</option>
-                                    @if(isset($categories))
-                                        @foreach($categories as $category)
-                                            <option value="{{ $category }}" {{ (isset($searchCategory) && $searchCategory == $category) ? 'selected' : '' }}>{{ $category }}</option>
-                                        @endforeach
-                                    @endif
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <input type="text" class="form-control" name="search_word" id="searchInput" 
-                                       placeholder="키워드 검색..." value="{{ $searchWord ?? '' }}">
-                            </div>
-                            <div class="col-md-2">
-                                <button type="submit" class="btn btn-secondary w-100" onclick="return validateSearch()">
-                                    <i class="fas fa-search"></i> 검색
-                                </button>
-                            </div>
-                        </div>
-                    </form>
+                    <!-- DataTables 검색 기능 사용 -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        DataTables의 내장 검색 기능을 사용하세요. 상단의 검색창에서 카테고리, 단어, 난이도 등을 검색할 수 있습니다.
+                    </div>
+                    
+                    <!-- 페이지네이션은 DataTables에서 자동 처리됩니다 -->
 
                     <!-- 단어 목록 -->
                     <div class="table-responsive">
-                        <table class="table table-hover">
+                        <table id="wordsDataTable" class="table table-hover">
                             <thead>
                                 <tr>
                                     <th>
@@ -156,130 +140,10 @@
                                     <th>관리</th>
                                 </tr>
                             </thead>
-                            <tbody id="wordsTableBody">
-                                @foreach($words as $word)
-                                    <tr data-word-id="{{ $word->id }}" data-category="{{ $word->category }}" data-hint-count="{{ $word->hints_count }}">
-                                        <td>
-                                            <input type="checkbox" class="word-checkbox" value="{{ $word->id }}">
-                                        </td>
-                                        <td>{{ $word->category }}</td>
-                                        <td>{{ $word->word }}</td>
-                                        <td>{{ $word->length }}</td>
-                                        <td>
-                                            @php
-                                                $badgeColor = 'success';
-                                                if ($word->difficulty === 2) $badgeColor = 'warning';
-                                                elseif ($word->difficulty === 3) $badgeColor = 'danger';
-                                                elseif ($word->difficulty === 4) $badgeColor = 'dark';
-                                                elseif ($word->difficulty === 5) $badgeColor = 'secondary';
-                                            @endphp
-                                            <span class="badge bg-{{ $badgeColor }}">
-                                                {{ $word->difficulty_text }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <span class="badge bg-{{ $word->hints_count > 0 ? 'success' : 'secondary' }}">
-                                                {{ $word->hints_count }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            @if($word->hints_count > 0)
-                                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                                        onclick="toggleHintsView({{ $word->id }})">
-                                                    <i class="fas fa-eye"></i> 힌트 보기
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-warning ms-1" 
-                                                        onclick="regenerateHint({{ $word->id }})">
-                                                    <i class="fas fa-redo"></i> 재생성
-                                                </button>
-                                            @else
-                                                <button type="button" class="btn btn-sm btn-primary" 
-                                                        onclick="generateHint({{ $word->id }})">
-                                                    <i class="fas fa-magic"></i> 힌트 생성
-                                                </button>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    {{-- 힌트 표시를 위한 아코디언 행 --}}
-                                    @if($word->hints_count > 0)
-                                    <tr class="hints-row" id="hints-view-{{ $word->id }}" style="display: none;">
-                                        <td colspan="7">
-                                            <div class="hints-container p-3">
-                                                <h6 class="mb-2"><strong>'{{ $word->word }}'</strong> 힌트 목록</h6>
-                                                <ul class="list-group">
-                                                    @php
-                                                        $difficultyOrder = [1 => 1, 2 => 2, 3 => 3];
-                                                        $sortedHints = $word->hints->sortBy(function($hint) use ($difficultyOrder) {
-                                                            return $difficultyOrder[$hint->difficulty] ?? 99;
-                                                        });
-                                                    @endphp
-                                                    @foreach($sortedHints as $hint)
-                                                        @php
-                                                            $badgeColor = 'bg-info';
-                                                            $iconClass = 'fa-question-circle';
-                                                            if ($hint->difficulty === 1) {
-                                                                $badgeColor = 'bg-primary';
-                                                                $iconClass = 'fa-laugh-beam';
-                                                            } elseif ($hint->difficulty === 2) {
-                                                                $badgeColor = 'bg-success';
-                                                                $iconClass = 'fa-meh';
-                                                            } elseif ($hint->difficulty === 3) {
-                                                                $badgeColor = 'bg-danger';
-                                                                $iconClass = 'fa-dizzy';
-                                                            }
-                                                        @endphp
-                                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                                            <span>{{ $hint->hint_text }}</span>
-                                                            <span class="badge {{ $badgeColor }}">
-                                                                <i class="fas {{ $iconClass }} me-1"></i>
-                                                                {{ $hint->difficulty_text }}
-                                                            </span>
-                                                        </li>
-                                                    @endforeach
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endif
-                                @endforeach
+                            <tbody>
+                                <!-- Ajax로 데이터 로드 -->
                             </tbody>
                         </table>
-                    </div>
-
-                    <!-- 페이징 -->
-                    <div class="d-flex justify-content-center">
-                        @if ($words->lastPage() > 1)
-                            <nav>
-                                <ul class="pagination">
-                                    @php
-                                        $blockSize = 10;
-                                        $currentPage = $words->currentPage();
-                                        $lastPage = $words->lastPage();
-                                        $currentBlock = intval(ceil($currentPage / $blockSize));
-                                        $start = ($currentBlock - 1) * $blockSize + 1;
-                                        $end = min($start + $blockSize - 1, $lastPage);
-                                        $prevBlockPage = $start - $blockSize > 0 ? $start - $blockSize : 1;
-                                        $nextBlockPage = $end + 1 <= $lastPage ? $end + 1 : $lastPage;
-                                    @endphp
-                                    {{-- Previous Block Link --}}
-                                    <li class="page-item {{ $start == 1 ? 'disabled' : '' }}">
-                                        <a class="page-link" href="{{ $start == 1 ? '#' : $words->url($prevBlockPage) }}" tabindex="-1">Previous</a>
-                                    </li>
-
-                                    {{-- Pagination Elements --}}
-                                    @for ($i = $start; $i <= $end; $i++)
-                                        <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
-                                            <a class="page-link" href="{{ $words->url($i) }}">{{ $i }}</a>
-                                        </li>
-                                    @endfor
-
-                                    {{-- Next Block Link --}}
-                                    <li class="page-item {{ $end == $lastPage ? 'disabled' : '' }}">
-                                        <a class="page-link" href="{{ $end == $lastPage ? '#' : $words->url($nextBlockPage) }}">Next</a>
-                                    </li>
-                                </ul>
-                            </nav>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -579,6 +443,29 @@
     border-left: 4px solid #007bff;
 }
 
+/* DataTables 그리드 외곽선 */
+#wordsDataTable {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#wordsDataTable thead th {
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #495057;
+}
+
+#wordsDataTable tbody td {
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+#wordsDataTable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
 /* 현재 페이지 강조 */
 .btn-info.btn-sm {
     background-color: #0aa2c0;
@@ -604,13 +491,132 @@
 @endpush
 
 @push('scripts')
+<!-- DataTables JS -->
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/scroller/2.2.0/js/dataTables.scroller.min.js"></script>
+
 <script src="{{ asset('js/hint-generator.js') }}"></script>
 <script>
+    // DataTables 초기화 (Ajax + 무한 스크롤)
+    $(document).ready(function() {
+        var table = $('#wordsDataTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("puzzle.hint-generator.words-ajax") }}',
+                type: 'GET',
+                data: function(d) {
+                    // 추가 파라미터 전달
+                    d.status = $('#statusFilter').val();
+                    return d;
+                }
+            },
+            pageLength: 30, // 한 번에 30개씩
+            deferRender: true, // 성능 최적화
+            order: [[2, 'asc']], // 단어 컬럼 기준 정렬
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/ko.json'
+            },
+            columnDefs: [
+                { orderable: false, targets: [0, 6] }, // 체크박스, 관리 컬럼 정렬 비활성화
+                { width: '5%', targets: 0 },
+                { width: '15%', targets: 1 },
+                { width: '20%', targets: 2 },
+                { width: '10%', targets: 3 },
+                { width: '10%', targets: 4 },
+                { width: '10%', targets: 5 },
+                { width: '30%', targets: 6 }
+            ],
+            // 무한 스크롤 설정
+            scrollY: '60vh',
+            scroller: {
+                loadingIndicator: true,
+                rowHeight: 50 // 행 높이 설정
+            },
+            // 데이터 로드 후 이벤트 연결
+            drawCallback: function() {
+                // 체크박스 이벤트 연결
+                $('.word-checkbox').off('change').on('change', function() {
+                    updateSelectedWords();
+                });
+                
+                // 전체 선택 체크박스 이벤트 연결
+                $('#selectAll').off('change').on('change', function() {
+                    toggleSelectAll();
+                });
+                
+                // 힌트 생성 버튼 이벤트 연결
+                $('.btn-primary[data-word-id]').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const wordId = $(this).data('word-id');
+                    generateHint(wordId);
+                });
+                
+                // 힌트 재생성 버튼 이벤트 연결
+                $('.btn-warning[data-word-id]').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const wordId = $(this).data('word-id');
+                    regenerateHint(wordId);
+                });
+                
+                // 힌트 보기 버튼 이벤트 연결
+                $('.btn-outline-primary[data-word-id]').off('click').on('click', function(e) {
+                    e.preventDefault();
+                    const wordId = $(this).data('word-id');
+                    toggleHintsView(wordId);
+                });
+            }
+        });
+    });
+
     function toggleHintsView(wordId) {
-        const hintsRow = document.getElementById(`hints-view-${wordId}`);
-        if (hintsRow) {
-            hintsRow.style.display = hintsRow.style.display === 'none' ? 'table-row' : 'none';
-        }
+        // Ajax로 힌트 데이터를 가져와서 모달로 표시
+        fetch(`/puzzle/hint-generator/word/${wordId}/hints`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showHintsModal(data.hints, data.word);
+                } else {
+                    showAlert('error', '힌트를 불러오는데 실패했습니다.');
+                }
+            })
+            .catch(error => {
+                console.error('힌트 로드 실패:', error);
+                showAlert('error', '힌트를 불러오는 중 오류가 발생했습니다.');
+            });
+    }
+    
+    function showHintsModal(hints, word) {
+        let hintsHtml = '';
+        hints.forEach(hint => {
+            const badgeColor = hint.difficulty === 1 ? 'bg-primary' : 
+                              hint.difficulty === 2 ? 'bg-success' : 'bg-danger';
+            const iconClass = hint.difficulty === 1 ? 'fa-laugh-beam' : 
+                             hint.difficulty === 2 ? 'fa-meh' : 'fa-dizzy';
+            
+            hintsHtml += `
+                <div class="hint-result-item">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <span class="hint-content">${hint.hint_text}</span>
+                        <span class="badge ${badgeColor} hint-difficulty-badge">
+                            <i class="fas ${iconClass} me-1"></i>
+                            ${hint.difficulty_text}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        document.getElementById('resultWord').textContent = word.word;
+        document.getElementById('resultCategory').textContent = word.category;
+        document.getElementById('generatedHintsList').innerHTML = hintsHtml;
+        
+        new bootstrap.Modal(document.getElementById('singleHintResultModal')).show();
     }
 </script>
 @endpush

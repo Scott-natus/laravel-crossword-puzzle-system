@@ -256,7 +256,7 @@ class GeminiService
     }
 
     /**
-     * 응답에서 단어 추출 (줄 단위 파싱)
+     * 응답에서 단어 추출 (줄 단위 파싱) - [카테고리,단어,난이도] 형식
      */
     private function extractWordsFromResponse(array $response): array
     {
@@ -270,21 +270,51 @@ class GeminiService
                 foreach ($lines as $line) {
                     $line = trim($line);
                     if (!$line) continue;
-                    // [카테고리,단어] 형식
-                    if (preg_match('/\[([^,\]]+),([^\]]+)\]/', $line, $match)) {
+                    
+                    // [카테고리,단어,난이도] 형식 파싱
+                    if (preg_match('/\[([^,\]]+),([^,\]]+),(\d+)\]/', $line, $match)) {
                         $category = trim($match[1]);
                         $word = trim($match[2]);
-                    } elseif (preg_match('/\[([^\]]+)\]/', $line, $match)) {
+                        $difficulty = (int)$match[3];
+                        
+                        // 난이도 범위 검증 (1~5)
+                        if ($difficulty < 1 || $difficulty > 5) {
+                            $difficulty = 2; // 기본값
+                        }
+                        
+                        if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
+                            $words[] = [
+                                'category' => $category,
+                                'word' => $word,
+                                'difficulty' => $difficulty
+                            ];
+                        }
+                    }
+                    // 기존 [카테고리,단어] 형식도 지원 (하위 호환성)
+                    elseif (preg_match('/\[([^,\]]+),([^\]]+)\]/', $line, $match)) {
+                        $category = trim($match[1]);
+                        $word = trim($match[2]);
+                        
+                        if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
+                            $words[] = [
+                                'category' => $category,
+                                'word' => $word,
+                                'difficulty' => 2 // 기본값
+                            ];
+                        }
+                    }
+                    // 단순 [단어] 형식도 지원
+                    elseif (preg_match('/\[([^\]]+)\]/', $line, $match)) {
                         $word = trim($match[1]);
                         $category = $this->extractCategoryFromPrompt($text);
-                    } else {
-                        continue;
-                    }
-                    if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
-                        $words[] = [
-                            'category' => $category,
-                            'word' => $word
-                        ];
+                        
+                        if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
+                            $words[] = [
+                                'category' => $category,
+                                'word' => $word,
+                                'difficulty' => 2 // 기본값
+                            ];
+                        }
                     }
                 }
                 return $words;

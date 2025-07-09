@@ -27,12 +27,12 @@ class Kernel extends ConsoleKernel
                 ->runInBackground()
                 ->appendOutputTo(storage_path('logs/word-scheduler.log'));
         
-        // 10분마다 기존 단어 난이도 50개씩 자동 업데이트
-        $schedule->command('puzzle:update-word-difficulty --limit=50')
-                ->everyTenMinutes()
-                ->withoutOverlapping()
-                ->runInBackground()
-                ->appendOutputTo(storage_path('logs/word-difficulty-update.log'));
+        // 12시간마다 새로운 단어를 임시테이블에 추가하고, 1분마다 50개씩 처리 (일시 중지)
+        // $schedule->command('puzzle:update-word-difficulty --continuous')
+        //         ->everyMinute()
+        //         ->withoutOverlapping()
+        //         ->runInBackground()
+        //         ->appendOutputTo(storage_path('logs/word-difficulty-update.log'));
     }
 
     /**

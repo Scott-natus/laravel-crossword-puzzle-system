@@ -86,16 +86,9 @@ class PzHintGeneratorController extends Controller
             }
         }
 
-        $words = $query->withCount('hints')
-            ->orderBy('created_at', 'desc')
-            ->orderBy('word', 'asc')
-            ->paginate(20)
-            ->withQueryString(); // 쿼리 스트링을 페이징 링크에 유지
-
         $categories = PzWord::distinct()->pluck('category')->sort()->values();
         
         return view('puzzle.hint-generator.index', compact(
-            'words', 
             'categories', 
             'status', 
             'searchType', 
@@ -140,7 +133,7 @@ class PzHintGeneratorController extends Controller
                             'hint_text' => $hintData['hint'],
                             'hint_type' => 'text',
                             'difficulty' => $difficultyMap[$difficulty] ?? 2,
-                            'is_primary' => ($difficulty == $word->difficulty), // 단어의 난이도와 일치하는 힌트를 primary로 설정
+                            'is_primary' => ($difficulty == 1), // 무조건 쉬운 난이도(1) 힌트를 primary로 설정
                         ]);
                         
                         $createdHints[] = $hint;
@@ -521,10 +514,13 @@ class PzHintGeneratorController extends Controller
         $intersectionCount = $levelInfo->intersection_count;
         $wordDifficulty = $levelInfo->word_difficulty;
         
+        // 새로운 난이도 규칙 적용
+        $allowedDifficulties = $this->getAllowedDifficulties($wordDifficulty);
+        
         // 출제 가능한 단어 풀 생성 (힌트 존재 + 난이도 맞는 단어들)
         $availableWords = DB::table('pz_words as pw')
             ->join('pz_hints as ph', 'pw.id', '=', 'ph.word_id')
-            ->where('pw.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
+            ->whereIn('pw.difficulty', $allowedDifficulties) // 새로운 난이도 규칙 적용
             ->where('pw.is_active', true)
             ->select('pw.id', 'pw.word', 'ph.hint_text', 'ph.difficulty as hint_difficulty')
             ->get();
@@ -807,5 +803,160 @@ class PzHintGeneratorController extends Controller
         }
         
         return $newWord ?: null;
+    }
+
+    /**
+     * 새로운 난이도 규칙에 따른 허용 난이도 반환
+     */
+    private function getAllowedDifficulties($levelDifficulty)
+    {
+        switch ($levelDifficulty) {
+            case 1:
+                return [1, 2]; // 레벨 1: 난이도 1,2
+            case 2:
+                return [1, 2, 3]; // 레벨 2: 난이도 1,2,3
+            case 3:
+                return [2, 3, 4]; // 레벨 3: 난이도 2,3,4
+            case 4:
+                return [3, 4, 5]; // 레벨 4: 난이도 3,4,5
+            case 5:
+                return [4, 5]; // 레벨 5: 난이도 4,5
+            default:
+                return [1, 2, 3, 4, 5]; // 기본값: 모든 난이도
+        }
+    }
+
+    /**
+     * Ajax로 단어 목록 제공 (DataTables용)
+     */
+    public function getWordsAjax(Request $request)
+    {
+        $start = $request->input('start', 0);
+        $length = $request->input('length', 30);
+        $search = $request->input('search.value', '');
+        $orderColumn = $request->input('order.0.column', 2);
+        $orderDir = $request->input('order.0.dir', 'asc');
+        
+        // 컬럼 매핑
+        $columns = ['id', 'category', 'word', 'length', 'difficulty', 'hints_count'];
+        $orderBy = $columns[$orderColumn] ?? 'word';
+        
+        $query = PzWord::active()->withCount('hints');
+        
+        // 검색 조건
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('word', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
+            });
+        }
+        
+        // 힌트 보유 상태 필터링
+        $status = $request->input('status');
+        if ($status === 'with_hints') {
+            $query->whereHas('hints');
+        } elseif ($status === 'without_hints') {
+            $query->doesntHave('hints');
+        }
+        
+        $totalRecords = $query->count();
+        $filteredRecords = $query->count();
+        
+        $words = $query->orderBy($orderBy, $orderDir)
+            ->skip($start)
+            ->take($length)
+            ->get();
+        
+        $data = [];
+        foreach ($words as $word) {
+            $data[] = [
+                '<input type="checkbox" class="word-checkbox" value="' . $word->id . '">',
+                $word->category,
+                $word->word,
+                $word->length,
+                '<span class="badge bg-' . $this->getDifficultyBadgeColor($word->difficulty) . '">' . $word->difficulty_text . '</span>',
+                '<span class="badge bg-' . ($word->hints_count > 0 ? 'success' : 'secondary') . '">' . $word->hints_count . '</span>',
+                $this->getActionButtons($word)
+            ];
+        }
+        
+        return response()->json([
+            'draw' => $request->input('draw'),
+            'recordsTotal' => $totalRecords,
+            'recordsFiltered' => $filteredRecords,
+            'data' => $data
+        ]);
+    }
+    
+    /**
+     * 난이도별 배지 색상 반환
+     */
+    private function getDifficultyBadgeColor($difficulty)
+    {
+        switch ($difficulty) {
+            case 1: return 'success';
+            case 2: return 'warning';
+            case 3: return 'danger';
+            case 4: return 'dark';
+            case 5: return 'secondary';
+            default: return 'secondary';
+        }
+    }
+    
+    /**
+     * 액션 버튼 HTML 생성
+     */
+    private function getActionButtons($word)
+    {
+        if ($word->hints_count > 0) {
+            return '<button type="button" class="btn btn-sm btn-outline-primary" data-word-id="' . $word->id . '">
+                        <i class="fas fa-eye"></i> 힌트 보기
+                    </button>
+                    <button type="button" class="btn btn-sm btn-warning ms-1" data-word-id="' . $word->id . '">
+                        <i class="fas fa-redo"></i> 재생성
+                    </button>';
+        } else {
+            return '<button type="button" class="btn btn-sm btn-primary" data-word-id="' . $word->id . '">
+                        <i class="fas fa-magic"></i> 힌트 생성
+                    </button>';
+        }
+    }
+
+    /**
+     * 단어의 힌트 데이터 가져오기
+     */
+    public function getWordHints($wordId)
+    {
+        try {
+            $word = PzWord::with('hints')->findOrFail($wordId);
+            
+            $hints = $word->hints->map(function($hint) {
+                return [
+                    'id' => $hint->id,
+                    'hint_text' => $hint->hint_text,
+                    'difficulty' => $hint->difficulty,
+                    'difficulty_text' => $hint->difficulty_text,
+                    'hint_type' => $hint->hint_type,
+                    'is_primary' => $hint->is_primary
+                ];
+            });
+            
+            return response()->json([
+                'success' => true,
+                'hints' => $hints,
+                'word' => [
+                    'id' => $word->id,
+                    'word' => $word->word,
+                    'category' => $word->category,
+                    'length' => $word->length,
+                    'difficulty' => $word->difficulty
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => '힌트를 불러오는데 실패했습니다: ' . $e->getMessage()
+            ], 500);
+        }
     }
 } 

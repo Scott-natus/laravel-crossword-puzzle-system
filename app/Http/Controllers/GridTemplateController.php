@@ -812,21 +812,25 @@ class GridTemplateController extends Controller
         // 레벨에 설정된 단어 난이도 사용
         $wordDifficulty = $template->word_difficulty;
         
+        // 새로운 난이도 규칙 적용
+        $allowedDifficulties = $this->getAllowedDifficulties($wordDifficulty);
+        
         // 2.5 단어 추출의 쿼리는 랜덤을 기본으로 한다.
         $query = DB::table('pz_words as a')
             ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
             ->select('a.word', 'b.hint_text as hint')
             ->where('a.length', $length)
-            ->where('a.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
+            ->whereIn('a.difficulty', $allowedDifficulties) // 새로운 난이도 규칙 적용
             ->where('a.is_active', true)
             ->orderByRaw('RANDOM()');
         
         // 쿼리 로그 수집
+        $allowedDifficultiesText = implode(',', $allowedDifficulties);
         $queryLog[] = [
             'type' => 'independent_word',
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
-            'description' => "독립 단어 추출 (길이: {$length}, 난이도: <= {$wordDifficulty})"
+            'description' => "독립 단어 추출 (길이: {$length}, 허용난이도: {$allowedDifficultiesText})"
         ];
         
         $result = $query->first();
@@ -844,6 +848,48 @@ class GridTemplateController extends Controller
             'hint' => $result->hint,
             'query_log' => $queryLog
         ];
+    }
+
+    /**
+     * 새로운 난이도 규칙에 따른 허용 난이도 반환
+     */
+    private function getAllowedDifficulties($levelDifficulty)
+    {
+        switch ($levelDifficulty) {
+            case 1:
+                return [1, 2]; // 레벨 1: 난이도 1,2
+            case 2:
+                return [1, 2, 3]; // 레벨 2: 난이도 1,2,3
+            case 3:
+                return [2, 3, 4]; // 레벨 3: 난이도 2,3,4
+            case 4:
+                return [3, 4, 5]; // 레벨 4: 난이도 3,4,5
+            case 5:
+                return [4, 5]; // 레벨 5: 난이도 4,5
+            default:
+                return [1, 2, 3, 4, 5]; // 기본값: 모든 난이도
+        }
+    }
+
+    /**
+     * 난이도 규칙 텍스트 생성
+     */
+    private function getDifficultyRuleText($levelDifficulty)
+    {
+        switch ($levelDifficulty) {
+            case 1:
+                return "난이도 1,2";
+            case 2:
+                return "난이도 1,2,3";
+            case 3:
+                return "난이도 2,3,4";
+            case 4:
+                return "난이도 3,4,5";
+            case 5:
+                return "난이도 4,5";
+            default:
+                return "모든 난이도";
+        }
     }
 
     /**
@@ -935,12 +981,15 @@ class GridTemplateController extends Controller
         // 레벨에 설정된 단어 난이도 사용
         $wordDifficulty = $template->word_difficulty;
         
+        // 새로운 난이도 규칙 적용
+        $allowedDifficulties = $this->getAllowedDifficulties($wordDifficulty);
+        
         // 확정된 음절들을 기반으로 조건 생성
         $query = DB::table('pz_words as a')
             ->join('pz_hints as b', 'a.id', '=', 'b.word_id')
             ->select('a.word', 'b.hint_text as hint')
             ->where('a.length', $length)
-            ->where('a.difficulty', '<=', $wordDifficulty) // 레벨에 설정된 난이도보다 같거나 낮은 난이도
+            ->whereIn('a.difficulty', $allowedDifficulties) // 새로운 난이도 규칙 적용
             ->where('a.is_active', true);
         
         // 교차점을 공유하는 다른 단어들과 같은 단어 제외
@@ -970,11 +1019,12 @@ class GridTemplateController extends Controller
             $excludedWordsDesc = ', 제외단어: ' . implode(', ', array_values($confirmedWords));
         }
         
+        $allowedDifficultiesText = implode(',', $allowedDifficulties);
         $queryLog[] = [
             'type' => 'intersection_word',
             'sql' => $query->toSql(),
             'bindings' => $query->getBindings(),
-            'description' => "교차점 단어 추출 (길이: {$length}, 난이도: <= {$wordDifficulty}, 확정음절: {$syllableDesc}{$excludedWordsDesc})"
+            'description' => "교차점 단어 추출 (길이: {$length}, 허용난이도: {$allowedDifficultiesText}, 확정음절: {$syllableDesc}{$excludedWordsDesc})"
         ];
         
         $result = $query->first();

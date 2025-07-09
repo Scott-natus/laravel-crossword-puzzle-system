@@ -81,7 +81,13 @@ class GenerateWordsScheduler extends Command
         $this->writeToLog("생성 요구사항: " . $selectedRequirement);
         
         try {
+            // API 원문 로그 기록
+            $this->writeToLog("[API 요청 프롬프트] " . $prompt);
+            
             $result = $this->geminiService->generateWords($prompt);
+            
+            // API 응답 로그 기록
+            $this->writeToLog("[API 응답 결과] " . json_encode($result, JSON_UNESCAPED_UNICODE));
             
             if (!$result['success']) {
                 $this->error("❌ 재미나이 API 호출 실패: " . ($result['error'] ?? '알 수 없는 오류'));
@@ -102,7 +108,7 @@ class GenerateWordsScheduler extends Command
             if ($dryRun) {
                 $this->info("🧪 테스트 모드 - 실제 저장하지 않습니다.");
                 $this->table(
-                    ['카테고리', '단어', '길이', '중복여부'],
+                    ['카테고리', '단어', '길이', '중복여부', '난이도'],
                     $this->checkDuplicates($suggestedWords, $targetCategory)
                 );
                 return 0;
@@ -118,9 +124,9 @@ class GenerateWordsScheduler extends Command
 
             if (!empty($newWords)) {
                 $this->table(
-                    ['카테고리', '단어', '길이'],
+                    ['카테고리', '단어', '길이', '난이도'],
                     array_map(function($word) {
-                        return [$word['category'], $word['word'], mb_strlen($word['word'])];
+                        return [$word['category'], $word['word'], mb_strlen($word['word']), $word['difficulty']];
                     }, $newWords)
                 );
             }
@@ -167,14 +173,14 @@ class GenerateWordsScheduler extends Command
     {
         $selectedRequirement = $this->getSelectedRequirement();
         
-        return "{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$limit}개 추천해줘
+        return "당신은 한글 단어를 가르치는 교사입니다.  사람들에게 한글 십자 낱말 퀴즈를 제공하려 합니다. 
+
+{$category}라는 카테고리 내에서 '{$selectedRequirement}' 2~5음절 단어를 {$limit}개 추천해줘
 
 **중요: 다양한 난이도의 단어를 생성해주세요!**
-- 쉬운 단어: 초보자도 쉽게 알 수 있는 단어
-- 보통 단어: 일상생활에서 자주 사용하는 단어  
-- 어려운 단어: 전문적이거나 복잡한 단어
-- 매우 어려운 단어: 고급 전문 용어
-- 극도 어려운 단어: 매우 특수하거나 전문적인 단어
+- 쉬운 단어: 초보자도 쉽게 알 수 있는 단어 ( 난이도 1~5 중 1,2 )
+- 보통 단어: 일상생활에서 자주 사용하는 단어 ( 난이도 1~5 중 3,4 )  
+- 어려운 단어: 전문적이거나 복잡한 단어 ( 난이도 1~5 중 5 )
 
 다음 품사에 해당하는 단어만 생성해주세요:
 - 명사 (일반명사)
@@ -183,18 +189,23 @@ class GenerateWordsScheduler extends Command
 - 외래어 (영어, 일본어, 중국어 등에서 유래한 단어)
 - 신조어 (새로 만들어진 단어나 최근 유행하는 단어)
 
-동사, 형용사, 부사, 조사 등은 제외하고 위의 품사에 해당하는 단어만 생성해주세요.
+**중요 제한사항:**
+- 영문 단어는 제외해주세요 (예: apple, computer, phone 등)
+- 한글로만 된 단어만 생성해주세요
+- 영어 발음의 한글 표기는 허용합니다 (예: 컴퓨터, 폰, 스마트폰 등)
 
-한줄에 [카테고리,단어] 형태로 보여줘
+동사, 형용사, 부사, 조사,  지시대명사 등은 제외하고 위의 품사에 해당하는 단어만 생성해주세요.
+
+한줄에 [카테고리,단어,난이도] 형태로 보여주세요
 
 예시:
-[{$category},단어1]
-[{$category},단어2]
-[{$category},단어3]
+[{$category},단어1,2]
+[{$category},단어2,1]
+[{$category},단어3,4]
 
 각 줄에 하나씩, 총 {$limit}개를 제시해주세요.
 
-주의: 반드시 [카테고리,단어] 형식으로만 응답해주세요.";
+주의: 반드시 [카테고리,단어,난이도] 형식으로만 응답해주세요.";
     }
 
     /**
@@ -252,6 +263,7 @@ class GenerateWordsScheduler extends Command
         foreach ($suggestedWords as $wordData) {
             $word = $wordData['word'] ?? '';
             $wordCategory = $wordData['category'] ?? $category;
+            $difficulty = $wordData['difficulty'] ?? 2;
             $isDuplicate = PzWord::where('word', $word)
                 ->where('category', $wordCategory)
                 ->exists();
@@ -260,7 +272,8 @@ class GenerateWordsScheduler extends Command
                 $wordCategory,
                 $word,
                 mb_strlen($word),
-                $isDuplicate ? '중복' : '신규'
+                $isDuplicate ? '중복' : '신규',
+                $difficulty
             ];
         }
         
@@ -284,6 +297,12 @@ class GenerateWordsScheduler extends Command
                 continue;
             }
             
+            // 영문 단어 제외 (영문자만으로 구성된 단어)
+            if (preg_match('/^[a-zA-Z\s]+$/', $word)) {
+                $this->writeToLog("영문 단어 스킵: [{$wordCategory}, {$word}]");
+                continue;
+            }
+            
             // 중복 체크 (카테고리와 단어 조합으로)
             $exists = PzWord::where('word', $word)
                 ->where('category', $wordCategory)
@@ -294,8 +313,11 @@ class GenerateWordsScheduler extends Command
                 continue;
             }
             
-            // 단어 난이도 별도 요청
-            $difficulty = $this->getWordDifficulty($word, $wordCategory);
+            // 단어 난이도 별도 요청 (주석 처리)
+            // $difficulty = $this->getWordDifficulty($word, $wordCategory);
+            
+            // API 응답에서 난이도 추출
+            $difficulty = $wordData['difficulty'] ?? 2; // 기본값 2
             
             // 새 단어 저장
             try {
@@ -329,23 +351,16 @@ class GenerateWordsScheduler extends Command
     }
 
     /**
-     * 단어 난이도 별도 요청
+     * 단어 난이도 별도 요청 (주석 처리)
      */
+    /*
     private function getWordDifficulty($word, $category)
     {
         try {
-            $prompt = "단어 '{$word}' ({$category} 카테고리)를 십자낱말 퀴즈에 제출한다고 고려할 때, 단어의 난이도를 1~5 숫자로 평가해주세요.
+            $prompt = "'{$word}' 라는 단어를 십자낱말퀴즈에 출제한다고 고려할때, 단어의 난이도를 1~5 숫자로 평가해주세요";
 
-1: 매우 쉬움 (초등학생도 쉽게 알 수 있는 단어)
-2: 쉬움 (일반인들이 쉽게 알 수 있는 단어)
-3: 보통 (일반적인 지식을 가진 사람이 알 수 있는 단어)
-4: 어려움 (전문 지식이 필요한 단어)
-5: 매우 어려움 (전문가 수준의 고급 단어)
-
-응답 형식: [1~5 숫자만]
-
-예시:
-3";
+            // 프롬프트 원문 로그
+            $this->writeToLog("[난이도 평가 프롬프트] " . $prompt);
 
             $requestData = [
                 'contents' => [
@@ -370,7 +385,8 @@ class GenerateWordsScheduler extends Command
                 $data = $response->json();
                 if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
                     $text = trim($data['candidates'][0]['content']['parts'][0]['text']);
-                    
+                    // Gemini 응답 원문 로그
+                    $this->writeToLog("[Gemini 응답 원문] " . $text);
                     // 숫자만 추출
                     if (preg_match('/(\d+)/', $text, $matches)) {
                         $difficulty = (int)$matches[1];
@@ -381,16 +397,15 @@ class GenerateWordsScheduler extends Command
                     }
                 }
             }
-            
             // 실패 시 기본값 반환
             $this->writeToLog("단어 '{$word}' 난이도 요청 실패, 기본값 2 사용");
             return 2;
-            
         } catch (\Exception $e) {
             $this->writeToLog("단어 '{$word}' 난이도 요청 중 오류: " . $e->getMessage());
             return 2; // 기본값
         }
     }
+    */
 
     /**
      * 로그 파일에 직접 기록

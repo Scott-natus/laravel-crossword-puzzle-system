@@ -130,7 +130,7 @@ class PuzzleGameController extends Controller
             ], 500);
         }
 
-        // 단어 정보에 실제 pz_words ID 추가
+        // 단어 정보에 실제 pz_words ID 추가 (보안을 위해 단어 텍스트는 제거)
         $wordsWithIds = [];
         foreach ($extractData['extracted_words']['word_order'] as $wordInfo) {
             // 단어 텍스트로 실제 pz_words ID 찾기
@@ -139,23 +139,28 @@ class PuzzleGameController extends Controller
                 ->where('is_active', true)
                 ->first();
             
-            $wordInfo['pz_word_id'] = $pzWord ? $pzWord->id : null;
-            $wordInfo['category'] = $pzWord ? $pzWord->category : '일반';
+            // 보안을 위해 단어 텍스트는 제거하고 ID만 전송
+            $secureWordInfo = [
+                'pz_word_id' => $pzWord ? $pzWord->id : null,
+                'category' => $pzWord ? $pzWord->category : '일반',
+                'position' => $wordInfo['position'],
+                'word_id' => $wordInfo['word_id'] // 그리드 내 단어 ID
+            ];
             
-            // 기본 힌트 ID 추가
+            // 기본 힌트 정보만 추가 (정답 단어는 제외)
             if ($pzWord) {
                 $baseHint = DB::table('pz_hints')
                     ->where('word_id', $pzWord->id)
                     ->where('is_primary', true)
                     ->first();
-                $wordInfo['hint_id'] = $baseHint ? $baseHint->id : null;
-                $wordInfo['hint'] = $baseHint ? $baseHint->hint_text : null;
+                $secureWordInfo['hint_id'] = $baseHint ? $baseHint->id : null;
+                $secureWordInfo['hint'] = $baseHint ? $baseHint->hint_text : null;
             } else {
-                $wordInfo['hint_id'] = null;
-                $wordInfo['hint'] = null;
+                $secureWordInfo['hint_id'] = null;
+                $secureWordInfo['hint'] = null;
             }
             
-            $wordsWithIds[] = $wordInfo;
+            $wordsWithIds[] = $secureWordInfo;
         }
 
         return response()->json([
@@ -204,11 +209,9 @@ class PuzzleGameController extends Controller
         
         $isCorrect = ($userAnswer === $correctAnswer);
         
-        // 디버깅 로그
+        // 보안을 위해 정답 정보는 로그에 기록하지 않음
         \Log::info('Answer check', [
             'word_id' => $request->word_id,
-            'user_answer' => $userAnswer,
-            'correct_answer' => $correctAnswer,
             'is_correct' => $isCorrect
         ]);
         
@@ -218,6 +221,9 @@ class PuzzleGameController extends Controller
         } else {
             $game->incrementWrongAnswer();
             $wrongCount = $game->current_level_wrong_answers;
+            
+            // 틀린 답변 기록
+            $this->recordWrongAnswer($user->id, $word->id, $request->answer, $word->word, $word->category, $game->current_level);
             
             // 오답 4회일 때 특별한 메시지
             if ($wrongCount == 4) {
@@ -236,7 +242,6 @@ class PuzzleGameController extends Controller
                 return response()->json([
                     'is_correct' => false,
                     'message' => '오답회수가 초과했습니다, 레벨을 다시 시작합니다.',
-                    'correct_answer' => $word->word,
                     'restart_level' => true,
                     'wrong_count_exceeded' => true
                 ]);
@@ -246,7 +251,7 @@ class PuzzleGameController extends Controller
         return response()->json([
             'is_correct' => $isCorrect,
             'message' => $message,
-            'correct_answer' => $word->word, // 디버깅용으로 정답도 반환
+            'correct_answer' => $isCorrect ? $word->word : null, // 정답일 때만 정답 전송
             'correct_count' => $game->current_level_correct_answers,
             'wrong_count' => $game->current_level_wrong_answers
         ]);
@@ -379,5 +384,39 @@ class PuzzleGameController extends Controller
             'message' => '정답: ' . $word->word,
             'show_answer' => true
         ]);
+    }
+
+    /**
+     * 틀린 답변 기록
+     */
+    private function recordWrongAnswer($userId, $wordId, $userAnswer, $correctAnswer, $category, $level)
+    {
+        try {
+            // 매번 새로운 틀린 답변 기록 생성
+            DB::table('user_wrong_answers')->insert([
+                'user_id' => $userId,
+                'word_id' => $wordId,
+                'user_answer' => $userAnswer,
+                'correct_answer' => $correctAnswer,
+                'category' => $category,
+                'level' => $level,
+                'created_at' => now()
+            ]);
+
+            \Log::info('틀린 답변 기록', [
+                'user_id' => $userId,
+                'word_id' => $wordId,
+                'user_answer' => $userAnswer,
+                'category' => $category,
+                'level' => $level
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('틀린 답변 기록 실패', [
+                'error' => $e->getMessage(),
+                'user_id' => $userId,
+                'word_id' => $wordId
+            ]);
+        }
     }
 }

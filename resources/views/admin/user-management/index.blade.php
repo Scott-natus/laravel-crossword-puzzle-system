@@ -33,7 +33,7 @@
                                     <td>{{ $user->created_at ? (is_string($user->created_at) ? $user->created_at : $user->created_at->format('Y-m-d H:i')) : '-' }}</td>
                                     <td>{{ $user->last_login_at ? (is_string($user->last_login_at) ? $user->last_login_at : $user->last_login_at->format('Y-m-d H:i')) : '-' }}</td>
                                     <td>
-                                        <span class="badge badge-{{ $user->is_admin ? 'success' : 'secondary' }}">
+                                        <span class="badge badge-{{ $user->is_admin ? 'success' : 'secondary' }}" style="color: #000;">
                                             {{ $user->is_admin ? '관리자' : '일반회원' }}
                                         </span>
                                     </td>

@@ -83,6 +83,9 @@
                                 <li><span class="dropdown-item-text">게시판이 없습니다</span></li>
                             @endif
 
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ route('puzzle-game.index') }}">퍼즐게임</a></li>
+
                             @auth
                                 @if(Auth::user()->is_admin)
                                     <li><hr class="dropdown-divider"></li>

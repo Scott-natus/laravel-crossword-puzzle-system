@@ -81,22 +81,15 @@ class CrosswordGeneratorService
      */
     private function getWordsForLevel(PuzzleLevel $level): Collection
     {
-        // word_difficulty가 3이면 3 이하 단어만 추출
-        if ($level->word_difficulty == 3) {
-            return PzWord::active()
-                ->where('difficulty', '<=', 3)
-                ->where('is_active', true)
-                ->inRandomOrder()
-                ->limit(20)
-                ->get();
-        } else {
-            return PzWord::active()
-                ->where('difficulty', $level->word_difficulty)
-                ->where('is_active', true)
-                ->inRandomOrder()
-                ->limit(20)
-                ->get();
-        }
+        // 새로운 난이도 규칙 적용
+        $allowedDifficulties = $this->getAllowedDifficulties($level->word_difficulty);
+        
+        return PzWord::active()
+            ->whereIn('difficulty', $allowedDifficulties)
+            ->where('is_active', true)
+            ->inRandomOrder()
+            ->limit(20)
+            ->get();
     }
     
     /**
@@ -589,5 +582,26 @@ class CrosswordGeneratorService
         }
         
         return $hints;
+    }
+
+    /**
+     * 새로운 난이도 규칙에 따른 허용 난이도 반환
+     */
+    private function getAllowedDifficulties($levelDifficulty)
+    {
+        switch ($levelDifficulty) {
+            case 1:
+                return [1, 2]; // 레벨 1: 난이도 1,2
+            case 2:
+                return [1, 2, 3]; // 레벨 2: 난이도 1,2,3
+            case 3:
+                return [2, 3, 4]; // 레벨 3: 난이도 2,3,4
+            case 4:
+                return [3, 4, 5]; // 레벨 4: 난이도 3,4,5
+            case 5:
+                return [4, 5]; // 레벨 5: 난이도 4,5
+            default:
+                return [1, 2, 3, 4, 5]; // 기본값: 모든 난이도
+        }
     }
 } 

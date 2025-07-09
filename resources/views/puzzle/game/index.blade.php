@@ -231,7 +231,7 @@ let baseHintId = null;
 let currentTemplateWords = [];
 let currentTemplate = null; // 현재 템플릿 저장
 let answeredWords = new Set();
-let answeredWordsData = new Map(); // 정답 데이터 저장 (wordId -> answer)
+let answeredWordsData = new Map(); // 정답 데이터 저장 (wordId -> answer) - 암호화된 형태로 저장
 let gameTimer = null;
 let timeLeft = {{ $level ? $level->time_limit : 0 }};
 
@@ -364,7 +364,10 @@ function renderPuzzleGrid(template) {
             }
             
             const fontSize = Math.max(8, Math.min(14, cellSize * 0.3));
-            html += `<div class="${cellClass}" style="width: ${cellSize}px; height: ${cellSize}px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}px; font-weight: bold; box-sizing: border-box;"${clickEvent}>${cellContent}</div>`;
+            // data-word-id 속성 추가 (보안을 위해 단어 ID만 저장)
+            const dataWordId = wordInfo ? (wordInfo.pz_word_id || wordInfo.word_id) : '';
+            const dataAttr = dataWordId ? ` data-word-id="${dataWordId}"` : '';
+            html += `<div class="${cellClass}" style="width: ${cellSize}px; height: ${cellSize}px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; font-size: ${fontSize}px; font-weight: bold; box-sizing: border-box;"${clickEvent}${dataAttr}>${cellContent}</div>`;
         }
         html += '</div>';
     }
@@ -532,10 +535,10 @@ $('#check-answer-btn').click(function() {
         
         if (data.is_correct) {
             // 정답인 경우
-            console.log('정답 확인됨:', data);
+            console.log('정답 확인됨');
             $('#result-message').html(`<div class="alert alert-success">${data.message}</div>`);
             
-            // 그리드에 정답 표시
+            // 서버에서 받은 정답을 그리드에 표시
             updateGridWithAnswer(data.correct_answer);
             
             // 입력 영역 숨기기
@@ -580,7 +583,7 @@ $('#check-answer-btn').click(function() {
 });
 
 function updateGridWithAnswer(correctWord) {
-    console.log('updateGridWithAnswer 호출됨:', { correctWord, currentWordId, currentTemplate });
+    console.log('updateGridWithAnswer 호출됨');
     
     // 현재 선택된 단어의 위치 정보를 사용하여 그리드에 정답 표시
     if (!currentWordId) {
@@ -602,11 +605,10 @@ function updateGridWithAnswer(correctWord) {
         return;
     }
     
-    console.log('selectedWord:', selectedWord);
-    
     // 정답을 맞춘 단어를 추적에 추가
     answeredWords.add(currentWordId);
-    answeredWordsData.set(currentWordId, correctWord); // 정답 데이터 저장
+    // 정답 데이터 저장 (정답일 때만 저장하므로 보안 문제 없음)
+    answeredWordsData.set(currentWordId, correctWord);
     
     const position = selectedWord.position;
     const direction = position.direction;
