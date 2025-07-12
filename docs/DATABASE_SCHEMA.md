@@ -282,3 +282,11 @@ pg_dump -h 127.0.0.1 -U myuser -t boards -t board_types mydb > boards_backup.sql
 
 ## 2025-07-01
 - 퍼즐 그리드 템플릿 저장 시 교차점 개수 validation을 '최소값' 기준으로 변경 (기존: 정확히 일치 → 변경: 최소값 이상) 
+
+### 2025-07-09 단어 난이도 평가/업데이트 시스템 개선
+
+- 임시테이블(tmp_pz_word_difficulty) 도입: pz_words와 동기화, update_yn 관리
+- 난이도 일괄 평가 스케줄러: 10분마다 50개씩 Gemini API로 평가, 12시간마다 동기화
+- Gemini API 프롬프트 구조 단순화, 모델 버전별 실험(1.5/2.5 flash)
+- 난이도 분포 집계 및 신규/재측정 방식 차이 분석
+- 쿼터 초과(429) 발생 시 대기/키 교체 등 대응 

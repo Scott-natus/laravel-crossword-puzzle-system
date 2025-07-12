@@ -12,8 +12,8 @@
 - **데이터베이스 접속**: PGPASSWORD=tngkrrhk psql -h 127.0.0.1 -U myuser -d mydb
 - **포트 구성**:
   - Laravel (게시판/관리 페이지): 80 포트
-  - React 프론트엔드: 3000 포트
-  - React API: 5050 포트
+  - React Native 웹앱: 3001 포트
+  - React API 서버: 8080 포트 (새로 분리)
 
 ## 중요 작업 원칙
 
@@ -60,6 +60,25 @@
 - 단어 추출 시 word_positions를 id 순서대로 정렬하여 표시 (백엔드에서 처리)
 - 문제가 있는 템플릿(#14, #15)은 비활성화 처리
 
+### 9. React Native 웹앱 인증 시스템 관리 (2025-07-10 추가)
+- **인증 구조**: 토큰 기반 인증 (Sanctum)
+- **인증 흐름**: 앱 진입 → 토큰 없으면 로그인 화면 → 로그인 성공 시 퍼즐게임 화면
+- **API 서버**: 8080 포트로 분리 (기존 라라벨 웹서비스와 독립)
+- **스토리지**: 웹 환경에서는 localStorage, 모바일에서는 AsyncStorage 사용
+- **포트 구성**:
+  - React Native 웹앱: http://222.100.103.227:3001/
+  - API 서버: http://222.100.103.227:8080/api
+  - 라라벨 웹서비스: http://222.100.103.227/
+- **방화벽**: 8080 포트 허용 완료
+
+### 10. React Native 웹앱 빌드 및 서비스 관리 (2025-07-11 추가)
+- **빌드 시스템**: `npm run build-web` 명령으로 프로덕션 빌드
+- **정적 파일**: `dist/` 폴더에 `index.html`, `bundle.js` 생성
+- **서비스 관리**: systemd 서비스로 Python HTTP 서버 실행
+- **포트 구성**: 3001 포트에서 정적 파일 서비스
+- **권한 관리**: www-data 사용자로 서비스 실행
+- **서비스 파일**: `/etc/systemd/system/crossword-puzzle-app.service`
+
 ## 데이터베이스 스키마
 - puzzle_words: 퍼즐 단어 테이블
 - puzzle_hints: 퍼즐 힌트 테이블  
@@ -74,6 +93,10 @@
 - 환경 설정 확인: cat .env
 - 로그 확인: tail -f storage/logs/laravel.log
 - 설정 캐시 클리어: php artisan config:clear
+- React Native 웹앱 실행: cd CrosswordPuzzleApp && npm run web
+- API 서버 실행: cd public && php -S 0.0.0.0:8080
+- React 앱 빌드: cd CrosswordPuzzleApp && npm run build-web
+- 서비스 상태 확인: sudo systemctl status crossword-puzzle-app
 
 ## 주의사항
 - **원격 개발 환경**: SSH로 222.100.103.227에 직접 연결하여 작업
@@ -82,6 +105,8 @@
 - **스키마 변경**: puzzle_db_schema.sql에 반드시 기록
 - **DB 조작**: INSERT/UPDATE/DELETE/TRUNCATE/DROP 시 반드시 대화형 진행 
 - **로그 설정**: config/logging.php 수정 후 반드시 config:clear 실행
+- **React Native 웹앱**: 인증 토큰이 없으면 반드시 로그인 화면으로 이동해야 함
+- **빌드 후 서비스**: 빌드 완료 후 반드시 systemd 서비스 재시작 필요
 
 # Cursor AI 프로젝트 작업 규칙
 
@@ -116,6 +141,22 @@
   4. docs/TROUBLESHOOTING.md (문제 해결 가이드)
 - Git 커밋 및 GitHub 푸시 포함
 
+# 2025-07-11 작업 내역 (React Native 웹앱 빌드 및 서비스 설정)
+- React Native 웹앱 프로덕션 빌드 시스템 구축
+- `npm run build-web` 명령으로 `dist/` 폴더에 정적 파일 생성
+- systemd 서비스(`crossword-puzzle-app.service`) 생성 및 설정
+- Python HTTP 서버로 3001 포트에서 정적 파일 서비스
+- 서비스 권한 문제로 시작 실패, www-data 사용자 권한 설정 필요
+- 빌드 파일(`index.html`, `bundle.js`) 정상 생성 확인
+
+# 2025-07-10 작업 내역 (React Native 웹앱 인증 시스템 구축)
+- React Native 웹앱 인증 시스템 구축 (토큰 기반)
+- API 서버 8080 포트로 분리 (기존 라라벨 웹서비스와 독립)
+- AuthContext 생성 및 인증 상태 전역 관리
+- 스토리지 호환성 해결 (웹: localStorage, 모바일: AsyncStorage)
+- 방화벽 8080 포트 허용 완료
+- 테스트 계정 생성 (test@test.com / 123456)
+
 # 2025-06-30 작업 내역
 - 서버 OS 재설치 후 크론탭(`*/10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1`) 재등록
 - storage 및 storage/logs 디렉토리, 로그 파일 권한/소유자(www-data)로 변경
@@ -141,6 +182,70 @@
 - GeminiService.php의 난이도 평가 프롬프트를 십자낱말 퀴즈 관점에서 1~5 숫자로 평가하도록 수정
 - 테스트 모드와 실제 업데이트 모두 정상 작동 확인
 
+# 2025-07-10 작업 내역 (React Native 웹앱 인증 시스템 구축)
+## 문제 상황
+- React Native 웹앱에서 퍼즐게임 진입 시 인증 없이 바로 게임 화면 표시
+- Laravel API 호출 시 404 Not Found 에러 발생
+- 기존 라라벨 웹서비스(쿠키&세션)와 React 앱(토큰 기반)의 인증 구조 차이
+
+## 해결 과정
+### 1. 인증 구조 분석
+- **라라벨 기존 웹 로그인**: 쿠키 + 세션 기반 (Auth::routes())
+- **React용 API 로그인**: Sanctum 토큰 기반 (AuthController)
+- **퍼즐게임 API**: 인증 토큰이 있어야 접근 가능
+
+### 2. API 서버 분리
+- **기존 라라벨 웹서비스**: http://222.100.103.227/ (포트 80)
+- **React Native 웹앱**: http://222.100.103.227:3001/ (포트 3001)
+- **API 서버**: http://222.100.103.227:8080/api (포트 8080, 새로 분리)
+
+### 3. 인증 시스템 구현
+- **AuthContext 생성**: 인증 상태 전역 관리
+- **App.tsx 수정**: 인증 상태에 따른 화면 분기
+- **LoginScreen/RegisterScreen**: AuthContext 사용하도록 수정
+- **GameScreen**: 인증 체크 추가, 로그아웃 기능 구현
+
+### 4. 스토리지 호환성 해결
+- **웹 환경**: localStorage 사용
+- **모바일 환경**: AsyncStorage 사용
+- **통합 스토리지 인터페이스**: 환경에 따라 자동 선택
+
+### 5. 서버 설정
+- **API 서버 실행**: `cd public && php -S 0.0.0.0:8080`
+- **방화벽 설정**: `sudo ufw allow 8080/tcp`
+- **포트포워딩**: 8080 포트 외부 접근 허용 필요
+
+### 6. 테스트 계정 생성
+- **이메일**: test@test.com
+- **비밀번호**: 123456
+- **API 테스트**: 회원가입/로그인 정상 작동 확인
+
+## 현재 상태
+- ✅ **API 서버**: 8080 포트에서 정상 실행
+- ✅ **방화벽**: 8080 포트 허용 완료
+- ✅ **인증 API**: 회원가입/로그인/토큰 발급 정상 작동
+- ✅ **React Native 웹앱**: 인증 상태에 따른 화면 분기 구현
+- ⚠️ **포트포워딩**: 8080 포트 외부 접근 설정 필요
+- ⚠️ **인증 화면 전환**: 브라우저에서 아직 로그인 화면으로 전환 안 됨
+
+## 다음 작업 예정
+1. **포트포워딩 설정**: 8080 포트 외부 접근 허용
+2. **인증 화면 전환 디버깅**: AuthContext 로그 확인 및 수정
+3. **퍼즐게임 API 연동**: 인증된 사용자의 퍼즐 데이터 로드
+4. **실제 로그인 테스트**: 브라우저에서 전체 인증 흐름 확인
+
+## 중요 파일 위치
+- **React Native 웹앱**: /var/www/html/CrosswordPuzzleApp/
+- **AuthContext**: CrosswordPuzzleApp/src/contexts/AuthContext.tsx
+- **API 서비스**: CrosswordPuzzleApp/src/services/api.ts
+- **App.tsx**: CrosswordPuzzleApp/App.tsx
+- **API 서버**: public/api.php (새로 생성)
+
+## 디버깅 명령어
+- **API 서버 상태 확인**: `curl -X POST http://127.0.0.1:8080/api/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'`
+- **React 앱 재시작**: `cd CrosswordPuzzleApp && npm run web`
+- **포트 충돌 해결**: `pkill -f "webpack-dev-server" && pkill -f "react-native start"`
+
 # 백업 정책
 - 데이터베이스는 **풀백업** 진행 (pg_dump 등)
 - 소스코드는 **핵심 소스만** 백업 (app, resources, routes, config, public, database, docs 등) 
@@ -148,4 +253,15 @@
 # 첨부파일(이미지) 미노출 문제 발생 시
 - storage/app/public/attachments에 파일이 있는데 웹에서 보이지 않으면 `php artisan storage:link` 상태를 반드시 점검
 - 심볼릭 링크가 없으면 웹에서 /storage/attachments/ 경로로 접근 불가
-- 서버 이전/OS 재설치/퍼미션 변경 후 반드시 storage:link 재확인 
+- 서버 이전/OS 재설치/퍼미션 변경 후 반드시 storage:link 재확인
+
+# 2025-07-09 작업 내역
+- 단어 난이도 보정 스케줄러 개선 및 임시테이블 동기화 로직 개선
+- Gemini API 프롬프트 구조 단순화 및 모델 버전별(1.5/2.5 flash) 실험
+- 난이도 분포 집계 및 신규/재측정 방식 차이 분석
+- Gemini API 쿼터 초과(429) 이슈 및 대응
+- docs/WORKFLOW.md, docs/DATABASE_SCHEMA.md, docs/TROUBLESHOOTING.md에 상세 내역 기록 및 커밋/푸시 완료 
+
+# 작업 규칙(중요)
+- 모든 서버와 서비스는 반드시 서버사이드(systemd 등 백그라운드)에서만 실행한다.
+- 터미널에서 직접 실행(포그라운드)은 금지. 

@@ -9,6 +9,8 @@ use App\Http\Controllers\DictionaryController;
 use App\Http\Controllers\CrosswordController;
 use App\Http\Controllers\PzHintGeneratorController;
 use App\Http\Controllers\Api\CrosswordGeneratorController;
+use App\Http\Controllers\MobilePushController;
+use App\Http\Controllers\Api\PuzzleGameController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,8 +58,8 @@ Route::prefix('board/{boardType}/{boardId}/comments')->middleware('auth:sanctum'
 
 Route::get('/dictionary', [DictionaryController::class, 'getDefinition']);
 
-// 십자낱말 퍼즐 API 라우트
-Route::prefix('crossword')->middleware('puzzle-api')->group(function () {
+// 십자낱말 퍼즐 API 라우트 (인증 불필요)
+Route::prefix('crossword')->group(function () {
     Route::get('/puzzle/{levelId}', [CrosswordController::class, 'getPuzzle']);
     Route::post('/submit-answer', [CrosswordController::class, 'submitAnswer']);
     Route::post('/puzzle', [CrosswordController::class, 'storePuzzle']);
@@ -74,7 +76,46 @@ Route::post('/puzzle/generate-hints', [PzHintGeneratorController::class, 'genera
 Route::get('/puzzle/words', [PzHintGeneratorController::class, 'getWords']);
 Route::get('/puzzle/crossword-words', [PzHintGeneratorController::class, 'getCrosswordWords']);
 
+// 모바일 푸시 알림 관련 라우트
+Route::prefix('mobile')->middleware('auth:sanctum')->group(function () {
+    Route::post('/push-token', [MobilePushController::class, 'registerToken']);
+    Route::delete('/push-token', [MobilePushController::class, 'unregisterToken']);
+    Route::get('/push-settings', [MobilePushController::class, 'getSettings']);
+    Route::put('/push-settings', [MobilePushController::class, 'updateSettings']);
+});
+
+// 모든 OPTIONS 요청에 대해 200 OK로 응답 (CORS preflight 우회)
+Route::options('/{any}', function () {
+    return response()->json([], 200);
+})->where('any', '.*');
+
 // 테스트용 라우트
 Route::get('/test', function () {
     return response()->json(['message' => 'API 서버가 정상 작동 중입니다!']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('user/stats', [AuthController::class, 'getUserStats']);
+    Route::get('user/recent-games', [AuthController::class, 'getRecentGames']);
+    Route::get('user/recent-game-sessions', [AuthController::class, 'getRecentGameSessions']);
+    
+    // 퍼즐게임 API 라우트 (기존 라라벨 웹용)
+    Route::prefix('puzzle-game')->group(function () {
+        Route::get('/template', [\App\Http\Controllers\PuzzleGameController::class, 'getTemplate']);
+        Route::post('/check-answer', [\App\Http\Controllers\PuzzleGameController::class, 'checkAnswer']);
+        Route::get('/hints', [\App\Http\Controllers\PuzzleGameController::class, 'getHints']);
+        Route::post('/complete-level', [\App\Http\Controllers\PuzzleGameController::class, 'completeLevel']);
+    });
+    
+    // React 앱용 퍼즐게임 API 라우트
+    Route::prefix('puzzle')->group(function () {
+        Route::get('/template', [PuzzleGameController::class, 'getTemplate']);
+        Route::post('/submit-answer', [PuzzleGameController::class, 'submitAnswer']);
+        Route::get('/hints', [PuzzleGameController::class, 'getPuzzleHints']);
+        Route::post('/generate', [PuzzleGameController::class, 'generate']);
+        Route::post('/check-completion', [PuzzleGameController::class, 'checkCompletion']);
+        Route::post('/save-game-state', [PuzzleGameController::class, 'saveGameState']);
+        Route::post('/submit-result', [PuzzleGameController::class, 'submitResult']);
+        Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel']);
+    });
 });

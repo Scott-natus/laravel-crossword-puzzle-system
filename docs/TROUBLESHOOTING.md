@@ -258,8 +258,6 @@ public function saveTemplate($template)
    INSERT INTO tmp_pz_word_difficulty (word_id, word)
    SELECT id, word FROM puzzle_words WHERE is_active = true;
    ```
-   }
-   ```
 
 ### 문제: 특정 템플릿에서 번호가 잘못 저장됨
 **원인:** 일부 템플릿이 자동 생성된 번호로 저장되어 있음
@@ -613,3 +611,10 @@ php artisan tinker --execute="echo config('database.default');"
 - 파일 업로드 용량 변경 시 PHP-FPM과 Apache 모두 재시작 필요
 - WebDAV 설정 변경 시 인증 팝업 캐시 문제 가능성
 - NTFS → ext4 포맷 시 모든 데이터 삭제됨
+
+### 2025-07-09 단어 난이도 평가/업데이트 관련 문제해결
+
+- Gemini API 429(쿼터 초과) 발생 시: 대기 또는 API 키 교체, 쿼터 복구 후 재시도
+- Gemini 2.5 flash 모델은 단어 생성 불가(빈 응답), 1.5 flash로 원복 필요
+- 프롬프트 구조 단순화 후 분포 변화, 신규/재측정 방식 차이 분석
+- DB/로그/응답값 불일치 시 직접 쿼리 및 로그 확인

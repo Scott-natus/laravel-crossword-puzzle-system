@@ -1,230 +1,125 @@
-# 작업 방법론 (WORKFLOW)
+# Laravel Crossword Puzzle Management System - Workflow
 
-## 0. 개발 환경 이해
+## 2025-07-11 작업 내역 (React Native 웹앱 빌드 및 서비스 설정)
 
-### 원격 개발 환경
-- **서버**: 222.100.103.227 (SSH 접속)
-- **개발 방식**: SSH로 원격 서버에 직접 연결하여 작업
-- **포트 구성**:
-  - Laravel (게시판/관리 페이지): 80 포트
-  - React 프론트엔드: 3000 포트
-  - React API: 5050 포트
+### 문제 상황
+- React Native 웹앱이 개발 서버 모드로 실행 중
+- 정식 빌드 및 정적 파일 서비스가 아닌 상태
+- UI 변경사항이 브라우저에 반영되지 않는 문제
 
-### 데이터베이스 접속
-- **호스트**: 127.0.0.1 (서버 내부에서 같은 서버의 DB 접근)
-- **접속 명령**: `PGPASSWORD=tngkrrhk psql -h 127.0.0.1 -U myuser -d mydb`
+### 해결 과정
 
-## 1. 변경/개발 전
-- 반드시 전체 백업(DB, 소스) 실시
-- 변경/추가 작업은 단계별로 진행, 중간 점검 필수
-- DB 변경은 쿼리/SQL을 사전 검토 및 승인 후 실행
+#### 1. 빌드 시스템 확인
+- `package.json`에서 `build-web` 스크립트 확인
+- `npm run build-web` 명령으로 프로덕션 빌드 실행
+- `dist/` 폴더에 정적 파일 생성 확인
 
-## 2. 개발/운영
-- React/Laravel 분리 개발, API 연동
-- 퍼즐/힌트/레벨 등 주요 데이터는 요구사항에 맞게 일괄 처리
-- 대량 작업은 artisan 명령어 또는 스케줄러로 자동화
-- 장애 발생 시 즉시 원인 파악 및 롤백/복구
+#### 2. Systemd 서비스 설정
+- `/etc/systemd/system/crossword-puzzle-app.service` 생성
+- Python HTTP 서버로 3001 포트에서 정적 파일 서비스
+- 서비스 활성화 및 시작
 
-## 3. 배포/운영
-- 배포 전 최종 백업
-- 배포 후 주요 기능 정상 동작 확인
-- 장애/이슈 발생 시 docs/TROUBLESHOOTING.md에 기록
+#### 3. 현재 상태
+- ✅ **빌드 완료**: `dist/` 폴더에 `index.html`, `bundle.js` 생성
+- ✅ **서비스 생성**: systemd 서비스 파일 생성 완료
+- ⚠️ **서비스 시작 실패**: Python HTTP 서버 시작 시 오류 발생
+- ⚠️ **권한 문제**: www-data 사용자 권한 설정 필요
 
-## 4. 문서화
-- 모든 변경/이슈/해결 내역은 docs/ 폴더에 기록
+### 다음 작업 예정
+1. **서비스 권한 문제 해결**: www-data 사용자 권한 설정
+2. **서비스 재시작**: 정상적인 정적 파일 서비스 확인
+3. **브라우저 캐시 클리어**: 하드 리프레시로 새 빌드 반영 확인
+4. **UI 기능 테스트**: 로그인, 게임 화면, 퍼즐 기능 정상 작동 확인
 
-## 1. 문제 해결 접근법
+### 중요 파일 위치
+- **빌드 파일**: `/var/www/html/CrosswordPuzzleApp/dist/`
+- **서비스 설정**: `/etc/systemd/system/crossword-puzzle-app.service`
+- **소스 코드**: `/var/www/html/CrosswordPuzzleApp/src/`
 
-### 데이터베이스 접속 문제 발생 시
-```
-1. 즉시 환경 설정 확인: cat .env
-2. 올바른 접속 정보로 재시도
-3. 불필요한 중간 단계 건너뛰기
-```
+### 디버깅 명령어
+- **서비스 상태 확인**: `sudo systemctl status crossword-puzzle-app`
+- **서비스 로그 확인**: `sudo journalctl -u crossword-puzzle-app -f`
+- **빌드 재실행**: `cd CrosswordPuzzleApp && npm run build-web`
+- **수동 서비스 테스트**: `cd CrosswordPuzzleApp/dist && python3 -m http.server 3001`
 
-### 코드 변경 시
-```
-1. 문제 분석 → 관련 코드 확인 → 해결책 제안 → 실행
-2. 변경 후 실제 동작 테스트
-3. docs/ 폴더에 변경사항 기록
-```
+---
 
-### 로그 시스템 문제 발생 시
-```
-1. config/logging.php 설정 확인
-2. 모든 로그 채널이 NullHandler로 설정되지 않았는지 확인
-3. php artisan config:clear 실행
-4. tail -f storage/logs/laravel.log로 실시간 로그 확인
-```
+## 2025-07-10 작업 내역 (React Native 웹앱 인증 시스템 구축)
 
-## 2. 데이터베이스 작업 원칙
+### 문제 상황
+- React Native 웹앱에서 퍼즐게임 진입 시 인증 없이 바로 게임 화면 표시
+- Laravel API 호출 시 404 Not Found 에러 발생
+- 기존 라라벨 웹서비스(쿠키&세션)와 React 앱(토큰 기반)의 인증 구조 차이
 
-### 스키마 변경 시 (매우 중요!)
-- **변경 전 필수 절차**:
-  1. 데이터에 미치는 영향 분석 및 상세 설명
-  2. 사용자에게 변경 작업 진행 여부 확인
-  3. 백업 진행 여부 확인
-  4. 사용자 승인 후 진행
-- **변경 중**:
-  - `/var/www/html/puzzle_db_schema.sql`에 변경사항 추가
-  - 단계별 진행 상황 보고
-- **변경 후**:
-  - 데이터 무결성 확인
-  - 서비스 정상 동작 확인
+### 해결 과정
 
-### 데이터 조작 작업 규칙 (매우 중요!)
-- **대화형 진행 필수**: INSERT, UPDATE, DELETE, TRUNCATE, DROP 작업 시 반드시 사용자와 대화형으로 진행
-- **작업 전 확인 절차**:
-  1. 실행할 SQL 문을 먼저 보여주기
-  2. 예상 결과와 영향 범위 설명
-  3. 사용자 승인 요청
-  4. 승인 후에만 실행
-- **단계별 진행**: 복잡한 작업은 단계별로 나누어 진행
-- **실행 후 확인**: 작업 완료 후 결과 확인 및 보고
+#### 1. 인증 구조 분석
+- **라라벨 기존 웹 로그인**: 쿠키 + 세션 기반 (Auth::routes())
+- **React용 API 로그인**: Sanctum 토큰 기반 (AuthController)
+- **퍼즐게임 API**: 인증 토큰이 있어야 접근 가능
 
-### 데이터 확인 시
-- PostgreSQL 접속: `PGPASSWORD=tngkrrhk psql -h 127.0.0.1 -U myuser -d mydb`
-- 테이블 구조: `\d table_name`
-- 제약조건 확인: 체크 제약조건, 유니크 제약조건 등
+#### 2. API 서버 분리
+- **기존 라라벨 웹서비스**: http://222.100.103.227/ (포트 80)
+- **React Native 웹앱**: http://222.100.103.227:3001/ (포트 3001)
+- **API 서버**: http://222.100.103.227:8080/api (포트 8080, 새로 분리)
 
-## 3. 라이브 서버 작업 주의사항 (222.100.103.227 전용)
+#### 3. 인증 시스템 구현
+- **AuthContext 생성**: 인증 상태 전역 관리
+- **App.tsx 수정**: 인증 상태에 따른 화면 분기
+- **LoginScreen/RegisterScreen**: AuthContext 사용하도록 수정
+- **GameScreen**: 인증 체크 추가, 로그아웃 기능 구현
 
-### Laravel 파일 수정 시
-- 서비스 영향도 분석 후 진행
-- React 기능과의 연동 고려
-- 변경 후 즉시 테스트
+#### 4. 스토리지 호환성 해결
+- **웹 환경**: localStorage 사용
+- **모바일 환경**: AsyncStorage 사용
+- **통합 스토리지 인터페이스**: 환경에 따라 자동 선택
 
-### React 기능 추가/수정 시
-- Laravel 서비스에 미치는 영향 분석
-- API 엔드포인트 변경 시 Laravel 측 영향 고려
-- 포트 충돌 여부 확인 (3000, 5050 포트)
+#### 5. 서버 설정
+- **API 서버 실행**: `cd public && php -S 0.0.0.0:8080`
+- **방화벽 설정**: `sudo ufw allow 8080/tcp`
+- **포트포워딩**: 8080 포트 외부 접근 허용 필요
 
-## 4. UI/UX 개선 작업
+#### 6. 테스트 계정 생성
+- **이메일**: test@test.com
+- **비밀번호**: 123456
+- **API 테스트**: 회원가입/로그인 정상 작동 확인
 
-### 페이지네이션
-- Laravel 기본 `links()` 대신 Bootstrap 커스텀 페이지네이션 사용
-- 서버사이드 필터링/검색 구현 (클라이언트사이드 JavaScript 대신)
+### 현재 상태
+- ✅ **API 서버**: 8080 포트에서 정상 실행
+- ✅ **방화벽**: 8080 포트 허용 완료
+- ✅ **인증 API**: 회원가입/로그인/토큰 발급 정상 작동
+- ✅ **React Native 웹앱**: 인증 상태에 따른 화면 분기 구현
+- ⚠️ **포트포워딩**: 8080 포트 외부 접근 설정 필요
+- ⚠️ **인증 화면 전환**: 브라우저에서 아직 로그인 화면으로 전환 안 됨
 
-### 정렬 기능
-- 서버사이드 정렬 구현
-- 컨트롤러에서 GET 파라미터 처리
+### 다음 작업 예정
+1. **포트포워딩 설정**: 8080 포트 외부 접근 허용
+2. **인증 화면 전환 디버깅**: AuthContext 로그 확인 및 수정
+3. **퍼즐게임 API 연동**: 인증된 사용자의 퍼즐 데이터 로드
+4. **실제 로그인 테스트**: 브라우저에서 전체 인증 흐름 확인
 
-### 네비게이션
-- 전역 드롭다운 메뉴 활용
-- 관리자 전용 링크는 조건부 표시
+### 중요 파일 위치
+- **React Native 웹앱**: /var/www/html/CrosswordPuzzleApp/
+- **AuthContext**: CrosswordPuzzleApp/src/contexts/AuthContext.tsx
+- **API 서비스**: CrosswordPuzzleApp/src/services/api.ts
+- **App.tsx**: CrosswordPuzzleApp/App.tsx
+- **API 서버**: public/api.php (새로 생성)
 
-### 게시판 시스템 관리
-- 각 게시판별 글쓰기 버튼은 현재 URL의 boardType 파라미터를 직접 읽어 생성
-- AppServiceProvider에서 전역 변수 공유 시 주의 (boardType 등)
-- 레이아웃에서 동적 링크 생성 시 현재 컨텍스트 확인
-- 게시판 타입별 올바른 글쓰기 페이지로 이동하는지 확인
+### 디버깅 명령어
+- **API 서버 상태 확인**: `curl -X POST http://127.0.0.1:8080/api/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'`
+- **React 앱 재시작**: `cd CrosswordPuzzleApp && npm run web`
+- **포트 충돌 해결**: `pkill -f "webpack-dev-server" && pkill -f "react-native start"`
 
-### 그리드 템플릿 시스템 관리
-- 그리드 템플릿 저장 시 사용자가 "단어 위치 정보"에서 선택한 번호가 그대로 저장됨
-- PuzzleGridTemplateService의 saveTemplate()에서 sortWordPositionsWithPriority() 호출 제거
-- 사용자 입력 번호 우선 보존, 자동 넘버링 비활성화
-- 템플릿 수정 시 기존 번호 정보 유지
-- 템플릿 수정 시 사용자가 선택한 번호로 word_positions의 id 값 업데이트
-- 단어 추출 시 word_positions를 id 순서대로 정렬하여 표시 (백엔드에서 처리)
-- 문제가 있는 템플릿(#14, #15)은 비활성화 처리
+---
 
-## 5. API 최적화
+## 2025-07-09 작업 내역
+- 단어 난이도 보정 스케줄러 개선 및 임시테이블 동기화 로직 개선
+- Gemini API 프롬프트 구조 단순화 및 모델 버전별(1.5/2.5 flash) 실험
+- 난이도 분포 집계 및 신규/재측정 방식 차이 분석
+- Gemini API 쿼터 초과(429) 이슈 및 대응
+- docs/WORKFLOW.md, docs/DATABASE_SCHEMA.md, docs/TROUBLESHOOTING.md에 상세 내역 기록 및 커밋/푸시 완료
 
-### Gemini API 사용
-- 개별 호출 대신 일괄 처리
-- 정규식으로 응답 파싱
-- 에러 처리 및 재시도 로직
-
-### 단어 난이도 업데이트 시스템
-- 힌트 생성과 단어 난이도 업데이트 완전 분리
-- 임시 테이블(tmp_pz_word_difficulty)을 통한 업데이트 관리
-- UpdateWordDifficultyScheduler artisan 명령어로 10분마다 자동 실행
-- 50개 단어씩 일괄 처리하여 Gemini API 효율성 극대화
-- 십자낱말 퀴즈 관점에서 1~5 숫자로 난이도 평가
-
-## 6. 코드 품질 관리
-
-### 모델-컨트롤러-뷰 일관성
-- 컬럼명 통일 (예: `content` → `hint_text`)
-- 유효성 검사 규칙 표준화
-- 에러 메시지 일관성 유지
-
-### JavaScript 중복 로드 방지
-- Vite와 CDN 중복 로드 확인
-- 불필요한 스크립트 태그 제거
-
-### 로그 시스템 관리
-- 로그 설정은 config/logging.php에서 관리
-- 모든 로그 채널이 NullHandler로 설정되지 않도록 주의
-- 디버깅 로그는 \Log::info() 사용하여 기록
-- 로그 레벨은 env('LOG_LEVEL', 'debug')로 설정
-- 설정 변경 후 반드시 php artisan config:clear 실행
-
-## 7. 백업 및 복구
-
-### 자동 백업 시스템
-- 데이터베이스: `pg_dump`
-- 소스코드: `tar.gz` 압축
-- 2일 이상 된 백업 자동 삭제
-
-### 수동 백업
-- 중요한 변경 전 반드시 백업
-- `backups/` 폴더에 저장
-
-## 8. 테스트 및 검증
-
-### 변경 후 확인사항
-- 페이지 로딩 확인
-- 기능 동작 테스트
-- 데이터베이스 무결성 확인
-- 에러 로그 확인
-
-### 게시판 기능 테스트
-- 각 게시판별 글쓰기 버튼이 올바른 페이지로 이동하는지 확인
-- 게시판 타입별 URL 파라미터 정상 전달 확인
-- 로그 시스템 정상 동작 확인
-
-### 그리드 템플릿 기능 테스트
-- 사용자가 선택한 번호가 정확히 저장되는지 확인
-- 템플릿 수정 시 기존 번호 정보가 유지되는지 확인
-- 자동 넘버링이 비활성화되어 있는지 확인
-
-## 9. 문서화 원칙
-
-### 모든 변경사항 기록
-- `docs/` 폴더에 상세 기록
-- 문제 해결 과정 문서화
-- 향후 참고용 가이드 작성
-
-### 커밋 메시지
-- 명확하고 구체적인 설명
-- 변경 이유와 영향 범위 포함
-
-### 작업 내용 저장 규칙
-- 작업 완료 후 다음 4개 파일에 내용 반영:
-  1. .cursorrules (프로젝트 루트)
-  2. docs/WORKFLOW.md (작업 방법론)
-  3. docs/DATABASE_SCHEMA.md (DB 스키마)
-  4. docs/TROUBLESHOOTING.md (문제 해결 가이드)
-- Git 커밋 및 GitHub 푸시 포함
-
-## 10. 언어 및 소통
-
-### 모든 설명은 한글로
-- 기술 용어도 한글로 설명
-- 사용자와의 소통은 한글 우선
-- 문서화도 한글로 진행
-
-## 2025-06-30 서버 유지보수 및 배치 스케줄러 점검
-- 서버 OS 재설치 후 크론탭(`*/10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1`) 재등록
-- storage 및 storage/logs 디렉토리, 로그 파일 권한/소유자(www-data)로 변경
-- 배치 스케줄러 정상 동작 및 로그 권한 이슈 대응
-
-## 2025-06-30 단어 추출 로직 개선 및 크론 권한 문제 해결
-- 단어 추출 로직에서 난이도 조건(단어 난이도, 힌트 난이도) 제거하여 더 다양한 단어 추출 가능
-- 단어 추출 실패 시 확정된 단어를 초기화하고 최대 5회까지 재시도하는 로직 구현
-- 크론 배치 작업 권한 문제 해결: natus-server를 www-data 그룹에 추가하여 로그 파일 쓰기 권한 확보
-- convertDifficultyToEnglish 메서드 제거 (더 이상 사용되지 않음)
+---
 
 ## 2025-07-01 작업 내역
 - 교차점 개수 validation을 '최소값' 기준으로 변경 (프론트엔드, 백엔드 모두)
@@ -233,56 +128,111 @@
 - Blade 템플릿 중복 @endpush 태그 제거
 - git 커밋 및 원격 저장소 푸시, 병합 충돌 해결
 
-## 2025-07-01 첨부파일(이미지) 미노출 문제 해결
+---
 
-- 증상: 게시판 답글 작성 시 첨부파일(이미지)이 정상적으로 업로드되었으나, 웹에서 '이미지 없음'으로 표시되고 미리보기/다운로드가 되지 않음
-- 원인: Laravel storage public 심볼릭 링크(`public/storage`)가 생성되어 있지 않아 웹에서 storage 파일 접근 불가
-- 조치: `php artisan storage:link` 명령어로 심볼릭 링크 생성
-- 결과: 첨부파일(이미지) 정상 노출 및 다운로드/미리보기 가능
-- 추가: 향후 첨부파일 미노출 시 storage:link 상태 점검 필요
+## 2025-06-30 작업 내역
+- 서버 OS 재설치 후 크론탭(`*/10 * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1`) 재등록
+- storage 및 storage/logs 디렉토리, 로그 파일 권한/소유자(www-data)로 변경
+- 배치 스케줄러 정상 동작 및 로그 권한 이슈 대응
+- 단어 추출 로직에서 난이도 조건(단어 난이도, 힌트 난이도) 제거하여 더 다양한 단어 추출 가능
+- 단어 추출 실패 시 확정된 단어를 초기화하고 최대 5회까지 재시도하는 로직 구현
+- 크론 배치 작업 권한 문제 해결: natus-server를 www-data 그룹에 추가하여 로그 파일 쓰기 권한 확보
 
-- 모든 주요 장애/이슈 해결 후 반드시 docs/WORKFLOW.md, docs/TROUBLESHOOTING.md 등 문서화
-- git add/commit/push 필수
+---
 
-## 2025-07-07 작업 내역
+## 2025-01-27 작업 내역
+- 단어 난이도 업데이트 방식 개선: 힌트 생성과 단어 난이도 업데이트 완전 분리
+- 임시 테이블(tmp_pz_word_difficulty) 생성하여 기존 단어 ID 복사 및 update_yn 관리
+- 힌트 생성 API에서 단어 난이도 업데이트 코드 제거
+- 단어 생성 API는 단어만 생성하고, 난이도는 별도 Gemini API 호출로 평가
+- 단어 난이도 업데이트 API 별도 구현: update_yn='n'인 단어 50개씩 가져와 Gemini API에 일괄 평가
+- UpdateWordDifficultyScheduler artisan 명령어 생성 및 Laravel 스케줄러에 10분마다 실행 등록
+- GeminiService.php의 난이도 평가 프롬프트를 십자낱말 퀴즈 관점에서 1~5 숫자로 평가하도록 수정
+- 테스트 모드와 실제 업데이트 모두 정상 작동 확인
 
-## 1. 파일 업로드 용량 확장 (500MB)
-- **PHP 설정 변경**:
-  - `upload_max_filesize = 500M`
-  - `post_max_size = 500M`
-  - `memory_limit = 512M`
-  - `max_execution_time = 300`
-- **Laravel Validation 변경**:
-  - BoardController: `max:512000` (500MB)
-  - Api/BoardController: `max:512000` (500MB)
-- **Apache 설정 변경**:
-  - `LimitRequestBody 524288000` (500MB)
+---
 
-## 2. WebDAV NAS 구축
-- **WebDAV 모듈 활성화**: `dav`, `dav_fs`, `auth_digest`
-- **SSL 설정 파일 수정**: `/etc/apache2/sites-available/natus-project-ssl.conf`
-- **인증 설정**: Basic 인증 (사용자: nas_user)
-- **비밀번호 파일**: `/etc/apache2/webdav.passwd`
-- **접근 URL**: https://natus250601.viewdns.net/webdav
+## 주요 작업 원칙
 
-## 3. 추가 HDD 설정
-- **디스크 정보**: /dev/sdb3 (119G)
-- **파일 시스템**: NTFS → ext4로 포맷
-- **마운트 위치**: `/mnt/nas_storage/hdd_data`
-- **소유권 설정**: www-data:www-data
-- **사용량**: 117G 중 24K 사용 (1% 미만)
+### 1. 데이터베이스 변경 시 필수 절차
+- **변경 전**: 데이터에 미치는 영향 분석 및 설명
+- **사용자 확인**: 변경 작업 진행 여부 및 백업 진행 여부 확인
+- **스키마 기록**: /var/www/html/puzzle_db_schema.sql에 변경사항 추가
 
-## 4. 문제 해결 과정
-- **413 에러**: Apache LimitRequestBody 설정 추가
-- **Internal Server Error**: Digest → Basic 인증 변경
-- **중복 설정 충돌**: 000-default.conf에서 WebDAV 설정 제거
-- **NTFS 손상**: ntfsfix로 복구 후 ext4로 포맷
+### 2. 데이터베이스 조작 작업 규칙 (매우 중요!)
+- **대화형 진행 필수**: INSERT, UPDATE, DELETE, TRUNCATE, DROP 작업 시 반드시 사용자와 대화형으로 진행
+- **작업 전 확인**: 실행할 SQL 문과 예상 결과를 먼저 보여주고 승인 요청
+- **단계별 진행**: 복잡한 작업은 단계별로 나누어 진행
+- **실행 후 확인**: 작업 완료 후 결과 확인 및 보고
 
-## 5. 최종 결과
-- **파일 업로드**: 500MB까지 지원
-- **WebDAV NAS**: 인증 기반 접근 가능
-- **추가 스토리지**: 117G ext4 파티션 사용 가능
-- **권한 설정**: WebDAV에서 파일 읽기/쓰기 가능
+### 3. 라이브 서버 주의사항 (222.100.103.227 전용)
+- 데이터베이스 변경 시 항상 백업 후 진행
+- Laravel 파일 수정 시 서비스 영향도 분석
+- React 기능 추가/수정 시 Laravel 서비스 영향 고려
 
-- 모든 주요 장애/이슈 해결 후 반드시 docs/WORKFLOW.md, docs/TROUBLESHOOTING.md 등 문서화
-- git add/commit/push 필수 
+### 4. 환경 설정 확인
+- 문제 발생 시 즉시 `cat .env`로 환경 설정 확인
+- 불필요한 중간 단계 건너뛰고 직접적인 방법 사용
+
+### 5. 문서화 원칙
+- 모든 주요 변경사항은 docs/ 폴더에 기록
+- 변경 후 실제 동작 확인
+
+### 6. 로그 시스템 관리
+- 로그 설정은 config/logging.php에서 관리
+- 모든 로그 채널이 NullHandler로 설정되지 않도록 주의
+- 디버깅 로그는 \Log::info() 사용하여 기록
+- 로그 레벨은 env('LOG_LEVEL', 'debug')로 설정
+
+### 7. 게시판 시스템 관리
+- 각 게시판별 글쓰기 버튼은 현재 URL의 boardType 파라미터를 직접 읽어 생성
+- AppServiceProvider에서 전역 변수 공유 시 주의 (boardType 등)
+- 레이아웃에서 동적 링크 생성 시 현재 컨텍스트 확인
+
+### 8. 그리드 템플릿 시스템 관리
+- 그리드 템플릿 저장 시 사용자가 "단어 위치 정보"에서 선택한 번호가 그대로 저장됨
+- PuzzleGridTemplateService의 saveTemplate()에서 sortWordPositionsWithPriority() 호출 제거
+- 사용자 입력 번호 우선 보존, 자동 넘버링 비활성화
+- 템플릿 수정 시 사용자가 선택한 번호로 word_positions의 id 값 업데이트
+- 단어 추출 시 word_positions를 id 순서대로 정렬하여 표시 (백엔드에서 처리)
+- 문제가 있는 템플릿(#14, #15)은 비활성화 처리
+
+### 9. React Native 웹앱 인증 시스템 관리 (2025-07-10 추가)
+- **인증 구조**: 토큰 기반 인증 (Sanctum)
+- **인증 흐름**: 앱 진입 → 토큰 없으면 로그인 화면 → 로그인 성공 시 퍼즐게임 화면
+- **API 서버**: 8080 포트로 분리 (기존 라라벨 웹서비스와 독립)
+- **스토리지**: 웹 환경에서는 localStorage, 모바일에서는 AsyncStorage 사용
+- **포트 구성**:
+  - React Native 웹앱: http://222.100.103.227:3001/
+  - API 서버: http://222.100.103.227:8080/api
+  - 라라벨 웹서비스: http://222.100.103.227/
+- **방화벽**: 8080 포트 허용 완료
+
+### 10. React Native 웹앱 빌드 및 서비스 관리 (2025-07-11 추가)
+- **빌드 시스템**: `npm run build-web` 명령으로 프로덕션 빌드
+- **정적 파일**: `dist/` 폴더에 `index.html`, `bundle.js` 생성
+- **서비스 관리**: systemd 서비스로 Python HTTP 서버 실행
+- **포트 구성**: 3001 포트에서 정적 파일 서비스
+- **권한 관리**: www-data 사용자로 서비스 실행
+
+## 자주 사용하는 명령어
+- 데이터베이스 백업: `pg_dump -h 127.0.0.1 -U myuser mydb > backup.sql`
+- 테이블 구조 확인: `\d table_name`
+- Laravel 설정 확인: `php artisan tinker --execute="echo config('database.default');"`
+- 환경 설정 확인: `cat .env`
+- 로그 확인: `tail -f storage/logs/laravel.log`
+- 설정 캐시 클리어: `php artisan config:clear`
+- React Native 웹앱 실행: `cd CrosswordPuzzleApp && npm run web`
+- API 서버 실행: `cd public && php -S 0.0.0.0:8080`
+- React 앱 빌드: `cd CrosswordPuzzleApp && npm run build-web`
+- 서비스 상태 확인: `sudo systemctl status crossword-puzzle-app`
+
+## 주의사항
+- **원격 개발 환경**: SSH로 222.100.103.227에 직접 연결하여 작업
+- **데이터베이스 호스트**: 127.0.0.1 (서버 내부에서 같은 서버의 DB 접근)
+- **모든 설명**: 한글로 진행
+- **스키마 변경**: puzzle_db_schema.sql에 반드시 기록
+- **DB 조작**: INSERT/UPDATE/DELETE/TRUNCATE/DROP 시 반드시 대화형 진행 
+- **로그 설정**: config/logging.php 수정 후 반드시 config:clear 실행
+- **React Native 웹앱**: 인증 토큰이 없으면 반드시 로그인 화면으로 이동해야 함
+- **빌드 후 서비스**: 빌드 완료 후 반드시 systemd 서비스 재시작 필요 

@@ -5,6 +5,7 @@
         "dev": "vite",
         "build": "vite build"
     },
+    "metro-react-native-babel-preset": "0.76.7",
     "devDependencies": {
         "@popperjs/core": "^2.11.6",
         "axios": "^1.6.4",

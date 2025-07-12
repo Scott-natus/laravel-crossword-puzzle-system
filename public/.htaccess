@@ -9,6 +9,10 @@
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+    # API 요청을 api.php로 전달
+    RewriteCond %{REQUEST_URI} ^/api/.*
+    RewriteRule ^api/(.*)$ api.php [QSA,L]
+
     # Redirect Trailing Slashes If Not A Folder...
     RewriteCond %{REQUEST_URI} !^/api/.*
     RewriteCond %{REQUEST_URI} !^/pgadmin4/.*
