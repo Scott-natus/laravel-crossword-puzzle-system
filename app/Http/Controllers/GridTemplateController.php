@@ -403,6 +403,11 @@ class GridTemplateController extends Controller
                         // 3-2. 단어가 교차점을 가지고 있다면, 확정된 단어들의 교차점 음절을 추출한다.
                         $confirmedIntersectionSyllables = [];
                         
+                        \Log::info("교차점 발견 - 단어 ID {$wordId}", [
+                            'intersections_count' => count($intersections),
+                            'intersections' => $intersections
+                        ]);
+                        
                         foreach ($intersections as $intersection) {
                             $connectedWordId = $intersection['connected_word_id'];
                             $connectedWord = $confirmedWords[$connectedWordId];
@@ -410,9 +415,21 @@ class GridTemplateController extends Controller
                             $connectedSyllablePos = $this->getSyllablePosition($connectedWordPosition, $intersection['position']);
                             $connectedSyllable = mb_substr($connectedWord, $connectedSyllablePos - 1, 1, 'UTF-8');
                             
+                            $currentSyllablePos = $this->getSyllablePosition($word, $intersection['position']);
+                            
+                            \Log::info("교차점 음절 계산", [
+                                'word_id' => $wordId,
+                                'connected_word_id' => $connectedWordId,
+                                'connected_word' => $connectedWord,
+                                'connected_syllable_pos' => $connectedSyllablePos,
+                                'connected_syllable' => $connectedSyllable,
+                                'current_syllable_pos' => $currentSyllablePos,
+                                'intersection_position' => $intersection['position']
+                            ]);
+                            
                             $confirmedIntersectionSyllables[] = [
                                 'syllable' => $connectedSyllable,
-                                'position' => $this->getSyllablePosition($word, $intersection['position'])
+                                'position' => $currentSyllablePos
                             ];
                         }
                         
@@ -999,10 +1016,22 @@ class GridTemplateController extends Controller
         }
         
         // 각 확정된 음절에 대한 조건 추가
+        \Log::info("교차점 음절 일치 조건 추가", [
+            'word_id' => $word['id'],
+            'confirmed_syllables_count' => count($confirmedSyllables),
+            'confirmed_syllables' => $confirmedSyllables
+        ]);
+        
         foreach ($confirmedSyllables as $syllableInfo) {
             $syllable = $syllableInfo['syllable'];
             $position = $syllableInfo['position'];
             $query->whereRaw("SUBSTRING(a.word, {$position}, 1) = ?", [$syllable]);
+            
+            \Log::info("음절 일치 조건 추가", [
+                'position' => $position,
+                'syllable' => $syllable,
+                'condition' => "SUBSTRING(a.word, {$position}, 1) = '{$syllable}'"
+            ]);
         }
         
         $query->orderByRaw('RANDOM()');

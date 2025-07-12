@@ -112,6 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/template', [PuzzleGameController::class, 'getTemplate']);
         Route::post('/submit-answer', [PuzzleGameController::class, 'submitAnswer']);
         Route::get('/hints', [PuzzleGameController::class, 'getPuzzleHints']);
+        Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer']);
         Route::post('/generate', [PuzzleGameController::class, 'generate']);
         Route::post('/check-completion', [PuzzleGameController::class, 'checkCompletion']);
         Route::post('/save-game-state', [PuzzleGameController::class, 'saveGameState']);
