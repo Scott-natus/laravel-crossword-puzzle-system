@@ -6,84 +6,60 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { GameScreen } from './src/screens/GameScreen';
+import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { LoginScreen } from './src/screens/LoginScreen';
 import { RegisterScreen } from './src/screens/RegisterScreen';
 import { MainScreen } from './src/screens/MainScreen';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { GameScreen } from './src/screens/GameScreen';
 
-// 네비게이션 타입 정의
-type Screen = 'main' | 'game' | 'login' | 'register';
-
-const AppContent: React.FC = () => {
+// 네비게이션 컴포넌트
+const Navigation = () => {
   const { isAuthenticated, isLoading } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<Screen>('main');
-
-  console.log('AppContent: isLoading =', isLoading, 'isAuthenticated =', isAuthenticated);
+  const [currentScreen, setCurrentScreen] = useState<'main' | 'game'>('main');
 
   if (isLoading) {
-    console.log('AppContent: Showing loading screen');
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>로딩 중...</Text>
-      </View>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        로딩 중...
+      </div>
     );
   }
 
   if (!isAuthenticated) {
-    console.log('AppContent: Showing login screen');
-    return <LoginScreen navigation={{ navigate: (screen: Screen) => setCurrentScreen(screen) }} />;
+    return <LoginScreen />;
   }
 
-  // 인증된 사용자의 화면 전환
-  const navigation = {
-    navigate: (screen: Screen) => setCurrentScreen(screen),
-    goBack: () => setCurrentScreen('main')
+  // 게임 화면으로 이동하는 함수
+  const handleStartGame = () => {
+    setCurrentScreen('game');
   };
 
-  console.log('AppContent: Showing screen =', currentScreen);
+  // 메인 화면으로 돌아가는 함수
+  const handleBackToMain = () => {
+    setCurrentScreen('main');
+  };
 
-  switch (currentScreen) {
-    case 'game':
-      return <GameScreen navigation={navigation} route={{}} />;
-    case 'login':
-      return <LoginScreen navigation={navigation} />;
-    case 'register':
-      return <RegisterScreen navigation={navigation} />;
-    case 'main':
-    default:
-      return <MainScreen navigation={navigation} />;
+  if (currentScreen === 'game') {
+    return <GameScreen navigation={{ goBack: handleBackToMain }} />;
   }
+
+  return <MainScreen navigation={{ navigate: (screen: string) => {
+    if (screen === 'Game') {
+      handleStartGame();
+    }
+  }}} />;
 };
 
-function App(): React.JSX.Element {
+export default function App() {
   return (
     <AuthProvider>
-      <View style={styles.container}>
-        <AppContent />
-      </View>
+      <Navigation />
     </AuthProvider>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#666',
-  },
-});
-
-export default App;
-
