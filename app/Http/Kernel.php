@@ -40,11 +40,13 @@ class Kernel extends HttpKernel
         ],
 
         'api' => [
+            \App\Http\Middleware\Cors::class,
             \Illuminate\Http\Middleware\HandleCors::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
 
         'puzzle-api' => [
+            \App\Http\Middleware\Cors::class,
             \Illuminate\Http\Middleware\HandleCors::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
@@ -70,5 +72,6 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'cors' => \App\Http\Middleware\Cors::class,
     ];
 }
