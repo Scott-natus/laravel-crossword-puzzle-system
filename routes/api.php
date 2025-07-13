@@ -113,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/submit-answer', [PuzzleGameController::class, 'submitAnswer']);
         Route::get('/hints', [PuzzleGameController::class, 'getPuzzleHints']);
         Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer']);
+        Route::get('/show-answer-wrong-count', [PuzzleGameController::class, 'showAnswerOnWrongCount']); // 오답 초과 시 정답보기
         Route::post('/generate', [PuzzleGameController::class, 'generate']);
         Route::post('/check-completion', [PuzzleGameController::class, 'checkCompletion']);
         Route::post('/save-game-state', [PuzzleGameController::class, 'saveGameState']);

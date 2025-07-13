@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService } from '../services/api';
@@ -37,6 +38,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ navigation }) => {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     loadUserData();
@@ -84,29 +86,17 @@ export const MainScreen: React.FC<MainScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleLogout = async () => {
-    if (typeof window !== 'undefined') {
-      // 웹 환경에서는 confirm 사용
-      if (confirm('정말 로그아웃하시겠습니까?')) {
-        await logout();
-      }
-    } else {
-      // 모바일 환경에서는 Alert.alert 사용
-      Alert.alert(
-        '로그아웃',
-        '정말 로그아웃하시겠습니까?',
-        [
-          { text: '취소', style: 'cancel' },
-          {
-            text: '로그아웃',
-            style: 'destructive',
-            onPress: async () => {
-              await logout();
-            },
-          },
-        ]
-      );
-    }
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setShowLogoutModal(false);
+    await logout();
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutModal(false);
   };
 
   if (loading) {
@@ -119,76 +109,101 @@ export const MainScreen: React.FC<MainScreenProps> = ({ navigation }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* 헤더 */}
-      <View style={styles.header}>
-        <View style={styles.userInfo}>
-          <Text style={styles.welcomeText}>
-            안녕하세요, {user?.name}님! 👋
-          </Text>
-          <Text style={styles.subtitle}>크로스워드 퍼즐을 즐겨보세요</Text>
+    <>
+      <ScrollView style={styles.container}>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={styles.userInfo}>
+            <Text style={styles.welcomeText}>
+              안녕하세요, {user?.name}님! 👋
+            </Text>
+            <Text style={styles.subtitle}>크로스워드 퍼즐을 즐겨보세요</Text>
+          </View>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>로그아웃</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>로그아웃</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* 통계 카드 */}
-      {stats && (
-        <View style={styles.statsContainer}>
-          <Text style={styles.sectionTitle}>📊 게임 통계</Text>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.current_level}</Text>
-              <Text style={styles.statLabel}>현재 레벨</Text>
+        {/* 통계 카드 */}
+        {stats && (
+          <View style={styles.statsContainer}>
+            <Text style={styles.sectionTitle}>📊 게임 통계</Text>
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stats.current_level}</Text>
+                <Text style={styles.statLabel}>현재 레벨</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stats.total_score}</Text>
+                <Text style={styles.statLabel}>총 점수</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stats.games_played}</Text>
+                <Text style={styles.statLabel}>플레이 횟수</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statValue}>{stats.accuracy_rate}%</Text>
+                <Text style={styles.statLabel}>정답률</Text>
+              </View>
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.total_score}</Text>
-              <Text style={styles.statLabel}>총 점수</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.games_played}</Text>
-              <Text style={styles.statLabel}>플레이 횟수</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>{stats.accuracy_rate}%</Text>
-              <Text style={styles.statLabel}>정답률</Text>
+          </View>
+        )}
+
+        {/* 최근 게임 이력 */}
+        {recentGames.length > 0 && (
+          <View style={styles.recentGamesContainer}>
+            <Text style={styles.sectionTitle}>🎮 최근 게임</Text>
+            {recentGames.slice(0, 5).map((game) => (
+              <View key={game.id} style={styles.gameItem}>
+                <View style={styles.gameInfo}>
+                  <Text style={styles.gameLevel}>레벨 {game.level}</Text>
+                  <Text style={styles.gameDate}>
+                    {new Date(game.completed_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                <View style={styles.gameStats}>
+                  <Text style={styles.gameScore}>점수: {game.score}</Text>
+                  <Text style={styles.gameAccuracy}>정답률: {game.accuracy_rate}%</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* 게임 시작 버튼 */}
+        <View style={styles.startGameContainer}>
+          <TouchableOpacity style={styles.startGameButton} onPress={handleStartGame}>
+            <Text style={styles.startGameButtonText}>🎯 게임 시작</Text>
+          </TouchableOpacity>
+          <Text style={styles.startGameDescription}>
+            현재 레벨 {stats?.current_level || 1}의 퍼즐을 풀어보세요!
+          </Text>
+        </View>
+      </ScrollView>
+
+      {/* 로그아웃 확인 모달 */}
+      <Modal
+        visible={showLogoutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelLogout}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <View style={styles.logoutModalContent}>
+            <Text style={styles.logoutModalTitle}>로그아웃</Text>
+            <Text style={styles.logoutModalMessage}>로그아웃 하시겠습니까?</Text>
+            <View style={styles.logoutModalButtons}>
+              <TouchableOpacity style={styles.logoutModalCancelButton} onPress={handleCancelLogout}>
+                <Text style={styles.logoutModalCancelButtonText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.logoutModalConfirmButton} onPress={handleConfirmLogout}>
+                <Text style={styles.logoutModalConfirmButtonText}>확인</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
-
-      {/* 최근 게임 이력 */}
-      {recentGames.length > 0 && (
-        <View style={styles.recentGamesContainer}>
-          <Text style={styles.sectionTitle}>🎮 최근 게임</Text>
-          {recentGames.slice(0, 5).map((game) => (
-            <View key={game.id} style={styles.gameItem}>
-              <View style={styles.gameInfo}>
-                <Text style={styles.gameLevel}>레벨 {game.level}</Text>
-                <Text style={styles.gameDate}>
-                  {new Date(game.completed_at).toLocaleDateString()}
-                </Text>
-              </View>
-              <View style={styles.gameStats}>
-                <Text style={styles.gameScore}>점수: {game.score}</Text>
-                <Text style={styles.gameAccuracy}>정답률: {game.accuracy_rate}%</Text>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {/* 게임 시작 버튼 */}
-      <View style={styles.startGameContainer}>
-        <TouchableOpacity style={styles.startGameButton} onPress={handleStartGame}>
-          <Text style={styles.startGameButtonText}>🎯 게임 시작</Text>
-        </TouchableOpacity>
-        <Text style={styles.startGameDescription}>
-          현재 레벨 {stats?.current_level || 1}의 퍼즐을 풀어보세요!
-        </Text>
-      </View>
-    </ScrollView>
+      </Modal>
+    </>
   );
 };
 
@@ -346,6 +361,70 @@ const styles = StyleSheet.create({
   startGameDescription: {
     fontSize: 14,
     color: '#666',
+    textAlign: 'center',
+  },
+  // 로그아웃 모달 전용 스타일
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoutModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    margin: 20,
+    minWidth: 280,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  logoutModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  logoutModalMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  logoutModalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  logoutModalCancelButton: {
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  logoutModalCancelButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  logoutModalConfirmButton: {
+    flex: 1,
+    backgroundColor: '#ff3b30',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  logoutModalConfirmButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
     textAlign: 'center',
   },
 }); 

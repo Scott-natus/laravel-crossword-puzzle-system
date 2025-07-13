@@ -1004,6 +1004,41 @@ class PuzzleGameController extends Controller
     }
 
     /**
+     * 오답 초과 시 정답보기 (모든 사용자 접근 가능)
+     */
+    public function showAnswerOnWrongCount(Request $request)
+    {
+        $request->validate([
+            'word_id' => 'required|integer',
+        ]);
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => '로그인이 필요합니다.'], 401);
+        }
+
+        try {
+            // word_id로 단어 조회
+            $word = DB::table('pz_words')
+                ->where('id', $request->word_id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$word) {
+                return response()->json(['error' => '단어를 찾을 수 없습니다.'], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'answer' => $word->word,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('오답 초과 정답보기 오류: ' . $e->getMessage());
+            return response()->json(['error' => '정답을 불러오는데 실패했습니다.'], 500);
+        }
+    }
+
+    /**
      * 레벨 재시작
      */
 }

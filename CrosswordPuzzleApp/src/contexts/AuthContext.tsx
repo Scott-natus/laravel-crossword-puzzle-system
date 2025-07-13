@@ -164,14 +164,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = async () => {
     try {
-      await apiService.logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+      // 로컬 스토리지에서 토큰과 사용자 정보 삭제
       await storage.removeItem('auth_token');
       await storage.removeItem('user');
       setUser(null);
       console.log('Logout completed');
+      
+      // 서버 로그아웃 요청은 제거 (토큰이 이미 삭제되어 401 에러 발생)
+      // 클라이언트 측에서만 토큰 삭제로 충분
+    } catch (error) {
+      console.error('Logout error:', error);
+      // 에러가 발생해도 로컬 상태는 정리
+      await storage.removeItem('auth_token');
+      await storage.removeItem('user');
+      setUser(null);
     }
   };
 

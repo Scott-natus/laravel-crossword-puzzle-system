@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 
 interface WordPosition {
   id: number; // 퍼즐에 표시되는 배지 번호 (puzzle_grid_templates.word_positions의 id)
@@ -15,19 +15,42 @@ interface WordPosition {
 interface CrosswordGridProps {
   grid: number[][];
   wordPositions: WordPosition[];
-  onWordClick?: (word: WordPosition) => void;
-  onCellClick?: (x: number, y: number) => void;
-  answeredWords?: Set<number>; // 정답이 입력된 단어들의 word_id 집합
-  wordAnswers?: Map<number, string>; // word_id별 정답 단어 매핑
+  onWordClick: (word: WordPosition) => void;
+  onCellClick: (x: number, y: number) => void;
+  answeredWords: Set<number>;
+  wordAnswers: Map<number, string>;
+  showAllAnswers?: boolean; // 추가
 }
 
-const CrosswordGrid: React.FC<CrosswordGridProps> = ({ 
-  grid, 
-  wordPositions, 
-  onWordClick, 
-  answeredWords = new Set(),
-  wordAnswers = new Map()
+const CrosswordGrid: React.FC<CrosswordGridProps> = ({
+  grid,
+  wordPositions,
+  onWordClick,
+  onCellClick,
+  answeredWords,
+  wordAnswers,
+  showAllAnswers = false,
 }) => {
+  // 화면 크기 가져오기
+  const screenWidth = Dimensions.get('window').width;
+  const screenHeight = Dimensions.get('window').height;
+  const isLandscape = screenWidth > screenHeight;
+
+  // 그리드 크기 계산
+  const gridSize = grid.length; // 5x5, 6x6, 7x7 등
+  const maxGridWidth = isLandscape ? 400 : screenWidth * 0.9; // 가로형일 때 400px, 세로형일 때 90%
+  const minGridWidth = isLandscape ? 320 : screenWidth * 0.8; // 가로형일 때 320px, 세로형일 때 80%
+  
+  // 그리드 크기에 따른 너비 결정
+  const gridWidth = gridSize >= 7 ? maxGridWidth : minGridWidth;
+  const cellSize = Math.floor(gridWidth / gridSize);
+  
+  // 배지 크기와 폰트 크기 조정
+  const badgeSize = Math.max(12, Math.floor(cellSize * 0.45)); // 셀 크기의 45%
+  const badgeFontSize = Math.max(8, Math.floor(badgeSize * 0.6));
+  const answerFontSize = Math.max(14, Math.floor(cellSize * 0.5));
+  const badgeOffset = Math.floor(cellSize * 0.1); // 셀 크기의 10%
+
   // 검은칸 여부
   const isBlackCell = (cell: number) => String(cell) === '2';
 
@@ -68,23 +91,80 @@ const CrosswordGrid: React.FC<CrosswordGridProps> = ({
     });
 
     for (const word of wordsAtPosition) {
-      if (answeredWords.has(word.word_id)) {
+      // showAllAnswers가 true면 모든 단어의 정답 표시
+      if (showAllAnswers || answeredWords.has(word.word_id)) {
         const answer = wordAnswers.get(word.word_id);
         if (answer) {
-          // 해당 위치의 문자 인덱스 계산
           let charIndex;
           if (word.direction === 'horizontal') {
             charIndex = x - word.start_x;
           } else {
             charIndex = y - word.start_y;
           }
-          const char = answer.charAt(charIndex);
-          return char;
+          if (charIndex >= 0 && charIndex < answer.length) {
+            return answer[charIndex];
+          }
         }
       }
     }
     return null;
   };
+
+  // 동적 스타일 생성
+  const dynamicStyles = useMemo(() => ({
+    cell: {
+      width: cellSize,
+      height: cellSize,
+      borderWidth: 1,
+      borderColor: '#ccc',
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      position: 'relative' as const,
+    },
+    badge: {
+      position: 'absolute' as const,
+      borderRadius: Math.floor(badgeSize * 0.4),
+      width: badgeSize,
+      height: badgeSize,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      backgroundColor: '#ff6b6b',
+    },
+    horizontalBadge: {
+      top: badgeOffset,
+      left: badgeOffset,
+      backgroundColor: '#ff6b6b',
+    },
+    verticalBadge: {
+      bottom: badgeOffset,
+      right: badgeOffset,
+      backgroundColor: '#4ecdc4',
+    },
+    badgeText: {
+      color: '#fff',
+      fontWeight: 'bold' as const,
+      fontSize: badgeFontSize,
+    },
+    answerChar: {
+      position: 'absolute' as const,
+      fontSize: answerFontSize,
+      fontWeight: 'bold' as const,
+      color: '#fff',
+      zIndex: 1,
+    },
+  }), [cellSize, badgeSize, badgeFontSize, answerFontSize, badgeOffset]);
+
+  // 디버깅을 위한 로그 추가
+  console.log('CrosswordGrid 렌더링:', {
+    answeredWords: Array.from(answeredWords),
+    wordAnswers: Array.from(wordAnswers.entries()),
+    wordPositionsCount: wordPositions.length,
+    gridSize,
+    cellSize,
+    screenWidth,
+    isLandscape,
+    gridWidth
+  });
 
   return (
     <View style={styles.gridWrapper}>
@@ -97,7 +177,7 @@ const CrosswordGrid: React.FC<CrosswordGridProps> = ({
             return (
               <TouchableOpacity
                 key={x}
-                style={[styles.cell, isBlack ? styles.blackCell : styles.whiteCell]}
+                style={[dynamicStyles.cell, isBlack ? styles.blackCell : styles.whiteCell]}
                 activeOpacity={0.7}
                 onPress={() => {
                   if (isBlack && wordId !== null && onWordClick) {
@@ -116,15 +196,15 @@ const CrosswordGrid: React.FC<CrosswordGridProps> = ({
                         {[0, 1].map(idx => {
                           const sorted = [...wordsAtStart].sort((a, b) => a.id - b.id);
                           const word = sorted[idx];
-                          const badgeStyle = idx === 0 ? styles.horizontalBadge : styles.verticalBadge;
+                          const badgeStyle = idx === 0 ? dynamicStyles.horizontalBadge : dynamicStyles.verticalBadge;
                           return (
                             <TouchableOpacity
                               key={word.id}
-                              style={[styles.badge, badgeStyle]}
+                              style={[dynamicStyles.badge, badgeStyle]}
                               onPress={() => onWordClick && onWordClick(word)}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.badgeText}>{word.id}</Text>
+                              <Text style={dynamicStyles.badgeText}>{word.id}</Text>
                             </TouchableOpacity>
                           );
                         })}
@@ -132,11 +212,11 @@ const CrosswordGrid: React.FC<CrosswordGridProps> = ({
                     ) : (
                       // 단일 단어: 하나의 배지 번호만 표시
                       <TouchableOpacity
-                        style={styles.badge}
+                        style={dynamicStyles.badge}
                         onPress={() => onWordClick && onWordClick(wordsAtStart[0])}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.badgeText}>{wordsAtStart[0].id}</Text>
+                        <Text style={dynamicStyles.badgeText}>{wordsAtStart[0].id}</Text>
                       </TouchableOpacity>
                     )}
                   </>
@@ -144,7 +224,7 @@ const CrosswordGrid: React.FC<CrosswordGridProps> = ({
                 
                 {/* 정답 문자 표시 */}
                 {isBlack && getAnswerChar(x, y) && (
-                  <Text style={styles.answerChar}>{getAnswerChar(x, y)}</Text>
+                  <Text style={dynamicStyles.answerChar}>{getAnswerChar(x, y)}</Text>
                 )}
               </TouchableOpacity>
             );

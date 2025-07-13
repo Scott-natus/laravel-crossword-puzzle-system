@@ -294,3 +294,14 @@
 - **로그 설정**: config/logging.php 수정 후 반드시 config:clear 실행
 - **React Native 웹앱**: 인증 토큰이 없으면 반드시 로그인 화면으로 이동해야 함
 - **빌드 후 서비스**: 빌드 완료 후 반드시 systemd 서비스 재시작 필요 
+
+## 2025-07-12 오답 초과 안내박스 UI/UX 반복 개선 및 배포
+
+- 오답 5회 초과 시 안내 모달(재도전) 위치/동작/클릭 가능성 20회 이상 반복 수정
+- 안내박스가 오버레이 위에 정확히 뜨도록 구조 개선 (zIndex, 렌더링 순서, pointerEvents)
+- 안내박스가 입력/버튼 박스와 정확히 겹치게 ref+absolute 방식으로 위치 조정 시도
+- transform, top, px, %, calc 등 다양한 CSS/React Native Web 스타일 실험
+- 오버레이와 안내박스를 같은 부모에서, 오버레이 먼저, 안내박스 나중에, zIndex로 분리하여 최종 구조 확정
+- 빌드(npm run build-web) 및 서비스 재시작(systemctl restart crossword-puzzle-app) 반복
+- 실제 서비스에서 위치/동작/클릭 가능성 등 실사용 피드백 반영
+- 서버 소스 전체 풀백업 진행 (source_backup_YYYYMMDD_HHMMSS.tar.gz) 

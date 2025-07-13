@@ -32,7 +32,14 @@ const Navigation = () => {
   }
 
   if (!isAuthenticated) {
-    return <LoginScreen />;
+    return <LoginScreen navigation={{ 
+      navigate: (screen: string) => {
+        if (screen === 'Register') {
+          // 회원가입 화면으로 이동하는 로직은 현재 구현되지 않음
+          // 필요시 추가 구현
+        }
+      }
+    }} />;
   }
 
   // 게임 화면으로 이동하는 함수
@@ -46,7 +53,18 @@ const Navigation = () => {
   };
 
   if (currentScreen === 'game') {
-    return <GameScreen navigation={{ goBack: handleBackToMain }} />;
+    return <GameScreen navigation={{ 
+      goBack: handleBackToMain,
+      navigate: (screen: string) => {
+        if (screen === 'Login') {
+          // 로그아웃 시 메인 화면으로 돌아가고, AuthContext에서 로그아웃 처리
+          handleBackToMain();
+        } else if (screen === 'Main') {
+          // 홈 버튼 클릭 시 메인 화면으로 이동
+          handleBackToMain();
+        }
+      }
+    }} />;
   }
 
   return <MainScreen navigation={{ navigate: (screen: string) => {
