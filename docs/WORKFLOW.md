@@ -305,3 +305,12 @@
 - 빌드(npm run build-web) 및 서비스 재시작(systemctl restart crossword-puzzle-app) 반복
 - 실제 서비스에서 위치/동작/클릭 가능성 등 실사용 피드백 반영
 - 서버 소스 전체 풀백업 진행 (source_backup_YYYYMMDD_HHMMSS.tar.gz) 
+## 2025-07-12 한글 음절별 단어 수집 자동화 및 장애 대응
+
+- temp_hangul_syllables 테이블 구조 개선(초성, processed_at 컬럼 추가)
+- syllable별 단어 수집 프롬프트/자동화 설계 및 CollectWordsFromSyllables artisan 커맨드 구현
+- 1분마다 스케줄러 자동 실행, Gemini API 연동, 결과 임시테이블 저장
+- 장애(503 등) 발생 시 롤백 처리 및 로그 기록 개선
+- 운영 정책 및 DB 작업 규칙 철저 준수
+- 전체 플로우/운영 정책 docs/WORKFLOW.md, docs/DATABASE_SCHEMA.md, docs/TROUBLESHOOTING.md에 반영
+
