@@ -29,6 +29,24 @@
                            class="btn btn-success btn-lg">
                             <i class="fas fa-sign-in-alt me-2"></i>로그인
                         </a>
+                        <button id="guest-start-btn" class="btn btn-warning btn-lg">
+                            <i class="fas fa-user-secret me-2"></i>게스트로 시작
+                        </button>
+                        <script>
+                        document.getElementById('guest-start-btn').onclick = function() {
+                            alert('게스트 버튼 클릭됨!'); // 동작 확인용
+                            let guestId = localStorage.getItem('guest_id');
+                            if (!guestId) {
+                                if (window.crypto && window.crypto.randomUUID) {
+                                    guestId = crypto.randomUUID();
+                                } else {
+                                    guestId = 'guest-' + Math.random().toString(36).substr(2, 16);
+                                }
+                                localStorage.setItem('guest_id', guestId);
+                            }
+                            window.location.href = '/puzzle-game?guest_id=' + guestId;
+                        };
+                        </script>
                     </div>
                     
                     <div class="mt-4">

@@ -13,59 +13,112 @@ use Illuminate\Support\Facades\Auth;
 
 class PuzzleGameController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
-            // 비로그인 상태일 때 안내 페이지 표시
+        $guestId = $request->query('guest_id') ?? session('guest_id');
+
+        if (!$user && !$guestId) {
+            // 로그인/게스트 ID 모두 없으면 안내
             return view('puzzle.game.guest');
         }
 
-        $game = UserPuzzleGame::where('user_id', $user->id)
+        if ($guestId && !$user) {
+            // 게스트 계정 자동 생성 또는 조회
+            $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+            if (!$userModel) {
+                $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::create([
+                        'name' => '게스트_' . substr($guestId, 0, 8),
+                        'email' => $guestId . '@guest.local',
+                        'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                        'guest_id' => $guestId,
+                        'is_guest' => true,
+                    ]);
+                }
+            }
+            $userId = $userModel->id;
+            session(['guest_id' => $guestId]);
+        } else {
+            $userId = $user->id;
+        }
+
+        // 게임 데이터 조회/생성 (user_id 기준)
+        $game = \App\Models\UserPuzzleGame::where('user_id', $userId)
             ->where('is_active', true)
             ->first();
-
         if (!$game) {
-            $game = UserPuzzleGame::create([
-                'user_id' => $user->id,
+            $game = \App\Models\UserPuzzleGame::create([
+                'user_id' => $userId,
+                'guest_id' => $guestId ?? null,
                 'current_level' => 1,
                 'first_attempt_at' => now(),
                 'is_active' => true,
             ]);
         }
-
-        $level = PuzzleLevel::where('level', $game->current_level)->first();
-
-        return view('puzzle.game.index', compact('game', 'level'));
+        $level = \App\Models\PuzzleLevel::where('level', $game->current_level)->first();
+        // 현재 레벨 클리어 횟수 계산
+        $clearCount = 0;
+        if ($level && $level->clear_condition) {
+            $clearCount = \DB::table('puzzle_game_records')
+                ->where('user_id', $userId)
+                ->where('level_played', $game->current_level)
+                ->where('game_status', 'completed')
+                ->count();
+        }
+        return view('puzzle.game.index', compact('game', 'level', 'clearCount'));
     }
 
     public function getTemplate(Request $request)
     {
         $user = Auth::user();
-        if (!$user) {
+        $guestId = $request->query('guest_id') ?? session('guest_id');
+
+        if (!$user && !$guestId) {
             return response()->json(['error' => '로그인이 필요합니다.'], 401);
         }
 
-        $game = UserPuzzleGame::where('user_id', $user->id)
+        if ($guestId && !$user) {
+            $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+            if (!$userModel) {
+                $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::create([
+                        'name' => '게스트_' . substr($guestId, 0, 8),
+                        'email' => $guestId . '@guest.local',
+                        'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                        'guest_id' => $guestId,
+                        'is_guest' => true,
+                    ]);
+                }
+            }
+            $userId = $userModel->id;
+            session(['guest_id' => $guestId]);
+        } else {
+            $userId = $user->id;
+        }
+
+        // 게임 데이터 조회/생성 (user_id 기준)
+        $game = \App\Models\UserPuzzleGame::where('user_id', $userId)
             ->where('is_active', true)
             ->first();
-
         if (!$game) {
-            $game = UserPuzzleGame::create([
-                'user_id' => $user->id,
+            $game = \App\Models\UserPuzzleGame::create([
+                'user_id' => $userId,
+                'guest_id' => $guestId ?? null,
                 'current_level' => 1,
                 'first_attempt_at' => now(),
                 'is_active' => true,
             ]);
         }
-
-        $level = PuzzleLevel::where('level', $game->current_level)->first();
+        $level = \App\Models\PuzzleLevel::where('level', $game->current_level)->first();
         if (!$level) {
             return response()->json(['error' => '레벨을 찾을 수 없습니다.'], 404);
         }
 
         // 레벨에 해당하는 템플릿 중 랜덤으로 하나 선택
-        $template = DB::table('puzzle_grid_templates')
+        $template = \DB::table('puzzle_grid_templates')
             ->where('level_id', $level->id)
             ->where('is_active', true)
             ->inRandomOrder()
@@ -96,7 +149,7 @@ class PuzzleGameController extends Controller
                 \Log::info("게임 단어 추출 성공 - 시도 #{$retryCount}에서 완료", [
                     'template_id' => $template->id,
                     'level_id' => $level->id,
-                    'user_id' => $user->id
+                    'user_id' => $userId
                 ]);
                 break;
             }
@@ -104,7 +157,7 @@ class PuzzleGameController extends Controller
             \Log::info("게임 단어 추출 실패 - 시도 #{$retryCount}", [
                 'template_id' => $template->id,
                 'level_id' => $level->id,
-                'user_id' => $user->id,
+                'user_id' => $userId,
                 'error_message' => $extractData['message'] ?? '알 수 없는 오류'
             ]);
             
@@ -119,7 +172,7 @@ class PuzzleGameController extends Controller
             \Log::error("게임 단어 추출 최종 실패 - 5회 시도 후 실패", [
                 'template_id' => $template->id,
                 'level_id' => $level->id,
-                'user_id' => $user->id,
+                'user_id' => $userId,
                 'final_error' => $extractData['message'] ?? '알 수 없는 오류'
             ]);
             
@@ -179,82 +232,129 @@ class PuzzleGameController extends Controller
 
     public function checkAnswer(Request $request)
     {
-        $request->validate([
-            'word_id' => 'required|integer',
-            'answer' => 'required|string',
-        ]);
+        \Log::info('checkAnswer 진입', $request->all());
+        try {
+            $request->validate([
+                'word_id' => 'required|integer',
+                'answer' => 'required|string',
+            ]);
 
-        $user = Auth::user();
-        $game = UserPuzzleGame::where('user_id', $user->id)
-            ->where('is_active', true)
-            ->first();
+            \Log::info('checkAnswer validate 통과', $request->all());
 
-        if (!$game) {
-            return response()->json(['error' => '게임을 찾을 수 없습니다.'], 404);
-        }
+            $user = Auth::user();
+            $guestId = $request->input('guest_id') ?? session('guest_id');
+            $userId = null;
 
-        // 단어 ID로 실제 단어 정보 가져오기
-        $word = DB::table('pz_words')
-            ->where('id', $request->word_id)
-            ->where('is_active', true)
-            ->first();
+            if (!$user && !$guestId) {
+                \Log::warning('checkAnswer: 로그인/게스트 ID 모두 없음');
+                return response()->json(['error' => '로그인이 필요합니다.'], 401);
+            }
 
-        if (!$word) {
-            return response()->json(['error' => '단어를 찾을 수 없습니다.'], 404);
-        }
-
-        // 정답 확인 (대소문자 구분 없이, 공백 제거)
-        $userAnswer = trim(strtolower($request->answer));
-        $correctAnswer = trim(strtolower($word->word));
-        
-        $isCorrect = ($userAnswer === $correctAnswer);
-        
-        // 보안을 위해 정답 정보는 로그에 기록하지 않음
-        \Log::info('Answer check', [
-            'word_id' => $request->word_id,
-            'is_correct' => $isCorrect
-        ]);
-        
-        if ($isCorrect) {
-            $game->incrementCorrectAnswer();
-            $message = '정답입니다!';
-        } else {
-            $game->incrementWrongAnswer();
-            $wrongCount = $game->current_level_wrong_answers;
-            
-            // 틀린 답변 기록
-            $this->recordWrongAnswer($user->id, $word->id, $request->answer, $word->word, $word->category, $game->current_level);
-            
-            // 오답 4회일 때 특별한 메시지
-            if ($wrongCount == 4) {
-                $message = '현재 오답이 4회 입니다, 5회 오답시 레벨을 재시작합니다';
+            if ($guestId && !$user) {
+                $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                    if (!$userModel) {
+                        $userModel = \App\Models\User::create([
+                            'name' => '게스트_' . substr($guestId, 0, 8),
+                            'email' => $guestId . '@guest.local',
+                            'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                            'guest_id' => $guestId,
+                            'is_guest' => true,
+                        ]);
+                    }
+                }
+                $userId = $userModel->id;
+                session(['guest_id' => $guestId]);
+                \Log::info('checkAnswer: 게스트 계정 사용', ['user_id' => $userId, 'guest_id' => $guestId]);
             } else {
-                $message = '오답입니다. 누적 오답: ' . $wrongCount . '회';
+                $userId = $user->id;
+                \Log::info('checkAnswer: 로그인 계정 사용', ['user_id' => $userId]);
             }
-            
-            // 오답 5회 초과 체크
-            if ($wrongCount >= 5) {
-                // 게임 상태 초기화
-                $game->current_level_correct_answers = 0;
-                $game->current_level_wrong_answers = 0;
-                $game->save();
-                
-                return response()->json([
-                    'is_correct' => false,
-                    'message' => '오답회수가 초과했습니다, 레벨을 다시 시작합니다.',
-                    'restart_level' => true,
-                    'wrong_count_exceeded' => true
-                ]);
-            }
-        }
 
-        return response()->json([
-            'is_correct' => $isCorrect,
-            'message' => $message,
-            'correct_answer' => $isCorrect ? $word->word : null, // 정답일 때만 정답 전송
-            'correct_count' => $game->current_level_correct_answers,
-            'wrong_count' => $game->current_level_wrong_answers
-        ]);
+            $game = \App\Models\UserPuzzleGame::where('user_id', $userId)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$game) {
+                \Log::warning('checkAnswer: 게임을 찾을 수 없음', ['user_id' => $userId]);
+                return response()->json(['error' => '게임을 찾을 수 없습니다.'], 404);
+            }
+
+            $word = \DB::table('pz_words')
+                ->where('id', $request->word_id)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$word) {
+                \Log::warning('checkAnswer: 단어를 찾을 수 없음', ['word_id' => $request->word_id]);
+                return response()->json(['error' => '단어를 찾을 수 없습니다.'], 404);
+            }
+
+            $userAnswer = trim(strtolower($request->answer));
+            $correctAnswer = trim(strtolower($word->word));
+            $isCorrect = ($userAnswer === $correctAnswer);
+
+            \Log::info('checkAnswer 정답 비교', [
+                'userAnswer' => $userAnswer,
+                'correctAnswer' => $correctAnswer,
+                'isCorrect' => $isCorrect
+            ]);
+
+            // 보안을 위해 정답 정보는 로그에 기록하지 않음
+            \Log::info('Answer check', [
+                'word_id' => $request->word_id,
+                'is_correct' => $isCorrect
+            ]);
+            
+            if ($isCorrect) {
+                $game->incrementCorrectAnswer();
+                $message = '정답입니다!';
+            } else {
+                $game->incrementWrongAnswer();
+                $wrongCount = $game->current_level_wrong_answers;
+                
+                // 틀린 답변 기록
+                $this->recordWrongAnswer($userId, $word->id, $request->answer, $word->word, $word->category, $game->current_level);
+                
+                // 오답 4회일 때 특별한 메시지
+                if ($wrongCount == 4) {
+                    $message = '현재 오답이 4회 입니다, 5회 오답시 레벨을 재시작합니다';
+                } else {
+                    $message = '오답입니다. 누적 오답: ' . $wrongCount . '회';
+                }
+                
+                // 오답 5회 초과 체크
+                if ($wrongCount >= 5) {
+                    // 게임 상태 초기화
+                    $game->current_level_correct_answers = 0;
+                    $game->current_level_wrong_answers = 0;
+                    $game->save();
+                    
+                    return response()->json([
+                        'is_correct' => false,
+                        'message' => '오답회수가 초과했습니다, 레벨을 다시 시작합니다.',
+                        'restart_level' => true,
+                        'wrong_count_exceeded' => true
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'is_correct' => $isCorrect,
+                'message' => $message,
+                'correct_answer' => $isCorrect ? $word->word : null, // 정답일 때만 정답 전송
+                'correct_count' => $game->current_level_correct_answers,
+                'wrong_count' => $game->current_level_wrong_answers
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('checkAnswer 예외 발생', [
+                'msg' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return response()->json(['error' => '서버 오류'], 500);
+        }
     }
 
     public function getHints(Request $request)
@@ -266,18 +366,35 @@ class PuzzleGameController extends Controller
         ]);
 
         $user = Auth::user();
-        if (!$user) {
+        $guestId = $request->input('guest_id') ?? session('guest_id');
+        $userId = null;
+
+        if (!$user && !$guestId) {
+            \Log::warning('getHints: 로그인/게스트 ID 모두 없음');
             return response()->json(['error' => '로그인이 필요합니다.'], 401);
         }
 
-        // 디버깅 로그 추가
-        \Log::info('getHints called', [
-            'word_id' => $request->word_id,
-            'current_hint_id' => $request->current_hint_id,
-            'base_hint_id' => $request->base_hint_id,
-            'has_current_hint_id' => $request->has('current_hint_id'),
-            'has_base_hint_id' => $request->has('base_hint_id')
-        ]);
+        if ($guestId && !$user) {
+            $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+            if (!$userModel) {
+                $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::create([
+                        'name' => '게스트_' . substr($guestId, 0, 8),
+                        'email' => $guestId . '@guest.local',
+                        'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                        'guest_id' => $guestId,
+                        'is_guest' => true,
+                    ]);
+                }
+            }
+            $userId = $userModel->id;
+            session(['guest_id' => $guestId]);
+            \Log::info('getHints: 게스트 계정 사용', ['user_id' => $userId, 'guest_id' => $guestId]);
+        } else {
+            $userId = $user->id;
+            \Log::info('getHints: 로그인 계정 사용', ['user_id' => $userId]);
+        }
 
         // 요구사항: 기본 힌트 제외하고 난이도 순서로 힌트 선택 (쉬운 것부터)
         $query = DB::table('pz_hints')
@@ -319,21 +436,102 @@ class PuzzleGameController extends Controller
 
     public function completeLevel(Request $request)
     {
-        $user = Auth::user();
-        $game = UserPuzzleGame::where('user_id', $user->id)
-            ->where('is_active', true)
-            ->first();
+        \Log::info('completeLevel 진입', $request->all());
+        try {
+            $user = Auth::user();
+            $guestId = $request->input('guest_id') ?? session('guest_id');
+            $userId = null;
 
-        if (!$game) {
-            return response()->json(['error' => '게임을 찾을 수 없습니다.'], 404);
+            if (!$user && !$guestId) {
+                \Log::warning('completeLevel: 로그인/게스트 ID 모두 없음');
+                return response()->json(['error' => '로그인이 필요합니다.'], 401);
+            }
+
+            if ($guestId && !$user) {
+                $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                    if (!$userModel) {
+                        $userModel = \App\Models\User::create([
+                            'name' => '게스트_' . substr($guestId, 0, 8),
+                            'email' => $guestId . '@guest.local',
+                            'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                            'guest_id' => $guestId,
+                            'is_guest' => true,
+                        ]);
+                    }
+                }
+                $userId = $userModel->id;
+                session(['guest_id' => $guestId]);
+                \Log::info('completeLevel: 게스트 계정 사용', ['user_id' => $userId, 'guest_id' => $guestId]);
+            } else {
+                $userId = $user->id;
+                \Log::info('completeLevel: 로그인 계정 사용', ['user_id' => $userId]);
+            }
+
+            $game = \App\Models\UserPuzzleGame::where('user_id', $userId)
+                ->where('is_active', true)
+                ->first();
+
+            if (!$game) {
+                \Log::warning('completeLevel: 게임을 찾을 수 없음', ['user_id' => $userId]);
+                return response()->json(['error' => '게임을 찾을 수 없습니다.'], 404);
+            }
+
+            // 레벨 클리어 기록 저장 (조건 충족 여부와 관계없이 항상 저장)
+            $gameData = [
+                'score' => $request->input('score', 0),
+                'play_time' => $request->input('play_time', 0),
+                'hints_used' => $request->input('hints_used', 0),
+                'words_found' => $request->input('words_found', 0),
+                'total_words' => $request->input('total_words', 0),
+                'accuracy' => $request->input('accuracy', 0),
+            ];
+            $game->recordLevelClear($gameData);
+
+            // 레벨 클리어 조건 확인 (기록 저장 후)
+            if (!$game->checkLevelClearCondition()) {
+                $level = \App\Models\PuzzleLevel::where('level', $game->current_level)->first();
+                $clearCount = \DB::table('puzzle_game_records')
+                    ->where('user_id', $userId)
+                    ->where('level_played', $game->current_level)
+                    ->where('game_status', 'completed')
+                    ->count();
+                $remaining = $level && $level->clear_condition ? max(0, $level->clear_condition - $clearCount) : 1;
+                return response()->json([
+                    'error' => '레벨 클리어 조건을 만족하지 않습니다.',
+                    'message' => "클리어까지 {$remaining}회 남았습니다.",
+                    'remaining' => $remaining,
+                    'condition_not_met' => true
+                ], 400);
+            }
+
+            // 다음 레벨로 진행 가능한지 확인
+            if (!$game->canAdvanceToNextLevel()) {
+                return response()->json([
+                    'message' => '축하합니다! 레벨을 완료했습니다.',
+                    'new_level' => $game->current_level,
+                    'success' => true,
+                    'no_next_level' => true
+                ]);
+            }
+
+            // 다음 레벨로 진행
+            $game->advanceToNextLevel();
+
+            return response()->json([
+                'message' => '축하합니다! 다음 레벨로 진행합니다.',
+                'new_level' => $game->current_level,
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('completeLevel 예외 발생', [
+                'msg' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            return response()->json(['error' => '서버 오류'], 500);
         }
-
-        $game->advanceToNextLevel();
-
-        return response()->json([
-            'message' => '축하합니다! 다음 레벨로 진행합니다.',
-            'new_level' => $game->current_level,
-        ]);
     }
 
     public function gameOver(Request $request)
@@ -357,32 +555,103 @@ class PuzzleGameController extends Controller
 
     public function showAnswer(Request $request)
     {
-        $request->validate([
-            'word_id' => 'required|integer',
-        ]);
-
-        $user = Auth::user();
-        
-        // 관리자 권한 체크
-        if (!$user->is_admin) {
+        if (!Auth::check() || !Auth::user()->is_admin) {
             return response()->json(['error' => '관리자만 접근 가능합니다.'], 403);
         }
 
-        // 단어 정보 가져오기
-        $word = DB::table('pz_words')
-            ->where('id', $request->word_id)
-            ->where('is_active', true)
-            ->first();
+        $wordId = $request->input('word_id');
+        if (!$wordId) {
+            return response()->json(['error' => '단어 ID가 필요합니다.'], 400);
+        }
 
+        $word = PzWord::find($wordId);
         if (!$word) {
             return response()->json(['error' => '단어를 찾을 수 없습니다.'], 404);
         }
 
         return response()->json([
             'success' => true,
-            'answer' => $word->word,
-            'message' => '정답: ' . $word->word,
-            'show_answer' => true
+            'message' => "정답: {$word->word}"
+        ]);
+    }
+
+    /**
+     * 현재 레벨의 클리어 조건 정보를 실시간으로 조회
+     */
+    public function getClearCondition(Request $request)
+    {
+        \Log::info('getClearCondition 진입', $request->all());
+        
+        $user = Auth::user();
+        $guestId = $request->query('guest_id') ?? session('guest_id');
+
+        if (!$user && !$guestId) {
+            \Log::warning('getClearCondition: 로그인/게스트 ID 모두 없음');
+            return response()->json(['error' => '로그인이 필요합니다.'], 401);
+        }
+
+        if ($guestId && !$user) {
+            $userModel = \App\Models\User::where('guest_id', $guestId)->first();
+            if (!$userModel) {
+                $userModel = \App\Models\User::where('email', $guestId . '@guest.local')->first();
+                if (!$userModel) {
+                    $userModel = \App\Models\User::create([
+                        'name' => '게스트_' . substr($guestId, 0, 8),
+                        'email' => $guestId . '@guest.local',
+                        'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+                        'guest_id' => $guestId,
+                        'is_guest' => true,
+                    ]);
+                }
+            }
+            $userId = $userModel->id;
+            session(['guest_id' => $guestId]);
+            \Log::info('getClearCondition: 게스트 계정 사용', ['user_id' => $userId, 'guest_id' => $guestId]);
+        } else {
+            $userId = $user->id;
+            \Log::info('getClearCondition: 로그인 계정 사용', ['user_id' => $userId]);
+        }
+
+        // 게임 데이터 조회
+        $game = \App\Models\UserPuzzleGame::where('user_id', $userId)
+            ->where('is_active', true)
+            ->first();
+        
+        if (!$game) {
+            \Log::warning('getClearCondition: 게임 데이터를 찾을 수 없음', ['user_id' => $userId]);
+            return response()->json(['error' => '게임 데이터를 찾을 수 없습니다.'], 404);
+        }
+
+        $level = \App\Models\PuzzleLevel::where('level', $game->current_level)->first();
+        if (!$level) {
+            \Log::warning('getClearCondition: 레벨을 찾을 수 없음', ['current_level' => $game->current_level]);
+            return response()->json(['error' => '레벨을 찾을 수 없습니다.'], 404);
+        }
+
+        // 현재 레벨 클리어 횟수 계산
+        $clearCount = 0;
+        if ($level->clear_condition > 1) {
+            $clearCount = \DB::table('puzzle_game_records')
+                ->where('user_id', $userId)
+                ->where('level_played', $game->current_level)
+                ->where('game_status', 'completed')
+                ->count();
+        }
+
+        \Log::info('getClearCondition 결과', [
+            'user_id' => $userId,
+            'current_level' => $game->current_level,
+            'clear_count' => $clearCount,
+            'clear_condition' => $level->clear_condition,
+            'level_name' => $level->level_name
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'clear_count' => $clearCount,
+            'clear_condition' => $level->clear_condition,
+            'current_level' => $game->current_level,
+            'level_name' => $level->level_name
         ]);
     }
 

@@ -4,6 +4,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-md-8">
+            <h2 class="mb-3">{{ $boardType->name }} - 게시글 작성</h2>
             <div class="card">
                 <div class="card-header">게시글 작성</div>
 

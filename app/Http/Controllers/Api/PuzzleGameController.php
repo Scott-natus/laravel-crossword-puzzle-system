@@ -835,11 +835,44 @@ class PuzzleGameController extends Controller
             return response()->json(['error' => '게임을 찾을 수 없습니다.'], 404);
         }
 
+        // 레벨 클리어 조건 확인
+        if (!$game->checkLevelClearCondition()) {
+            $conditionMessage = $game->getLevelClearConditionMessage();
+            return response()->json([
+                'error' => '레벨 클리어 조건을 만족하지 않습니다.',
+                'message' => $conditionMessage,
+                'condition_not_met' => true
+            ], 400);
+        }
+
+        // 레벨 클리어 기록 저장
+        $gameData = [
+            'score' => $request->input('score', 0),
+            'play_time' => $request->input('play_time', 0),
+            'hints_used' => $request->input('hints_used', 0),
+            'words_found' => $request->input('words_found', 0),
+            'total_words' => $request->input('total_words', 0),
+            'accuracy' => $request->input('accuracy', 0),
+        ];
+        $game->recordLevelClear($gameData);
+
+        // 다음 레벨로 진행 가능한지 확인
+        if (!$game->canAdvanceToNextLevel()) {
+            return response()->json([
+                'message' => '축하합니다! 레벨을 완료했습니다.',
+                'new_level' => $game->current_level,
+                'success' => true,
+                'no_next_level' => true
+            ]);
+        }
+
+        // 다음 레벨로 진행
         $game->advanceToNextLevel();
 
         return response()->json([
             'message' => '축하합니다! 다음 레벨로 진행합니다.',
             'new_level' => $game->current_level,
+            'success' => true
         ]);
     }
 

@@ -5,16 +5,32 @@
     <div class="row">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">레벨 {{ $game->current_level }}</h5>
-                    <div>
-                        <span class="badge bg-primary me-2">정답: {{ $game->current_level_correct_answers }}</span>
-                        <span class="badge bg-danger me-2">오답: {{ $game->current_level_wrong_answers }}</span>
-                        @if($level && $level->time_limit > 0)
-                            <span class="badge bg-warning" id="timer">남은시간: <span id="time-left">{{ $level->time_limit }}</span>초</span>
-                        @endif
+                <div class="card-header d-flex flex-column align-items-center">
+                    <h3 class="text-center mb-2">K-CrossWord</h3>
+                    <div class="w-100 d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            레벨 {{ $game->current_level }}
+                            @if($level && $level->level_name)
+                                <span class="ms-2 text-secondary">({{ $level->level_name }})</span>
+                            @endif
+                        </h5>
+                        <div>
+                            <span class="badge bg-primary me-2">정답: {{ $game->current_level_correct_answers }}</span>
+                            <span class="badge bg-danger me-2">오답: {{ $game->current_level_wrong_answers }}</span>
+                            @if($level && $level->time_limit > 0)
+                                <span class="badge bg-warning" id="timer">남은시간: <span id="time-left">{{ $level->time_limit }}</span>초</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
+                @if($level && $level->clear_condition > 1)
+                    <div class="card-body border-bottom">
+                        <div class="alert alert-info mb-0 text-center">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>클리어 조건/횟수 :</strong> <span id="clear-condition-display">({{ $clearCount }}/{{ $level->clear_condition }})</span>
+                        </div>
+                    </div>
+                @endif
                 <div class="card-body">
                     <div id="puzzle-grid" class="text-center">
                         <!-- 퍼즐 그리드가 여기에 렌더링됩니다 -->
@@ -40,7 +56,7 @@
                         <div class="d-flex gap-2">
                             <button type="button" id="check-answer-btn" class="btn btn-primary">확인</button>
                             <button type="button" id="show-hint-btn" class="btn btn-secondary">힌트보기</button>
-                            @if(Auth::user()->is_admin)
+                            @if(Auth::check() && Auth::user()->is_admin)
                                 <button type="button" id="show-answer-btn" class="btn btn-warning">정답보기</button>
                             @endif
                         </div>
@@ -64,12 +80,12 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">축하합니다!</h5>
+                <h5 class="modal-title">레벨 완료</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>모든 단어를 맞추셨습니다!</p>
-                <p>다음 레벨로 진행하시겠습니까?</p>
+                <p id="level-complete-message">모든 단어를 맞추셨습니다!</p>
+                <p id="level-complete-sub-message">다음 레벨로 진행하시겠습니까?</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
@@ -225,6 +241,19 @@
 
 @push('scripts')
 <script>
+// 게스트 ID 관리
+(function() {
+    let guestId = localStorage.getItem('guest_id');
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!guestId && urlParams.get('guest_id')) {
+        guestId = urlParams.get('guest_id');
+        localStorage.setItem('guest_id', guestId);
+    }
+    window.GUEST_ID = guestId || null;
+})();
+// 이후 window.GUEST_ID를 모든 API 요청에 포함
+// 예시: $.post('/api/puzzle-level', { guest_id: window.GUEST_ID, ... })
+
 let currentWordId = null;
 let currentHintId = null;
 let baseHintId = null;
@@ -241,6 +270,9 @@ $(document).ready(function() {
     if (timeLeft > 0) {
         startTimer();
     }
+    
+    // 페이지 로드 시 클리어 조건 업데이트
+    updateClearCondition();
 });
 
 function loadTemplate() {
@@ -527,31 +559,34 @@ $('#check-answer-btn').click(function() {
         answer: answer,
         _token: '{{ csrf_token() }}'
     })
-    .done(function(data) {
-        // 실시간 카운트 업데이트
-        if (data.correct_count !== undefined && data.wrong_count !== undefined) {
-            updateGameCounts(data.correct_count, data.wrong_count);
-        }
-        
-        if (data.is_correct) {
-            // 정답인 경우
-            console.log('정답 확인됨');
-            $('#result-message').html(`<div class="alert alert-success">${data.message}</div>`);
+            .done(function(data) {
+            // 실시간 카운트 업데이트
+            if (data.correct_count !== undefined && data.wrong_count !== undefined) {
+                updateGameCounts(data.correct_count, data.wrong_count);
+            }
             
-            // 서버에서 받은 정답을 그리드에 표시
-            updateGridWithAnswer(data.correct_answer);
-            
-            // 입력 영역 숨기기
-            $('#word-input-section').hide();
-            
-            // 정답 메시지 표시 후 2초 뒤 숨기기
-            setTimeout(function() {
-                $('#result-message').empty();
-            }, 2000);
-            
-            // 레벨 완료 체크 (모든 단어를 맞췄는지 확인)
-            checkLevelCompletion();
-        } else {
+            if (data.is_correct) {
+                // 정답인 경우
+                console.log('정답 확인됨');
+                $('#result-message').html(`<div class="alert alert-success">${data.message}</div>`);
+                
+                // 서버에서 받은 정답을 그리드에 표시
+                updateGridWithAnswer(data.correct_answer);
+                
+                // 입력 영역 숨기기
+                $('#word-input-section').hide();
+                
+                // 정답 메시지 표시 후 2초 뒤 숨기기
+                setTimeout(function() {
+                    $('#result-message').empty();
+                }, 2000);
+                
+                // 클리어 조건 실시간 업데이트
+                updateClearCondition();
+                
+                // 레벨 완료 체크 (모든 단어를 맞췄는지 확인)
+                checkLevelCompletion();
+            } else {
             // 오답인 경우
             if (data.wrong_count_exceeded) {
                 // 오답 5회 초과 시 메시지 표시
@@ -668,10 +703,38 @@ function checkLevelCompletion() {
     
     // 모든 단어의 정답을 맞췄는지 확인
     if (answeredWords.size >= currentTemplateWords.length) {
-        // 레벨 완료 모달 표시
-        setTimeout(function() {
+        // 클리어 조건 미달/충족 여부 확인
+        $.post('{{ route("puzzle-game.complete-level") }}', {
+            _token: '{{ csrf_token() }}',
+            score: 0,
+            play_time: 0,
+            hints_used: 0,
+            words_found: answeredWords.size,
+            total_words: currentTemplateWords.length,
+            accuracy: 100
+        })
+        .done(function(data) {
+            // 클리어 조건 충족: 다음 레벨로 이동 안내
+            $('#level-complete-message').text('축하드립니다! 다음 레벨로 이동하겠습니다.');
+            $('#level-complete-sub-message').text('확인 버튼을 누르면 다음 레벨로 이동합니다.');
+            $('#next-level-btn').text('확인').prop('disabled', false).data('condition', 'met').show();
             $('#levelCompleteModal').modal('show');
-        }, 1000);
+        })
+        .fail(function(xhr) {
+            const response = xhr.responseJSON;
+            if (response && response.condition_not_met) {
+                // 클리어 조건 미달: 남은 횟수 안내 및 새 퍼즐 재도전
+                $('#level-complete-message').text(response.message || '아직 클리어 조건을 충족하지 못했습니다.');
+                $('#level-complete-sub-message').text('확인 버튼을 누르면 새 퍼즐로 재도전합니다.');
+                $('#next-level-btn').text('확인').prop('disabled', false).data('condition', 'not_met').show();
+                $('#levelCompleteModal').modal('show');
+            } else {
+                $('#level-complete-message').text('오류가 발생했습니다.');
+                $('#level-complete-sub-message').text('잠시 후 다시 시도해 주세요.');
+                $('#next-level-btn').text('확인').prop('disabled', true).data('condition', '').show();
+                $('#levelCompleteModal').modal('show');
+            }
+        });
     }
 }
 
@@ -680,6 +743,24 @@ function updateGameCounts(correctCount, wrongCount) {
     // 정답/오답 카운트 업데이트
     $('.badge.bg-primary').text('정답: ' + correctCount);
     $('.badge.bg-danger').text('오답: ' + wrongCount);
+}
+
+// 클리어 조건 실시간 업데이트
+function updateClearCondition() {
+    console.log('클리어 조건 업데이트 시작');
+    $.get('{{ route("puzzle-game.get-clear-condition") }}')
+        .done(function(data) {
+            console.log('클리어 조건 업데이트 성공:', data);
+            if (data.success && data.clear_condition > 1) {
+                // 클리어 조건 표시 업데이트
+                const clearConditionText = `(${data.clear_count}/${data.clear_condition})`;
+                $('#clear-condition-display').text(clearConditionText);
+                console.log('클리어 조건 표시 업데이트:', clearConditionText);
+            }
+        })
+        .fail(function(xhr) {
+            console.log('클리어 조건 업데이트 실패:', xhr);
+        });
 }
 
 $('#show-hint-btn').click(function() {
@@ -741,17 +822,19 @@ $('#show-answer-btn').click(function() {
     });
 });
 
-$('#next-level-btn').click(function() {
-    $.post('{{ route("puzzle-game.complete-level") }}', {
-        _token: '{{ csrf_token() }}'
-    })
-    .done(function(data) {
+$('#next-level-btn').off('click').on('click', function() {
+    if ($(this).data('condition') === 'not_met') {
+        // 클리어 조건 미달: 새 퍼즐로 재도전
+        $('#levelCompleteModal').modal('hide');
+        updateClearCondition();
+        setTimeout(function() {
+            location.reload();
+        }, 500);
+    } else {
+        // 클리어 조건 충족: 다음 레벨로 이동 (API 호출 없이 새로고침)
         $('#levelCompleteModal').modal('hide');
         location.reload();
-    })
-    .fail(function(xhr) {
-        alert('오류가 발생했습니다.');
-    });
+    }
 });
 
 function startTimer() {

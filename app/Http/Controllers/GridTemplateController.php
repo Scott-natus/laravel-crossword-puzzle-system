@@ -231,6 +231,37 @@ class GridTemplateController extends Controller
     }
 
     /**
+     * 레벨별 템플릿 목록 조회 (API)
+     */
+    public function getTemplatesByLevel($levelId)
+    {
+        try {
+            $templates = DB::table('puzzle_grid_templates')
+                ->where('level_id', $levelId)
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($template) {
+                    // 날짜 필드를 문자열로 변환
+                    $template->created_at = (string) $template->created_at;
+                    $template->updated_at = (string) $template->updated_at;
+                    return $template;
+                });
+
+            return response()->json([
+                'success' => true,
+                'templates' => $templates
+            ]);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => '템플릿 목록 조회 중 오류가 발생했습니다: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * 그리드 템플릿 상세 보기
      */
     public function show($id)

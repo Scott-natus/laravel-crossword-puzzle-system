@@ -2,6 +2,12 @@
 
 @section('content')
 <div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-3">{{ $board->boardType->name }}</h2>
+            <hr>
+        </div>
+    </div>
     <h2 class="fw-bold">{{ $board->title }}</h2>
     <div class="mb-2 text-muted">
         작성자: {{ $board->user->name ?? '알 수 없음' }} | 작성일: {{ $board->created_at->format('Y-m-d H:i') }} | 조회수: {{ $board->views }}

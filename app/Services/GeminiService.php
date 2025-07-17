@@ -271,8 +271,25 @@ class GeminiService
                     $line = trim($line);
                     if (!$line) continue;
                     
-                    // [카테고리,단어,난이도] 형식 파싱
-                    if (preg_match('/\[([^,\]]+),([^,\]]+),(\d+)\]/', $line, $match)) {
+                    // "단어, 난이도" 형식 파싱
+                    if (preg_match('/^([^,]+),\s*(\d+)$/', $line, $match)) {
+                        $word = trim($match[1]);
+                        $difficulty = (int)$match[2];
+                        
+                        // 난이도 범위 검증 (1~5)
+                        if ($difficulty < 1 || $difficulty > 5) {
+                            $difficulty = 2; // 기본값
+                        }
+                        
+                        if (!empty($word) && mb_strlen($word) >= 2 && mb_strlen($word) <= 5) {
+                            $words[] = [
+                                'word' => $word,
+                                'difficulty' => $difficulty
+                            ];
+                        }
+                    }
+                    // 기존 [카테고리,단어,난이도] 형식도 지원 (하위 호환성)
+                    elseif (preg_match('/\[([^,\]]+),([^,\]]+),(\d+)\]/', $line, $match)) {
                         $category = trim($match[1]);
                         $word = trim($match[2]);
                         $difficulty = (int)$match[3];
@@ -490,6 +507,171 @@ class GeminiService
         } catch (\Exception $e) {
             Log::error('Gemini connection test failed', ['error' => $e->getMessage()]);
             return false;
+        }
+    }
+
+    /**
+     * 카테고리와 힌트를 함께 생성
+     */
+    public function generateCategoryAndHints(string $word): array
+    {
+        try {
+            $prompt = $this->buildCategoryAndHintsPrompt($word);
+            
+            $requestData = [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.7,
+                    'topK' => 40,
+                    'topP' => 0.95,
+                    'maxOutputTokens' => 1024,
+                ]
+            ];
+
+            $url = $this->baseUrl . '?key=' . $this->apiKey;
+            Log::info('Gemini API 카테고리+힌트 생성 호출', ['word' => $word]);
+            
+            $response = Http::timeout(60)->post($url, $requestData);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                Log::info('Gemini API 카테고리+힌트 응답 성공', ['word' => $word]);
+                
+                $result = $this->extractCategoryAndHintsFromResponse($data);
+                
+                if ($result['success']) {
+                    Log::info('카테고리+힌트 추출 성공', [
+                        'word' => $word,
+                        'category' => $result['category'],
+                        'hints_count' => count($result['hints'])
+                    ]);
+                }
+
+                return $result;
+            } else {
+                $error = 'API 요청 실패: ' . $response->status();
+                Log::error('Gemini API 카테고리+힌트 생성 실패', [
+                    'word' => $word,
+                    'status' => $response->status(),
+                    'response' => $response->body()
+                ]);
+                return [
+                    'success' => false,
+                    'error' => $error
+                ];
+            }
+        } catch (\Exception $e) {
+            Log::error('Gemini 카테고리+힌트 생성 오류', [
+                'word' => $word,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => '서비스 오류: ' . $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * 카테고리와 힌트 생성 프롬프트
+     */
+    private function buildCategoryAndHintsPrompt(string $word): string
+    {
+        return "당신은 한글 십자낱말 퍼즐을 위한 힌트를 만드는 전문가입니다.
+
+단어 '{$word}' 에 대한 적절한 카테고리를 하나 생성하고 
+카테고리와 단어 '{$word}'에  적정한 힌트를 3가지 난이도로 만들어주세요.
+
+카테고리는 적합한 한가지 분야로 판단해주세요. (예: 사회 , 사회과학, 인문, 인문학 등)
+ 
+
+**힌트 작성 규칙:**
+1. 정답 단어를 직접 언급하지 마세요
+2. 50자 내외로 연상되기 쉽게 설명해 주세요
+3. 초등학생도 이해할 수 있게 작성하세요
+4. 너무 어렵거나 추상적인 표현은 피하세요
+
+**응답 형식 (다른 설명 없이):**
+
+'{$word}' 의 카테고리 : [카테고리]
+
+쉬움: [매우 쉬운 힌트]
+보통: [보통 난이도 힌트]  
+어려움: [조금 어려운 힌트]";
+    }
+
+    /**
+     * 응답에서 카테고리와 힌트 추출
+     */
+    private function extractCategoryAndHintsFromResponse(array $response): array
+    {
+        $difficulties = [1 => '쉬움', 2 => '보통', 3 => '어려움'];
+        $hints = [];
+        $category = null;
+
+        try {
+            if (isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+                $text = $response['candidates'][0]['content']['parts'][0]['text'];
+                Log::info('카테고리+힌트 파싱 직전 텍스트', ['text' => $text]);
+
+                // 카테고리 추출
+                $categoryPattern = "/의 카테고리\s*:\s*([^\\n]+)/";
+                preg_match($categoryPattern, $text, $categoryMatches);
+                if (isset($categoryMatches[1])) {
+                    $category = trim($categoryMatches[1]);
+                    // 대괄호 제거
+                    $category = preg_replace('/^\[|\]$/', '', $category);
+                }
+
+                // 힌트들 추출
+                foreach ($difficulties as $level => $diffText) {
+                    $pattern = "/{$diffText}\s*:\s*([^\\n\\[\\]]+)/";
+                    preg_match($pattern, $text, $matches);
+                    
+                    $hintText = isset($matches[1]) ? trim($matches[1]) : '힌트 추출 실패';
+                    $isSuccess = isset($matches[1]);
+
+                    $hints[$level] = [
+                        'difficulty' => $level,
+                        'difficulty_text' => $diffText,
+                        'hint' => $hintText,
+                        'success' => $isSuccess
+                    ];
+                }
+
+                if ($category && count(array_filter($hints, fn($h) => $h['success'])) > 0) {
+                    return [
+                        'success' => true,
+                        'category' => $category,
+                        'hints' => $hints
+                    ];
+                } else {
+                    return [
+                        'success' => false,
+                        'error' => '카테고리 또는 힌트 추출 실패',
+                        'category' => $category,
+                        'hints' => $hints
+                    ];
+                }
+            }
+            throw new \Exception('Invalid response structure');
+        } catch (\Exception $e) {
+            Log::error('카테고리+힌트 추출 오류', [
+                'response' => $response,
+                'error' => $e->getMessage()
+            ]);
+            return [
+                'success' => false,
+                'error' => '카테고리+힌트 추출 중 오류 발생',
+                'category' => null,
+                'hints' => []
+            ];
         }
     }
 } 

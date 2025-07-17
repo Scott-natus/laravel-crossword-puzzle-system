@@ -29,6 +29,9 @@
                     <a href="{{ route('puzzle.levels.index') }}" class="btn btn-success btn-sm">
                         <i class="fas fa-layer-group me-1"></i>레벨 관리
                     </a>
+                    <a href="{{ route('puzzle.grid-templates.index') }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-th me-1"></i>그리드 템플릿관리
+                    </a>
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             <i class="fas fa-ellipsis-v"></i>
@@ -42,6 +45,9 @@
                             </a></li>
                             <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">
                                 <i class="fas fa-layer-group me-2"></i>레벨 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('puzzle.grid-templates.index') }}">
+                                <i class="fas fa-th me-2"></i>그리드 템플릿관리
                             </a></li>
                             <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">
                                 <i class="fas fa-users me-2"></i>회원 관리
@@ -116,13 +122,7 @@
                 </div>
                 
                 <div class="card-body">
-                    <!-- DataTables 검색 기능 사용 -->
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        DataTables의 내장 검색 기능을 사용하세요. 상단의 검색창에서 카테고리, 단어, 난이도 등을 검색할 수 있습니다.
-                    </div>
-                    
-                    <!-- 페이지네이션은 DataTables에서 자동 처리됩니다 -->
+
 
                     <!-- 단어 목록 -->
                     <div class="table-responsive">
@@ -334,7 +334,7 @@
                 <h5 class="modal-title">
                     <i class="fas fa-check-circle me-2"></i>힌트 생성 완료
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="location.reload()"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-success">
@@ -365,7 +365,7 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="location.reload()">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> 닫기
                 </button>
             </div>
@@ -518,7 +518,7 @@
             },
             pageLength: 30, // 한 번에 30개씩
             deferRender: true, // 성능 최적화
-            order: [[2, 'asc']], // 단어 컬럼 기준 정렬
+            order: [[0, 'desc']], // 최근 등록순 정렬 (id 컬럼 기준 내림차순)
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/ko.json'
             },
@@ -577,17 +577,24 @@
     function toggleHintsView(wordId) {
         // Ajax로 힌트 데이터를 가져와서 모달로 표시
         fetch(`/puzzle/hint-generator/word/${wordId}/hints`)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || '힌트를 불러오는데 실패했습니다.');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.success) {
                     showHintsModal(data.hints, data.word);
                 } else {
-                    showAlert('error', '힌트를 불러오는데 실패했습니다.');
+                    showAlert('error', data.message || '힌트를 불러오는데 실패했습니다.');
                 }
             })
             .catch(error => {
                 console.error('힌트 로드 실패:', error);
-                showAlert('error', '힌트를 불러오는 중 오류가 발생했습니다.');
+                showAlert('error', error.message || '힌트를 불러오는 중 오류가 발생했습니다.');
             });
     }
     

@@ -289,4 +289,6 @@ pg_dump -h 127.0.0.1 -U myuser -t boards -t board_types mydb > boards_backup.sql
 - 난이도 일괄 평가 스케줄러: 10분마다 50개씩 Gemini API로 평가, 12시간마다 동기화
 - Gemini API 프롬프트 구조 단순화, 모델 버전별 실험(1.5/2.5 flash)
 - 난이도 분포 집계 및 신규/재측정 방식 차이 분석
-- 쿼터 초과(429) 발생 시 대기/키 교체 등 대응 
+- 쿼터 초과(429) 발생 시 대기/키 교체 등 대응 ### 2025-07-17
+- puzzle_game_records: 클리어 기록 항상 저장, 조건 충족 시 다음 레벨 이동
+

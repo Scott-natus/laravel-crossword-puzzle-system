@@ -27,6 +27,7 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             
+            $table->uuid('guest_id')->nullable()->index(); // 게스트 식별자
             $table->index(['user_id', 'is_active']);
             $table->index('ranking');
         });

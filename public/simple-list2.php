@@ -465,20 +465,95 @@ $categories = $categoryStmt->fetchAll(PDO::FETCH_COLUMN);
                     return;
                 }
                 
-                var csvContent = "ID,단어,카테고리,난이도,생성일\n";
-                allData.forEach(function(item) {
-                    // HTML 태그 제거
-                    var cleanData = item.map(function(cell) {
-                        return cell.replace(/<[^>]*>/g, '');
+                if (type === 'csv') {
+                    // CSV 다운로드
+                    var csvContent = "ID,단어,카테고리,난이도,생성일\n";
+                    allData.forEach(function(item) {
+                        // HTML 태그 제거 및 데이터 정리
+                        var cleanData = item.map(function(cell) {
+                            // 데이터 타입 체크 및 문자열 변환
+                            var cellStr = String(cell || '');
+                            // HTML 태그 제거
+                            var cleanCell = cellStr.replace(/<[^>]*>/g, '');
+                            // 특수문자 처리 (CSV에서 쉼표가 포함된 경우)
+                            if (cleanCell.includes(',')) {
+                                cleanCell = '"' + cleanCell + '"';
+                            }
+                            return cleanCell;
+                        });
+                        csvContent += cleanData.join(',') + '\n';
                     });
-                    csvContent += cleanData.join(',') + '\n';
-                });
-                
-                var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                var link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = '단어리스트_' + new Date().toISOString().slice(0, 10) + '.csv';
-                link.click();
+                    
+                    var blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = '단어리스트_' + new Date().toISOString().slice(0, 10) + '.csv';
+                    link.click();
+                } else if (type === 'excel') {
+                    // Excel 다운로드 (HTML 테이블 형식으로 Excel에서 열 수 있게)
+                    var excelContent = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+                    excelContent += '<head>';
+                    excelContent += '<meta charset="utf-8">';
+                    excelContent += '<style>';
+                    excelContent += 'table { border-collapse: collapse; width: 100%; }';
+                    excelContent += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
+                    excelContent += 'th { background-color: #f2f2f2; font-weight: bold; }';
+                    excelContent += '</style>';
+                    excelContent += '</head>';
+                    excelContent += '<body>';
+                    excelContent += '<table>';
+                    excelContent += '<thead><tr><th>ID</th><th>단어</th><th>카테고리</th><th>난이도</th><th>생성일</th></tr></thead>';
+                    excelContent += '<tbody>';
+                    
+                    allData.forEach(function(item) {
+                        excelContent += '<tr>';
+                        item.forEach(function(cell) {
+                            // 데이터 타입 체크 및 문자열 변환
+                            var cellStr = String(cell || '');
+                            // HTML 태그 제거
+                            var cleanCell = cellStr.replace(/<[^>]*>/g, '');
+                            excelContent += '<td>' + cleanCell + '</td>';
+                        });
+                        excelContent += '</tr>';
+                    });
+                    
+                    excelContent += '</tbody></table>';
+                    excelContent += '</body></html>';
+                    
+                    var blob = new Blob([excelContent], { type: 'application/vnd.ms-excel' });
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = '단어리스트_' + new Date().toISOString().slice(0, 10) + '.xls';
+                    link.click();
+                } else if (type === 'print') {
+                    // 인쇄 기능
+                    var printWindow = window.open('', '_blank');
+                    printWindow.document.write('<html><head><title>단어 리스트</title>');
+                    printWindow.document.write('<style>table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #f2f2f2; }</style>');
+                    printWindow.document.write('</head><body>');
+                    printWindow.document.write('<h2>단어 리스트</h2>');
+                    printWindow.document.write('<table>');
+                    printWindow.document.write('<thead><tr><th>ID</th><th>단어</th><th>카테고리</th><th>난이도</th><th>생성일</th></tr></thead>');
+                    printWindow.document.write('<tbody>');
+                    
+                    allData.forEach(function(item) {
+                        var cleanData = item.map(function(cell) {
+                            // 데이터 타입 체크 및 문자열 변환
+                            var cellStr = String(cell || '');
+                            return cellStr.replace(/<[^>]*>/g, '');
+                        });
+                        printWindow.document.write('<tr>');
+                        cleanData.forEach(function(cell) {
+                            printWindow.document.write('<td>' + cell + '</td>');
+                        });
+                        printWindow.document.write('</tr>');
+                    });
+                    
+                    printWindow.document.write('</tbody></table>');
+                    printWindow.document.write('</body></html>');
+                    printWindow.document.close();
+                    printWindow.print();
+                }
             }
         });
     </script>

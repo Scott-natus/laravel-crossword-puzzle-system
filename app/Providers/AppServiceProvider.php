@@ -28,7 +28,10 @@ class AppServiceProvider extends ServiceProvider
 
         // 모든 뷰에서 게시판 타입 목록을 공유
         View::composer('layouts.app', function ($view) {
-            $boardTypes = BoardType::where('is_active', true)->orderBy('name')->get();
+            $boardTypes = BoardType::where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get();
             $view->with('sharedBoardTypes', $boardTypes);
         });
 

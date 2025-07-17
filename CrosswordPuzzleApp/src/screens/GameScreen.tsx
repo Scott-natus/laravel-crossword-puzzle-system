@@ -502,6 +502,14 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          score: 0, // 기본 점수
+          play_time: 0, // 기본 플레이 시간
+          hints_used: 0, // 기본 힌트 사용 수
+          words_found: answeredWords.size, // 찾은 단어 수
+          total_words: wordPositions.length, // 총 단어 수
+          accuracy: 100 // 기본 정확도
+        }),
       });
 
       const result = await response.json();
@@ -510,6 +518,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({ navigation }) => {
       if (result.success) {
         console.log('레벨 완료 성공 - gameComplete 상태를 true로 설정');
         setGameComplete(true);
+      } else if (result.condition_not_met) {
+        // 클리어 조건을 만족하지 않은 경우
+        Alert.alert('알림', result.message || '레벨 클리어 조건을 만족하지 않습니다.');
+        setGameComplete(false);
+      } else if (result.no_next_level) {
+        // 다음 레벨이 없는 경우
+        Alert.alert('축하합니다!', '모든 레벨을 완료했습니다.');
+        if (navigation) {
+          navigation.navigate('Main');
+        }
       } else {
         console.log('레벨 완료 API 실패했지만 gameComplete 상태를 true로 설정');
         setGameComplete(true); // API 실패해도 UI는 표시

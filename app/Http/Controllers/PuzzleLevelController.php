@@ -16,6 +16,15 @@ class PuzzleLevelController extends Controller
     public function index()
     {
         $levels = PuzzleLevel::orderBy('level', 'asc')->get();
+        
+        // 각 레벨별 그리드 템플릿 개수 조회
+        foreach ($levels as $level) {
+            $level->template_count = DB::table('puzzle_grid_templates')
+                ->where('level_id', $level->id)
+                ->where('is_active', true)
+                ->count();
+        }
+        
         return view('puzzle.levels.index', compact('levels'));
     }
 
@@ -54,6 +63,7 @@ class PuzzleLevelController extends Controller
                 'hint_difficulty' => $request->hint_difficulty,
                 'intersection_count' => $request->intersection_count,
                 'time_limit' => $request->time_limit,
+                'clear_condition' => $request->clear_condition,
                 'updated_by' => Auth::user()->email
             ]);
 
@@ -100,6 +110,7 @@ class PuzzleLevelController extends Controller
                     'hint_difficulty' => $row->hint_difficulty,
                     'intersection_count' => $row->intersection_count,
                     'time_limit' => $row->time_limit,
+                    'clear_condition' => $row->clear_condition ?? 1,
                     'updated_by' => Auth::user()->email
                 ]);
             }

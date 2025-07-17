@@ -14,7 +14,8 @@ class BoardType extends Model
         'name',
         'slug',
         'description',
-        'is_active'
+        'is_active',
+        'sort_order'
     ];
 
     protected $casts = [

@@ -11,6 +11,7 @@ use App\Http\Controllers\GridTemplateController;
 use App\Http\Controllers\Auth\SocialLoginController;
 use App\Http\Controllers\PuzzleGameController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\OcrController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,12 +25,18 @@ use App\Http\Controllers\UserManagementController;
 */
 
 Route::get('/', function () {
-    $boardTypes = BoardType::where('is_active', true)->get();
+    $boardTypes = BoardType::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
     return view('welcome', compact('boardTypes'));
 });
 
 Route::get('/main', function () {
-    $boardTypes = BoardType::where('is_active', true)->get();
+    $boardTypes = BoardType::where('is_active', true)
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
     return view('welcome', compact('boardTypes'));
 })->name('main');
 
@@ -83,7 +90,9 @@ Route::prefix('board/{boardType}')->group(function () {
 });
 
 // 크로스워드 퍼즐 관리
-Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(function () {
+Route::prefix('puzzle')->name('puzzle.')->middleware(['auth'])->group(function () {
+    Route::get('words/data', [PzWordController::class, 'getData'])->name('words.data');
+    Route::post('words/batch-update', [PzWordController::class, 'batchUpdate'])->name('words.batch-update');
     Route::resource('words', PzWordController::class);
     Route::put('words/{id}/toggle-active', [PzWordController::class, 'toggleActive'])->name('words.toggle-active');
     
@@ -148,6 +157,7 @@ Route::prefix('puzzle')->name('puzzle.')->middleware(['auth', 'admin'])->group(f
         Route::post('/update-numbering', [GridTemplateController::class, 'updateTemplateNumbering'])->name('update-numbering');
         Route::post('/sample-templates', [GridTemplateController::class, 'getSampleTemplates'])->name('sample-templates');
         Route::post('/create-from-sample', [GridTemplateController::class, 'createFromSample'])->name('create-from-sample');
+        Route::get('/level/{levelId}', [GridTemplateController::class, 'getTemplatesByLevel'])->name('level-templates');
     });
 
     Route::get('/grid-templates/{id}/json', [GridTemplateController::class, 'showJson']);
@@ -161,14 +171,13 @@ Route::get('/crossword-test', function () {
 // 크로스워드 퍼즐 게임 (모든 사용자)
 Route::prefix('puzzle-game')->name('puzzle-game.')->group(function () {
     Route::get('/', [PuzzleGameController::class, 'index'])->name('index');
-    Route::middleware(['auth'])->group(function () {
-        Route::get('/template', [PuzzleGameController::class, 'getTemplate'])->name('get-template');
-        Route::post('/check-answer', [PuzzleGameController::class, 'checkAnswer'])->name('check-answer');
-        Route::get('/hints', [PuzzleGameController::class, 'getHints'])->name('get-hints');
-        Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer'])->name('show-answer');
-        Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
-        Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
-    });
+    Route::get('/template', [PuzzleGameController::class, 'getTemplate'])->name('get-template');
+    Route::post('/check-answer', [PuzzleGameController::class, 'checkAnswer'])->name('check-answer');
+    Route::get('/hints', [PuzzleGameController::class, 'getHints'])->name('get-hints');
+    Route::get('/show-answer', [PuzzleGameController::class, 'showAnswer'])->name('show-answer');
+    Route::post('/complete-level', [PuzzleGameController::class, 'completeLevel'])->name('complete-level');
+    Route::post('/game-over', [PuzzleGameController::class, 'gameOver'])->name('game-over');
+    Route::get('/clear-condition', [PuzzleGameController::class, 'getClearCondition'])->name('get-clear-condition');
 });
 
 // 회원 관리 (관리자만 접근)
@@ -177,4 +186,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/users/{userId}/puzzle-info', [UserManagementController::class, 'getPuzzleGameInfo'])->name('users.puzzle-info');
     Route::post('/users/{userId}/toggle-admin', [UserManagementController::class, 'toggleAdmin'])->name('users.toggle-admin');
     Route::post('/users/{userId}/reset-password', [UserManagementController::class, 'resetPassword'])->name('users.reset-password');
+});
+
+// OCR 기능 라우트
+Route::prefix('ocr')->name('ocr.')->group(function () {
+    Route::get('/', [OcrController::class, 'index'])->name('index');
+    Route::post('/process-server', [OcrController::class, 'processServer'])->name('process-server');
+    Route::post('/process-google-vision', [OcrController::class, 'processGoogleVision'])->name('process-google-vision');
+    Route::post('/save-result', [OcrController::class, 'saveResult'])->name('save-result');
+    Route::get('/history', [OcrController::class, 'history'])->name('history');
 });

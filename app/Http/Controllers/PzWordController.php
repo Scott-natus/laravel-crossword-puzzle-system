@@ -20,80 +20,9 @@ class PzWordController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PzWord::with(['primaryHint'])
-            ->withCount('hints') // 힌트 개수
-            ->selectSub(function ($query) {
-                $query->from('pz_hints')
-                    ->whereColumn('pz_hints.word_id', 'pz_words.id')
-                    ->latest('created_at')
-                    ->limit(1)
-                    ->select('created_at');
-            }, 'latest_hint_date'); // 마지막 힌트 생성일
-
-        // 검색 타입과 검색어 처리
-        $searchType = $request->input('search_type', 'keyword');
-        $searchCategory = $request->input('search_category', '');
-        $searchWord = $request->input('search_word', '');
-
-        // 검색 조건에 따른 쿼리 구성
-        if ($searchWord) {
-            switch ($searchType) {
-                case 'keyword':
-                    // 키워드 검색: 카테고리 + 단어에서 검색
-                    $query->where(function($q) use ($searchWord) {
-                        $q->where('category', 'like', "%{$searchWord}%")
-                          ->orWhere('word', 'like', "%{$searchWord}%");
-                    });
-                    break;
-                    
-                case 'category':
-                    // 카테고리 검색
-                    if ($searchCategory && $searchCategory !== '전체 카테고리') {
-                        $query->where('category', $searchCategory);
-                    }
-                    if ($searchWord) {
-                        if ($searchCategory === '전체 카테고리' || !$searchCategory) {
-                            // B가 기본값인 경우: 카테고리 필드에서만 검색
-                            $query->where('category', 'like', "%{$searchWord}%");
-                        } else {
-                            // B에 값이 선택된 경우: 선택된 카테고리에서 키워드 검색
-                            $query->where(function($q) use ($searchWord) {
-                                $q->where('category', 'like', "%{$searchWord}%")
-                                  ->orWhere('word', 'like', "%{$searchWord}%");
-                            });
-                        }
-                    }
-                    break;
-                    
-                case 'word':
-                    // 단어 검색
-                    if ($searchCategory && $searchCategory !== '전체 카테고리') {
-                        $query->where('category', $searchCategory);
-                    }
-                    if ($searchWord) {
-                        $query->where('word', 'like', "%{$searchWord}%");
-                    }
-                    break;
-            }
-        }
-
-        // 정렬
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortDir = $request->input('sort_dir', 'desc');
-
-        if (in_array($sortBy, ['hints_count', 'difficulty', 'latest_hint_date', 'created_at'])) {
-            $query->orderBy($sortBy, $sortDir);
-        } else {
-            // 기본 정렬: 생성일자 내림차순
-            $query->orderBy('created_at', 'desc');
-        }
+        // 통계 데이터
+        $stats = $this->getStats();
         
-        // 2차 정렬: 단어 알파벳순
-        $query->orderBy('word', 'asc');
-        
-        // 3차 정렬: 카테고리 알파벳순
-        $query->orderBy('category', 'asc');
-
         // 카테고리 목록 가져오기
         $categories = PzWord::distinct()->pluck('category')->sort()->values();
         
@@ -106,18 +35,168 @@ class PzWordController extends Controller
             PzWord::DIFFICULTY_EXTREME => '극도 어려움'
         ];
 
-        $words = $query->paginate(15)->withQueryString();
+        return view('puzzle.words.index', compact('stats', 'categories', 'difficulties'));
+    }
 
-        return view('puzzle.words.index', compact(
-            'words', 
-            'categories', 
-            'difficulties', 
-            'sortBy', 
-            'sortDir',
-            'searchType',
-            'searchCategory',
-            'searchWord'
-        ));
+    /**
+     * 통계 데이터 조회
+     */
+    public function getStats()
+    {
+        $stats = [
+            'total_words' => PzWord::count(),
+            'active_words' => PzWord::where('is_active', true)->count(),
+            'inactive_words' => PzWord::where('is_active', false)->count(),
+            'words_with_hints' => PzWord::whereHas('hints')->count(),
+            'words_without_hints' => PzWord::whereDoesntHave('hints')->count(),
+            'total_hints' => PzHint::count(),
+            'difficulty_distribution' => PzWord::select('difficulty', DB::raw('count(*) as count'))
+                ->groupBy('difficulty')
+                ->pluck('count', 'difficulty')
+                ->toArray(),
+            'category_distribution' => PzWord::select('category', DB::raw('count(*) as count'))
+                ->groupBy('category')
+                ->orderBy('count', 'desc')
+                ->limit(10)
+                ->pluck('count', 'category')
+                ->toArray()
+        ];
+
+        return $stats;
+    }
+
+    /**
+     * DataTables용 데이터 API
+     */
+    public function getData(Request $request)
+    {
+        try {
+            $draw = $request->input('draw', 1);
+            $start = $request->input('start', 0);
+            $length = $request->input('length', 25);
+            $search = $request->input('search.value', '');
+            $orderColumn = $request->input('order.0.column', 7); // 기본값: 입력일자
+            $orderDir = $request->input('order.0.dir', 'desc');
+            $difficultyFilter = $request->input('difficulty_filter', ''); // 난이도 필터 추가
+            
+            // 컬럼 매핑
+            $columns = ['category', 'word', 'length', 'difficulty', 'hints_count', 'is_active', 'latest_hint_date', 'created_at'];
+            $orderBy = $columns[$orderColumn] ?? 'created_at';
+            
+            // 쿼리 시작
+            $query = PzWord::withCount('hints')
+                ->withMax('hints', 'created_at');
+            
+            // 검색 조건
+            if (!empty($search)) {
+                $query->where(function($q) use ($search) {
+                    $q->where('word', 'like', "%{$search}%")
+                      ->orWhere('category', 'like', "%{$search}%");
+                });
+            }
+            
+            // 난이도 필터 조건
+            if (!empty($difficultyFilter)) {
+                $query->where('difficulty', $difficultyFilter);
+            }
+            
+            // 전체 레코드 수 (필터 적용 전)
+            $totalRecords = PzWord::count();
+            
+            // 필터 적용 후 레코드 수
+            $filteredRecords = $query->count();
+            
+            // 정렬 및 페이징
+            $query->orderBy($orderBy, $orderDir);
+            $words = $query->skip($start)->take($length)->get();
+            
+            // 데이터 변환
+            $data = $words->map(function ($word) {
+                return [
+                    'id' => $word->id,
+                    'category' => $word->category,
+                    'word' => $word->word,
+                    'length' => $word->length,
+                    'difficulty' => $word->difficulty,
+                    'hints_count' => $word->hints_count,
+                    'is_active' => $word->is_active,
+                    'latest_hint_date' => $word->hints_max_created_at ? 
+                        \Carbon\Carbon::parse($word->hints_max_created_at)->format('Y-m-d H:i') : '',
+                    'created_at' => $word->created_at->format('Y-m-d H:i'),
+                ];
+            });
+            
+            return response()->json([
+                'draw' => $draw,
+                'recordsTotal' => $totalRecords,
+                'recordsFiltered' => $filteredRecords,
+                'data' => $data
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('DataTables API 오류: ' . $e->getMessage());
+            return response()->json([
+                'error' => '데이터를 불러오는 중 오류가 발생했습니다: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * 일괄 처리 API
+     */
+    public function batchUpdate(Request $request)
+    {
+        $request->validate([
+            'word_ids' => 'required|array',
+            'word_ids.*' => 'integer|exists:pz_words,id'
+        ]);
+
+        $wordIds = $request->input('word_ids');
+        $updates = [];
+
+        try {
+            DB::beginTransaction();
+
+            // 난이도 변경
+            if ($request->has('update_difficulty') && $request->input('update_difficulty')) {
+                $difficulty = $request->input('difficulty');
+                if (!in_array($difficulty, [1, 2, 3, 4, 5])) {
+                    throw new \Exception('유효하지 않은 난이도입니다.');
+                }
+                $updates['difficulty'] = $difficulty;
+            }
+
+            // 사용여부 변경
+            if ($request->has('update_active') && $request->input('update_active')) {
+                $isActive = $request->input('is_active');
+                if (!in_array($isActive, ['0', '1'])) {
+                    throw new \Exception('유효하지 않은 활성화 상태입니다.');
+                }
+                $updates['is_active'] = (bool)$isActive;
+            }
+
+            // 변경할 항목이 없으면 오류
+            if (empty($updates)) {
+                throw new \Exception('변경할 항목을 선택해주세요.');
+            }
+
+            $updatedCount = PzWord::whereIn('id', $wordIds)->update($updates);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "{$updatedCount}개의 단어가 업데이트되었습니다.",
+                'updated_count' => $updatedCount
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => '일괄 처리 중 오류가 발생했습니다: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -136,7 +215,7 @@ class PzWordController extends Controller
         $validated = $request->validate([
             'category' => 'required|string|max:50',
             'word' => 'required|string|max:50',
-            'difficulty' => 'required|in:1,2,3',
+            'difficulty' => 'required|in:1,2,3,4,5',
         ]);
 
         try {
@@ -188,6 +267,7 @@ class PzWordController extends Controller
 
         $validated = $request->validate([
             'is_active' => 'boolean',
+            'difficulty' => 'sometimes|in:1,2,3,4,5',
         ]);
 
         $word->update($validated);

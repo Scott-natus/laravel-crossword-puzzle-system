@@ -17,6 +17,7 @@ class PuzzleLevel extends Model
         'hint_difficulty',
         'intersection_count',
         'time_limit',
+        'clear_condition',
         'updated_by'
     ];
 
@@ -25,6 +26,7 @@ class PuzzleLevel extends Model
         'hint_difficulty' => 'integer',
         'intersection_count' => 'integer',
         'time_limit' => 'integer',
+        'clear_condition' => 'integer',
     ];
 
     /**
@@ -68,6 +70,7 @@ class PuzzleLevel extends Model
             'hint_difficulty' => 'required|integer|between:1,3',
             'intersection_count' => 'required|integer|min:1',
             'time_limit' => 'required|integer|min:0',
+            'clear_condition' => 'required|integer|min:1',
         ];
     }
 

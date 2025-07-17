@@ -149,6 +149,40 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <!-- Board Navigation Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownBoard" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                바로가기
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="navbarDropdownBoard">
+                                <li><h6 class="dropdown-header">게시판</h6></li>
+                                @if(isset($boardTypes) && $boardTypes->count() > 0)
+                                    @foreach ($boardTypes as $boardType)
+                                        <li>
+                                            <a class="dropdown-item" href="{{ route('board.index', ['boardType' => $boardType->slug]) }}">
+                                                {{ $boardType->name }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                @else
+                                    <li><span class="dropdown-item-text">게시판이 없습니다</span></li>
+                                @endif
+
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ route('puzzle-game.index') }}">퍼즐게임</a></li>
+
+                                @auth
+                                    @if(Auth::user()->is_admin)
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header">관리자메뉴</h6></li>
+                                        <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">퍼즐관리</a></li>
+                                        <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">회원관리</a></li>
+                                    @endif
+                                @endauth
+                            </ul>
+                        </li>
+                    </ul>
                     <ul class="navbar-nav ms-auto">
                     @auth
                             <li class="nav-item me-4">

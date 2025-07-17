@@ -102,7 +102,15 @@ class PzHintGeneratorController extends Controller
      */
     public function generateForWord(Request $request, $wordId)
     {
-        $word = PzWord::findOrFail($wordId);
+        $word = PzWord::active()->findOrFail($wordId);
+        
+        // 비활성화된 단어는 힌트 생성 불가
+        if (!$word->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => '비활성화된 단어에는 힌트를 생성할 수 없습니다.'
+            ], 403);
+        }
         
         try {
             $result = $this->geminiService->generateHint(
@@ -182,7 +190,7 @@ class PzHintGeneratorController extends Controller
         try {
             DB::beginTransaction();
 
-            $words = PzWord::whereIn('id', $validated['word_ids'])->get();
+            $words = PzWord::active()->whereIn('id', $validated['word_ids'])->get();
             $results = [];
             $successCount = 0;
             $errorCount = 0;
@@ -332,7 +340,12 @@ class PzHintGeneratorController extends Controller
         try {
             DB::beginTransaction();
 
-            $hints = PzHint::whereIn('id', $validated['hint_ids'])->with('word')->get();
+            $hints = PzHint::whereIn('id', $validated['hint_ids'])
+                ->whereHas('word', function($q) {
+                    $q->active(); // 활성화된 단어의 힌트만
+                })
+                ->with('word')
+                ->get();
             $results = [];
             $successCount = 0;
             $errorCount = 0;
@@ -403,8 +416,13 @@ class PzHintGeneratorController extends Controller
     public function getHintsForCorrection(Request $request)
     {
         $query = PzHint::with('word')
-            ->where('correction_status', '!=', 'y') // 보정되지 않은 힌트
-            ->orWhereNull('correction_status');
+            ->whereHas('word', function($q) {
+                $q->active(); // 활성화된 단어의 힌트만
+            })
+            ->where(function($q) {
+                $q->where('correction_status', '!=', 'y') // 보정되지 않은 힌트
+                  ->orWhereNull('correction_status');
+            });
 
         // 난이도별 필터링
         $difficulty = $request->input('difficulty');
@@ -452,11 +470,13 @@ class PzHintGeneratorController extends Controller
     public function getStats()
     {
         $stats = [
-            'total_words' => PzWord::count(),
-            'words_with_hints' => PzWord::has('hints')->count(),
-            'words_without_hints' => PzWord::doesntHave('hints')->count(),
-            'total_hints' => PzHint::count(),
-            'categories' => PzWord::selectRaw('category, COUNT(*) as count')
+            'total_words' => PzWord::active()->count(),
+            'words_with_hints' => PzWord::active()->has('hints')->count(),
+            'words_without_hints' => PzWord::active()->doesntHave('hints')->count(),
+            'total_hints' => PzHint::whereHas('word', function($query) {
+                $query->active();
+            })->count(),
+            'categories' => PzWord::active()->selectRaw('category, COUNT(*) as count')
                 ->groupBy('category')
                 ->orderBy('count', 'desc')
                 ->get()
@@ -834,12 +854,12 @@ class PzHintGeneratorController extends Controller
         $start = $request->input('start', 0);
         $length = $request->input('length', 30);
         $search = $request->input('search.value', '');
-        $orderColumn = $request->input('order.0.column', 2);
-        $orderDir = $request->input('order.0.dir', 'asc');
+        $orderColumn = $request->input('order.0.column', 0); // 기본값을 id(최근 등록순)로 변경
+        $orderDir = $request->input('order.0.dir', 'desc'); // 기본값을 desc로 변경
         
         // 컬럼 매핑
         $columns = ['id', 'category', 'word', 'length', 'difficulty', 'hints_count'];
-        $orderBy = $columns[$orderColumn] ?? 'word';
+        $orderBy = $columns[$orderColumn] ?? 'id'; // 기본값을 id로 변경
         
         $query = PzWord::active()->withCount('hints');
         
@@ -908,6 +928,11 @@ class PzHintGeneratorController extends Controller
      */
     private function getActionButtons($word)
     {
+        // 비활성화된 단어는 힌트 관련 버튼을 표시하지 않음
+        if (!$word->is_active) {
+            return '<span class="text-muted">비활성화됨</span>';
+        }
+        
         if ($word->hints_count > 0) {
             return '<button type="button" class="btn btn-sm btn-outline-primary" data-word-id="' . $word->id . '">
                         <i class="fas fa-eye"></i> 힌트 보기
@@ -928,7 +953,15 @@ class PzHintGeneratorController extends Controller
     public function getWordHints($wordId)
     {
         try {
-            $word = PzWord::with('hints')->findOrFail($wordId);
+            $word = PzWord::active()->with('hints')->findOrFail($wordId);
+            
+            // 비활성화된 단어인 경우 힌트를 표시하지 않음
+            if (!$word->is_active) {
+                return response()->json([
+                    'success' => false,
+                    'message' => '비활성화된 단어의 힌트는 표시할 수 없습니다.'
+                ], 403);
+            }
             
             $hints = $word->hints->map(function($hint) {
                 return [

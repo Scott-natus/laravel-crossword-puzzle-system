@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // 이벤트 리스너 초기화
 function initializeEventListeners() {
     // 입력 필드 변경 감지
-    document.querySelectorAll('.word-count, .word-difficulty, .hint-difficulty, .intersection-count, .time-limit').forEach(function(element) {
+    document.querySelectorAll('.word-count, .word-difficulty, .hint-difficulty, .intersection-count, .time-limit, .clear-condition').forEach(function(element) {
         element.addEventListener('change', function() {
             checkRowChanges(this);
         });
@@ -53,7 +53,8 @@ function checkFieldChanges(row) {
         { element: '.word-difficulty', attr: 'data-original' },
         { element: '.hint-difficulty', attr: 'data-original' },
         { element: '.intersection-count', attr: 'data-original' },
-        { element: '.time-limit', attr: 'data-original' }
+        { element: '.time-limit', attr: 'data-original' },
+        { element: '.clear-condition', attr: 'data-original' }
     ];
     
     for (let field of fields) {
@@ -82,7 +83,8 @@ function saveLevel(levelId, button) {
         word_difficulty: parseInt(row.querySelector('.word-difficulty').value) || 1,
         hint_difficulty: parseInt(row.querySelector('.hint-difficulty').value) || 1,
         intersection_count: parseInt(row.querySelector('.intersection-count').value) || 0,
-        time_limit: parseInt(row.querySelector('.time-limit').value) || 0
+        time_limit: parseInt(row.querySelector('.time-limit').value) || 0,
+        clear_condition: parseInt(row.querySelector('.clear-condition').value) || 1
     };
     
     console.log('Sending data:', data);
@@ -145,6 +147,7 @@ function updateOriginalValues(row, levelData) {
     row.querySelector('.hint-difficulty').setAttribute('data-original', levelData.hint_difficulty);
     row.querySelector('.intersection-count').setAttribute('data-original', levelData.intersection_count);
     row.querySelector('.time-limit').setAttribute('data-original', levelData.time_limit);
+    row.querySelector('.clear-condition').setAttribute('data-original', levelData.clear_condition);
 }
 
 // 기본 데이터 생성

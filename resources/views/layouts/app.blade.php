@@ -68,9 +68,10 @@
                     <!-- Board Navigation Dropdown -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-white" href="#" id="navbarDropdownBoard" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            게시판 바로가기
+                            바로가기
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdownBoard">
+                            <li><h6 class="dropdown-header">게시판</h6></li>
                             @if(isset($sharedBoardTypes) && $sharedBoardTypes->count() > 0)
                                 @foreach ($sharedBoardTypes as $boardType)
                                     <li>
@@ -89,12 +90,9 @@
                             @auth
                                 @if(Auth::user()->is_admin)
                                     <li><hr class="dropdown-divider"></li>
-                                    <li><h6 class="dropdown-header">관리자 메뉴</h6></li>
-                                    <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">단어 관리</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('puzzle.hint-generator.index') }}">AI 힌트 생성</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">레벨 관리</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('puzzle.grid-templates.index') }}">그리드 템플릿 관리</a></li>
-                                    <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">회원 관리</a></li>
+                                    <li><h6 class="dropdown-header">관리자메뉴</h6></li>
+                                    <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">퍼즐관리</a></li>
+                                    <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">회원관리</a></li>
                                 @endif
                             @endauth
                         </ul>
@@ -150,6 +148,15 @@
         </div>
     </div>
     @if (Route::is('board.index'))
+        <!-- Board Title -->
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h2 class="mb-3">{{ $boardType->name }}</h2>
+                    <hr>
+                </div>
+            </div>
+        </div>
         <!-- Statistics Cards -->
         <div class="container">
             <div class="row stats-cards">

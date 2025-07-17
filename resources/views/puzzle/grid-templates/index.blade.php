@@ -3,6 +3,55 @@
 @section('title', '그리드 템플릿 목록')
 
 @section('content')
+<!-- 퍼즐 관리 바로가기 네비게이션 -->
+<div class="container-fluid mb-4">
+    <div class="card">
+        <div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-primary">
+                    <i class="fas fa-puzzle-piece me-2"></i>퍼즐 관리 바로가기
+                </h6>
+                <div class="d-flex gap-2">
+                    <a href="{{ route('puzzle.words.index') }}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list me-1"></i>단어 관리
+                    </a>
+                    <a href="{{ route('puzzle.hint-generator.index') }}" class="btn btn-info btn-sm">
+                        <i class="fas fa-magic me-1"></i>AI 힌트 생성
+                    </a>
+                    <a href="{{ route('puzzle.levels.index') }}" class="btn btn-success btn-sm">
+                        <i class="fas fa-layer-group me-1"></i>레벨 관리
+                    </a>
+                    <a href="{{ route('puzzle.grid-templates.index') }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-th me-1"></i>그리드 템플릿관리
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ route('puzzle.words.index') }}">
+                                <i class="fas fa-list me-2"></i>단어 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('puzzle.hint-generator.index') }}">
+                                <i class="fas fa-magic me-2"></i>AI 힌트 생성
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('puzzle.levels.index') }}">
+                                <i class="fas fa-layer-group me-2"></i>레벨 관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('puzzle.grid-templates.index') }}">
+                                <i class="fas fa-th me-2"></i>그리드 템플릿관리
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ route('admin.users.index') }}">
+                                <i class="fas fa-users me-2"></i>회원 관리
+                            </a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
