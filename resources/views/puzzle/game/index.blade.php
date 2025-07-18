@@ -281,10 +281,49 @@ function loadTemplate() {
             currentTemplate = data.template; // 템플릿 저장
             currentTemplateWords = data.template.words;
             renderPuzzleGrid(data.template);
+            
+            // Wordle처럼 게임 상태 복원
+            if (data.is_restored && data.game_state) {
+                console.log('기존 게임 상태 복원:', data.game_state);
+                restoreGameState(data.game_state, data.answered_words_with_answers);
+            } else {
+                console.log('새로운 퍼즐 시작');
+            }
         })
         .fail(function(xhr) {
             alert('템플릿을 불러올 수 없습니다.');
         });
+}
+
+// 게임 상태 복원 함수
+function restoreGameState(gameState, answeredWordsWithAnswers) {
+    if (!gameState) return;
+    
+    // 정답 단어 복원
+    if (gameState.answered_words && Array.isArray(gameState.answered_words)) {
+        gameState.answered_words.forEach(function(wordId) {
+            answeredWords.add(wordId);
+            // 서버에서 받은 정답 단어 정보 사용
+            if (answeredWordsWithAnswers && answeredWordsWithAnswers[wordId]) {
+                answeredWordsData.set(wordId, answeredWordsWithAnswers[wordId]);
+            } else {
+                answeredWordsData.set(wordId, '***'); // 정답 정보가 없으면 별표로 표시
+            }
+        });
+    }
+    
+    // 오답 기록 복원 (선택적)
+    if (gameState.wrong_answers) {
+        console.log('오답 기록 복원:', gameState.wrong_answers);
+    }
+    
+    // 힌트 사용 기록 복원 (선택적)
+    if (gameState.hints_used) {
+        console.log('힌트 사용 기록 복원:', gameState.hints_used);
+    }
+    
+    // 그리드에 정답 상태 표시
+    restoreAnsweredCells();
 }
 
 // 동적 셀 크기 계산 함수
@@ -644,6 +683,10 @@ function updateGridWithAnswer(correctWord) {
     answeredWords.add(currentWordId);
     // 정답 데이터 저장 (정답일 때만 저장하므로 보안 문제 없음)
     answeredWordsData.set(currentWordId, correctWord);
+    
+    // Wordle처럼 게임 상태를 서버에 저장 (선택적)
+    // 실제 구현에서는 서버에서 게임 상태를 관리하므로 클라이언트에서는 표시만 담당
+    console.log('정답 단어 추가됨:', currentWordId, correctWord);
     
     const position = selectedWord.position;
     const direction = position.direction;

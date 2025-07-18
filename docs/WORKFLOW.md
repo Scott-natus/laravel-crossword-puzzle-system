@@ -1,5 +1,94 @@
 # Laravel Crossword Puzzle Management System - Workflow
 
+## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 - 정답 표시 문제 해결)
+
+### 문제 상황
+- 새로고침 후 맞춘 정답들이 `***` 별표로 표시됨
+- 사용자가 맞춘 정답은 보여야 하는데 보안상 정답을 클라이언트에 전송하지 않아서 발생한 문제
+
+### 해결 과정
+
+#### 1. 서버 측 수정 (PuzzleGameController.php)
+- `getTemplate()` 메서드에서 맞춘 정답 단어 정보를 안전하게 전송하는 로직 추가
+- `answered_words_with_answers` 필드 추가: 맞춘 단어의 정답만 서버에서 전송
+- 보안 고려사항: 맞춘 단어만 전송하여 보안 유지
+
+#### 2. 클라이언트 측 수정 (index.blade.php)
+- `restoreGameState()` 함수 수정: 서버에서 받은 정답 정보 사용
+- `answeredWordsWithAnswers` 파라미터 추가하여 정답 복원 로직 개선
+- 정답 정보가 없으면 별표로 표시하는 fallback 로직 유지
+
+#### 3. 구현된 기능
+- 새로고침 시 맞춘 정답들이 정상적으로 표시됨
+- 보안 유지: 맞춘 단어만 전송, 미완성 단어는 전송하지 않음
+- 사용자 경험 개선: Wordle처럼 게임 진행 상태 완전 복원
+
+### 수정된 파일
+- `app/Http/Controllers/PuzzleGameController.php`: 정답 단어 정보 전송 로직 추가
+- `resources/views/puzzle/game/index.blade.php`: 정답 복원 로직 수정
+
+### 테스트 방법
+1. 퍼즐게임에서 몇 개 단어를 맞춤
+2. 브라우저 새로고침
+3. 맞춘 정답들이 정상적으로 표시되는지 확인
+
+---
+
+## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 구축)
+
+### 문제 상황
+- 새로고침할 때마다 새로운 퍼즐이 생성되어 사용자가 어려운 퍼즐을 피해갈 수 있는 문제
+- Wordle처럼 새로고침해도 게임 진행 상태가 유지되어야 함
+
+### 해결 과정
+
+#### 1. 데이터베이스 스키마 확장
+- `user_puzzle_games` 테이블에 퍼즐 세션 정보 저장 컬럼 추가
+- `current_puzzle_data`: 현재 퍼즐의 템플릿, 단어, 그리드 정보
+- `current_game_state`: 현재 게임 상태 (정답/오답, 힌트 사용 등)
+- `current_puzzle_started_at`: 현재 퍼즐 시작 시간
+- `has_active_puzzle`: 활성 퍼즐 존재 여부
+
+#### 2. UserPuzzleGame 모델 확장
+- 퍼즐 세션 관리용 메서드 추가:
+  - `startNewPuzzle()`: 새 퍼즐 시작
+  - `endCurrentPuzzle()`: 현재 퍼즐 종료
+  - `updateGameState()`: 게임 상태 업데이트
+  - `hasActivePuzzle()`: 활성 퍼즐 존재 확인
+  - `getCurrentPuzzleData()`: 현재 퍼즐 데이터 조회
+  - `getCurrentGameState()`: 현재 게임 상태 조회
+
+#### 3. PuzzleGameController 수정
+- `getTemplate()` 메서드: 활성 퍼즐 세션이 있으면 기존 퍼즐과 게임 상태 복원
+- `checkAnswer()` 메서드: 게임 상태 업데이트 로직 추가
+- `completeLevel()` 메서드: 퍼즐 세션 종료 로직 추가
+
+#### 4. 프론트엔드 JavaScript 수정
+- `loadTemplate()` 함수: 서버에서 받은 게임 상태 복원
+- `restoreGameState()` 함수: 정답 상태 복원
+- `restoreAnsweredCells()` 함수: 그리드에 정답 상태 표시
+- `updateGridWithAnswer()` 함수: 게임 상태 업데이트 로그 추가
+
+#### 5. 구현된 기능
+- Wordle처럼 게임 진행 상태를 데이터베이스에 저장
+- 새로고침 시 동일한 퍼즐과 진행 상태 복원
+- 정답/오답 상태, 힌트 사용 여부 등 추적
+- 정답 단어는 보안상 서버에만 저장하고 클라이언트에는 표시용으로만 복원
+
+### 수정된 파일
+- `database/migrations/2025_07_18_102239_add_current_puzzle_session_to_user_puzzle_games_table.php`: 마이그레이션 파일
+- `app/Models/UserPuzzleGame.php`: 퍼즐 세션 관리 메서드 추가
+- `app/Http/Controllers/PuzzleGameController.php`: 게임 상태 관리 로직 추가
+- `resources/views/puzzle/game/index.blade.php`: 프론트엔드 게임 상태 복원 로직 추가
+
+### 테스트 방법
+1. 퍼즐게임에서 몇 개 단어를 맞춤
+2. 브라우저 새로고침
+3. 동일한 퍼즐과 진행 상태가 복원되는지 확인
+4. 정답/오답 상태가 정상적으로 표시되는지 확인
+
+---
+
 ## 2025-07-11 작업 내역 (React Native 웹앱 빌드 및 서비스 설정)
 
 ### 문제 상황

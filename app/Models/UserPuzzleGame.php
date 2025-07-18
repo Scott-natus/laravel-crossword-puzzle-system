@@ -11,6 +11,11 @@ class UserPuzzleGame extends Model
 
     protected $fillable = [
         'user_id',
+        'guest_id',
+        'current_puzzle_data',
+        'current_game_state',
+        'current_puzzle_started_at',
+        'has_active_puzzle',
         'current_level',
         'first_attempt_at',
         'total_play_time',
@@ -27,8 +32,12 @@ class UserPuzzleGame extends Model
     protected $casts = [
         'first_attempt_at' => 'datetime',
         'last_played_at' => 'datetime',
+        'current_puzzle_started_at' => 'datetime',
         'is_active' => 'boolean',
+        'has_active_puzzle' => 'boolean',
         'accuracy_rate' => 'decimal:2',
+        'current_puzzle_data' => 'array',
+        'current_game_state' => 'array',
     ];
 
     public function user()
@@ -80,6 +89,69 @@ class UserPuzzleGame extends Model
         $this->resetCurrentLevelStats();
         $this->last_played_at = now();
         $this->save();
+    }
+
+    /**
+     * 현재 퍼즐 세션 시작
+     */
+    public function startNewPuzzle($puzzleData)
+    {
+        $this->current_puzzle_data = $puzzleData;
+        $this->current_game_state = [
+            'answered_words' => [],
+            'wrong_answers' => [],
+            'hints_used' => [],
+            'additional_hints' => [],
+            'started_at' => now()->toISOString()
+        ];
+        $this->current_puzzle_started_at = now();
+        $this->has_active_puzzle = true;
+        $this->save();
+    }
+
+    /**
+     * 현재 퍼즐 세션 종료
+     */
+    public function endCurrentPuzzle()
+    {
+        $this->current_puzzle_data = null;
+        $this->current_game_state = null;
+        $this->current_puzzle_started_at = null;
+        $this->has_active_puzzle = false;
+        $this->save();
+    }
+
+    /**
+     * 게임 상태 업데이트
+     */
+    public function updateGameState($gameState)
+    {
+        $this->current_game_state = $gameState;
+        $this->save();
+    }
+
+    /**
+     * 활성 퍼즐이 있는지 확인
+     */
+    public function hasActivePuzzle()
+    {
+        return $this->has_active_puzzle && $this->current_puzzle_data !== null;
+    }
+
+    /**
+     * 현재 퍼즐 데이터 가져오기
+     */
+    public function getCurrentPuzzleData()
+    {
+        return $this->current_puzzle_data;
+    }
+
+    /**
+     * 현재 게임 상태 가져오기
+     */
+    public function getCurrentGameState()
+    {
+        return $this->current_game_state;
     }
 
     /**

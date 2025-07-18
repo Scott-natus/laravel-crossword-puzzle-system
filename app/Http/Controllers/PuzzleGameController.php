@@ -117,6 +117,45 @@ class PuzzleGameController extends Controller
             return response()->json(['error' => '레벨을 찾을 수 없습니다.'], 404);
         }
 
+        // Wordle처럼 현재 활성 퍼즐이 있는지 확인
+        if ($game->hasActivePuzzle()) {
+            \Log::info("기존 퍼즐 세션 복원", [
+                'user_id' => $userId,
+                'level' => $game->current_level,
+                'puzzle_started_at' => $game->current_puzzle_started_at
+            ]);
+            
+            // 저장된 퍼즐 데이터와 게임 상태 반환
+            $puzzleData = $game->getCurrentPuzzleData();
+            $gameState = $game->getCurrentGameState();
+            
+            // 정답 단어 정보 추가 (보안을 위해 맞춘 단어만)
+            $answeredWordsWithAnswers = [];
+            if (isset($gameState['answered_words']) && is_array($gameState['answered_words'])) {
+                foreach ($gameState['answered_words'] as $wordId) {
+                    $word = DB::table('pz_words')->where('id', $wordId)->first();
+                    if ($word) {
+                        $answeredWordsWithAnswers[$wordId] = $word->word;
+                    }
+                }
+            }
+            
+            return response()->json([
+                'template' => $puzzleData['template'],
+                'level' => $level,
+                'game' => $game,
+                'game_state' => $gameState,
+                'answered_words_with_answers' => $answeredWordsWithAnswers, // 맞춘 정답 단어들
+                'is_restored' => true // 프론트엔드에서 복원된 퍼즐임을 알 수 있도록
+            ]);
+        }
+
+        // 새로운 퍼즐 생성
+        \Log::info("새로운 퍼즐 세션 시작", [
+            'user_id' => $userId,
+            'level' => $game->current_level
+        ]);
+
         // 레벨에 해당하는 템플릿 중 랜덤으로 하나 선택
         $template = \DB::table('puzzle_grid_templates')
             ->where('level_id', $level->id)
@@ -216,7 +255,8 @@ class PuzzleGameController extends Controller
             $wordsWithIds[] = $secureWordInfo;
         }
 
-        return response()->json([
+        // 퍼즐 데이터 구성
+        $puzzleData = [
             'template' => [
                 'id' => $template->id,
                 'template_name' => $template->template_name,
@@ -227,6 +267,16 @@ class PuzzleGameController extends Controller
             ],
             'level' => $level,
             'game' => $game,
+        ];
+
+        // 새로운 퍼즐 세션 시작
+        $game->startNewPuzzle($puzzleData);
+
+        return response()->json([
+            'template' => $puzzleData['template'],
+            'level' => $level,
+            'game' => $game,
+            'is_restored' => false // 새로운 퍼즐임을 표시
         ]);
     }
 
@@ -307,15 +357,35 @@ class PuzzleGameController extends Controller
                 'is_correct' => $isCorrect
             ]);
             
+            // 게임 상태 업데이트
+            $gameState = $game->getCurrentGameState() ?? [
+                'answered_words' => [],
+                'wrong_answers' => [],
+                'hints_used' => [],
+                'additional_hints' => [],
+                'started_at' => now()->toISOString()
+            ];
+
             if ($isCorrect) {
                 $game->incrementCorrectAnswer();
                 $message = '정답입니다!';
+                
+                // 정답 단어를 게임 상태에 추가
+                if (!in_array($word->id, $gameState['answered_words'])) {
+                    $gameState['answered_words'][] = $word->id;
+                }
             } else {
                 $game->incrementWrongAnswer();
                 $wrongCount = $game->current_level_wrong_answers;
                 
                 // 틀린 답변 기록
                 $this->recordWrongAnswer($userId, $word->id, $request->answer, $word->word, $word->category, $game->current_level);
+                
+                // 오답 기록을 게임 상태에 추가
+                if (!isset($gameState['wrong_answers'][$word->id])) {
+                    $gameState['wrong_answers'][$word->id] = 0;
+                }
+                $gameState['wrong_answers'][$word->id]++;
                 
                 // 오답 4회일 때 특별한 메시지
                 if ($wrongCount == 4) {
@@ -329,6 +399,7 @@ class PuzzleGameController extends Controller
                     // 게임 상태 초기화
                     $game->current_level_correct_answers = 0;
                     $game->current_level_wrong_answers = 0;
+                    $game->endCurrentPuzzle(); // 현재 퍼즐 세션 종료
                     $game->save();
                     
                     return response()->json([
@@ -339,6 +410,9 @@ class PuzzleGameController extends Controller
                     ]);
                 }
             }
+
+            // 게임 상태 저장
+            $game->updateGameState($gameState);
 
             return response()->json([
                 'is_correct' => $isCorrect,
@@ -516,6 +590,9 @@ class PuzzleGameController extends Controller
                 ]);
             }
 
+            // 현재 퍼즐 세션 종료
+            $game->endCurrentPuzzle();
+            
             // 다음 레벨로 진행
             $game->advanceToNextLevel();
 
