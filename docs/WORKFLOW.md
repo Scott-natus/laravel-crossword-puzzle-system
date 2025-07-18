@@ -299,6 +299,59 @@
 
 ---
 
+## 2025-07-18 작업 내역 (퍼즐 단어 정리 및 비활성화 스케줄러 구축)
+
+### 문제 상황
+- `pz_words` 테이블에 "단어,숫자" 형태로 저장된 데이터들이 존재
+- 영문이나 숫자가 포함된 단어들이 활성 상태로 남아있음
+- 매일 정기적으로 단어 데이터를 정리하고 비활성화할 필요
+
+### 해결 과정
+
+#### 1. Artisan 명령어 생성
+- `CleanupPuzzleWords` 명령어 생성: `php artisan make:command CleanupPuzzleWords`
+- 두 가지 기능 구현:
+  1. 쉼표와 숫자가 포함된 단어 정리
+  2. 영문이나 숫자가 포함된 단어 비활성화
+
+#### 2. 명령어 기능 구현
+- `cleanupCommaNumberWords()`: 쉼표와 숫자 제거, length 업데이트
+- `deactivateEnglishNumberWords()`: 영문/숫자 포함 단어 비활성화
+- 로그 기록 및 에러 처리 구현
+
+#### 3. 스케줄러 등록
+- `app/Console/Kernel.php`에 매일 새벽 1시 실행 스케줄 등록
+- `storage/logs/word-cleanup.log`에 로그 기록
+- `withoutOverlapping()` 설정으로 중복 실행 방지
+
+#### 4. 테스트 결과
+- 쉼표 포함 단어: 0개 (이미 정리 완료)
+- 영문/숫자 포함 단어: 22개 비활성화
+- 비활성화된 단어 예시: "PR전략", "의료AI", "MZ세대", "NFT아트", "UI/UX", "3D프린터" 등
+
+### 구현된 기능
+- ✅ 매일 새벽 1시 자동 실행
+- ✅ 쉼표와 숫자 제거하여 순수 단어만 남김
+- ✅ 영문이나 숫자가 포함된 단어 자동 비활성화
+- ✅ 로그 기록 및 에러 처리
+- ✅ 중복 실행 방지
+
+### 수정된 파일
+- `app/Console/Commands/CleanupPuzzleWords.php`: 단어 정리 명령어
+- `app/Console/Kernel.php`: 스케줄러 등록
+
+### 테스트 방법
+```bash
+# 수동 실행
+php artisan puzzle:cleanup-words
+
+# 로그 확인
+tail -f storage/logs/word-cleanup.log
+cat storage/logs/laravel.log | grep "cleanup"
+```
+
+---
+
 ## 주요 작업 원칙
 
 ### 1. 데이터베이스 변경 시 필수 절차
