@@ -66,49 +66,67 @@ class PzWordController extends Controller
     }
 
     /**
-     * DataTables용 데이터 API
+     * DataTables용 데이터 API (클라이언트 사이드)
      */
     public function getData(Request $request)
     {
         try {
-            $draw = $request->input('draw', 1);
-            $start = $request->input('start', 0);
-            $length = $request->input('length', 25);
-            $search = $request->input('search.value', '');
-            $orderColumn = $request->input('order.0.column', 7); // 기본값: 입력일자
-            $orderDir = $request->input('order.0.dir', 'desc');
             $difficultyFilter = $request->input('difficulty_filter', ''); // 난이도 필터 추가
+            $page = $request->input('page', 1); // 페이지 번호
+            $perPage = $request->input('per_page', 100); // 페이지당 데이터 수
             
-            // 컬럼 매핑
-            $columns = ['category', 'word', 'length', 'difficulty', 'hints_count', 'is_active', 'latest_hint_date', 'created_at'];
-            $orderBy = $columns[$orderColumn] ?? 'created_at';
+            \Log::info('getData 호출됨', [
+                'page' => $page,
+                'per_page' => $perPage,
+                'difficulty_filter' => $difficultyFilter
+            ]);
             
-            // 쿼리 시작
-            $query = PzWord::withCount('hints')
-                ->withMax('hints', 'created_at');
+            // 쿼리 로깅 활성화
+            \DB::enableQueryLog();
             
-            // 검색 조건
-            if (!empty($search)) {
-                $query->where(function($q) use ($search) {
-                    $q->where('word', 'like', "%{$search}%")
-                      ->orWhere('category', 'like', "%{$search}%");
-                });
-            }
+            // 기본 쿼리 (JOIN 최적화)
+            $query = PzWord::select([
+                'pz_words.*',
+                \DB::raw('COALESCE(hints_stats.hints_count, 0) as hints_count'),
+                \DB::raw('hints_stats.hints_max_created_at')
+            ])
+            ->leftJoin(\DB::raw('(
+                SELECT 
+                    word_id,
+                    COUNT(*) as hints_count,
+                    MAX(created_at) as hints_max_created_at
+                FROM pz_hints 
+                GROUP BY word_id
+            ) as hints_stats'), 'pz_words.id', '=', 'hints_stats.word_id');
             
             // 난이도 필터 조건
             if (!empty($difficultyFilter)) {
                 $query->where('difficulty', $difficultyFilter);
             }
             
-            // 전체 레코드 수 (필터 적용 전)
-            $totalRecords = PzWord::count();
+            // 전체 개수 조회 (데이터베이스에서 직접 COUNT)
+            $total = PzWord::when(!empty($difficultyFilter), function($query) use ($difficultyFilter) {
+                return $query->where('difficulty', $difficultyFilter);
+            })->count();
             
-            // 필터 적용 후 레코드 수
-            $filteredRecords = $query->count();
+            // 페이지네이션 적용 (offset/limit 사용)
+            $offset = ($page - 1) * $perPage;
+            $words = $query->orderBy('created_at', 'desc')
+                          ->offset($offset)
+                          ->limit($perPage)
+                          ->get();
             
-            // 정렬 및 페이징
-            $query->orderBy($orderBy, $orderDir);
-            $words = $query->skip($start)->take($length)->get();
+            // 실행된 SQL 쿼리 로깅
+            $queries = \DB::getQueryLog();
+            \Log::info('실행된 SQL 쿼리들:', $queries);
+            
+            \Log::info('쿼리 결과', [
+                'total' => $total,
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'has_more' => ($offset + $perPage) < $total,
+                'data_count' => $words->count()
+            ]);
             
             // 데이터 변환
             $data = $words->map(function ($word) {
@@ -127,10 +145,15 @@ class PzWordController extends Controller
             });
             
             return response()->json([
-                'draw' => $draw,
-                'recordsTotal' => $totalRecords,
-                'recordsFiltered' => $filteredRecords,
-                'data' => $data
+                'data' => $data,
+                'recordsTotal' => $total,
+                'recordsFiltered' => $total,
+                'draw' => $request->input('draw', 1),
+                'current_page' => $page,
+                'last_page' => ceil($total / $perPage),
+                'per_page' => $perPage,
+                'total' => $total,
+                'has_more' => ($offset + $perPage) < $total
             ]);
             
         } catch (\Exception $e) {

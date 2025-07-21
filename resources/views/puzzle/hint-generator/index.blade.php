@@ -373,6 +373,48 @@
     </div>
 </div>
 
+<!-- 힌트 보기 모달 -->
+<div class="modal fade" id="viewHintsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>힌트 보기
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="word-info mb-4">
+                    <h6>단어 정보</h6>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>카테고리:</strong> <span id="viewHintsCategory" class="badge bg-primary"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>단어:</strong> <span id="viewHintsWord" class="fw-bold text-primary"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>글자수:</strong> <span id="viewHintsLength" class="badge bg-secondary"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="hints-section">
+                    <h6>등록된 힌트</h6>
+                    <div id="viewHintsList">
+                        <!-- 힌트들이 여기에 표시됩니다 -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> 닫기
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('styles')
 <style>
 .word-checkbox:checked + td {
@@ -619,11 +661,14 @@
             `;
         });
         
-        document.getElementById('resultWord').textContent = word.word;
-        document.getElementById('resultCategory').textContent = word.category;
-        document.getElementById('generatedHintsList').innerHTML = hintsHtml;
+        // 힌트 보기 모달에 데이터 설정
+        document.getElementById('viewHintsWord').textContent = word.word;
+        document.getElementById('viewHintsCategory').textContent = word.category;
+        document.getElementById('viewHintsLength').textContent = word.length;
+        document.getElementById('viewHintsList').innerHTML = hintsHtml;
         
-        new bootstrap.Modal(document.getElementById('singleHintResultModal')).show();
+        // 힌트 보기 모달 표시
+        new bootstrap.Modal(document.getElementById('viewHintsModal')).show();
     }
 </script>
 @endpush

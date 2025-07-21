@@ -33,6 +33,15 @@ class AppServiceProvider extends ServiceProvider
                 ->orderBy('name')
                 ->get();
             $view->with('sharedBoardTypes', $boardTypes);
+            
+            // 현재 게시판 타입 정보도 공유
+            $currentBoardTypeSlug = request()->route('boardType');
+            if ($currentBoardTypeSlug) {
+                $currentBoardType = BoardType::where('slug', $currentBoardTypeSlug)->first();
+                if ($currentBoardType) {
+                    $view->with('boardType', $currentBoardType);
+                }
+            }
         });
 
         // Kakao Socialite 드라이버 추가

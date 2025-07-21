@@ -1,8 +1,10 @@
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="ko">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Language" content="ko">
+    <meta name="language" content="ko">
 
     <!-- CSRF Token -->
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -48,6 +50,13 @@
         border-right: 0.3em solid transparent;
         border-bottom: 0;
         border-left: 0.3em solid transparent;
+    }
+    
+    /* 모바일에서 상단 배너 숨기기 */
+    @media (max-width: 768px) {
+        .hero-banner {
+            display: none !important;
+        }
     }
     </style>
 </head>
@@ -152,7 +161,14 @@
         <div class="container">
             <div class="row mb-4">
                 <div class="col-12">
-                    <h2 class="mb-3">{{ $boardType->name }}</h2>
+                    @php
+                        $currentBoardTypeSlug = request()->route('boardType');
+                        $currentBoardType = null;
+                        if ($currentBoardTypeSlug) {
+                            $currentBoardType = \App\Models\BoardType::where('slug', $currentBoardTypeSlug)->first();
+                        }
+                    @endphp
+                    <h2 class="mb-3">{{ $currentBoardType ? $currentBoardType->name : '게시판' }}</h2>
                     <hr>
                 </div>
             </div>

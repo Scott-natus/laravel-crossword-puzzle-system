@@ -84,9 +84,6 @@ class Kernel extends ConsoleKernel
         // 기존 퍼즐 힌트 생성 스케줄러
         $schedule->command('puzzle:generate-hints-scheduler')->everyMinute()->withoutOverlapping();
         
-        // 기존 단어 난이도 업데이트 스케줄러
-        $schedule->command('puzzle:update-word-difficulty')->everyTenMinutes()->withoutOverlapping();
-        
         // 매일 새벽 1시에 퍼즐 단어 정리 및 비활성화
         $schedule->command('puzzle:cleanup-words')
                 ->dailyAt('01:00')

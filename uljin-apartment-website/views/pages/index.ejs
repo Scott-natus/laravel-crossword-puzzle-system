@@ -1,0 +1,1006 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>울진 고성리 프리미엄 아파트 분양</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            overflow-x: hidden;
+        }
+
+        /* 헤더 */
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            padding: 15px 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 30px;
+        }
+
+        .nav-menu a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-menu a:hover {
+            color: #3498db;
+        }
+
+        .contact-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .contact-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        /* 히어로 섹션 */
+        .hero {
+            height: 100vh;
+            background: linear-gradient(135deg, #2c3e50, #3498db), url('/images/aerial/jogam.jpg') center center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-bg-slider {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            overflow: hidden;
+            /* 디버깅용 */
+            /* border: 2px solid red; */
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+        }
+        .hero-bg-slider-img {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s;
+            z-index: 2;
+        }
+        .hero-bg-slider-img.active {
+            opacity: 1;
+            z-index: 3;
+        }
+        .hero-bg-slider-img.slide-out {
+            opacity: 0;
+            z-index: 2;
+            transform: translateX(-30px);
+        }
+        .hero-content {
+            position: relative;
+            z-index: 5;
+            text-align: center;
+            color: white;
+            max-width: 800px;
+            padding: 0 20px;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(44,62,80,0.35);
+            z-index: 4;
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .hero h2 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .cta-btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .cta-primary {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .cta-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        /* 공통 스타일 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .section-title p {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        /* 프로젝트 개요 */
+        .overview {
+            padding: 100px 0;
+            background: #f8f9fa;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .overview-card {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .overview-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .overview-card .icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .overview-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .overview-card p {
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+
+        /* 입지 환경 */
+        .features {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .feature-item {
+            padding: 30px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .feature-item:hover {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .feature-item h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+
+        .feature-item:hover h4 {
+            color: white;
+        }
+
+        /* 분양 정보 */
+        .sales-info {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+        }
+
+        .sales-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .sales-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .sales-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #3498db;
+        }
+
+        .price {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin: 20px 0;
+            color: #e74c3c;
+        }
+
+        .sales-details {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .sales-details li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 단지 배치도 */
+        .site-plan {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .plan-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 60px 40px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .buildings {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 60px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .building {
+            background: linear-gradient(to bottom, #3498db, #2980b9);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .building:hover {
+            transform: translateY(-10px);
+        }
+
+        .building-101 {
+            width: 120px;
+            height: 180px;
+        }
+
+        .building-102 {
+            width: 120px;
+            height: 200px;
+        }
+
+        .building-103 {
+            width: 120px;
+            height: 180px;
+        }
+
+        .building h4 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .building p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .facilities {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .facility {
+            background: #e8f4fd;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .facility-icon {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* 갤러리 */
+        .gallery-preview {
+            padding: 100px 0;
+            background: #f8f9fa;
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 60px;
+        }
+
+        .gallery-item {
+            position: relative;
+            height: 250px;
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #3498db, #e74c3c);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .gallery-item:nth-child(1) {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .gallery-item:nth-child(2) {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .gallery-item:nth-child(3) {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .gallery-item:hover {
+            transform: scale(1.05);
+        }
+
+        .gallery-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .gallery-item:hover .gallery-overlay {
+            opacity: 1;
+        }
+
+        /* 연락처 */
+        .contact {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            text-align: center;
+        }
+
+        .contact-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .contact-item {
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .contact-item .icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .contact-item h4 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+
+        /* 푸터 */
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .footer p {
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+
+        /* 애니메이션 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .hero h2 {
+                font-size: 1.5rem;
+            }
+
+            .nav-menu {
+                display: none;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .section-title h2 {
+                font-size: 2rem;
+            }
+
+            .buildings {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        /* 스크롤 인디케이터 */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: bounce 2s infinite;
+            color: white;
+            font-size: 2rem;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 헤더 -->
+    <header class="header">
+        <div class="nav-container">
+            <div class="logo">울진 고성리</div>
+            <nav>
+                <ul class="nav-menu">
+                    <li><a href="#home">홈</a></li>
+                    <li><a href="#overview">단지소개</a></li>
+                    <li><a href="#features">입지환경</a></li>
+                    <li><a href="#sales">분양정보</a></li>
+                    <li><a href="#gallery">갤러리</a></li>
+                    <li><a href="#contact">문의</a></li>
+                </ul>
+            </nav>
+            <a href="tel:1588-0000" class="contact-btn">상담문의</a>
+        </div>
+    </header>
+
+    <!-- 히어로 섹션 -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>울진 고성리</h1>
+            <h2>프리미엄 아파트</h2>
+            <p>경상북도 울진군 울진읍 고성리 12-45번지 일원<br>
+            총 3개동 138세대 | 지하2층~지상20층</p>
+            <div class="cta-buttons">
+                <a href="#sales" class="cta-btn cta-primary">분양정보 보기</a>
+                <a href="#contact" class="cta-btn cta-secondary">상담 신청</a>
+            </div>
+        </div>
+        <div class="scroll-indicator">⌄</div>
+    </section>
+    <style>
+    .hero {
+      position: relative;
+      height: 100vh;
+      background: url('/images/aerial/jogam.jpg') center center/cover no-repeat;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      opacity: 0.35;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      color: white;
+      max-width: 800px;
+      padding: 0 20px;
+    }
+    </style>
+
+    <!-- 프로젝트 개요 -->
+    <section id="overview" class="overview">
+        <div class="container">
+            <div class="section-title">
+                <h2>프로젝트 개요</h2>
+                <p>울진의 새로운 랜드마크가 될 프리미엄 아파트</p>
+            </div>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="icon">🏢</div>
+                    <h3>총 138세대</h3>
+                    <p>3개동으로 구성된 대단지<br>지하2층~지상20층 규모</p>
+                </div>
+                <div class="overview-card">
+                    <div class="icon">📐</div>
+                    <h3>84A/84B 타입</h3>
+                    <p>84A: 83.86㎡ (25.37평) - 73세대<br>84B: 84.96㎡ (25.7평) - 65세대</p>
+                </div>
+                <div class="overview-card">
+                    <div class="icon">🚗</div>
+                    <h3>161대 주차</h3>
+                    <p>법정 주차대수 146대 대비<br>110.47% 확보</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 입지 환경 -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>입지 환경</h2>
+                <p>울진의 미래 성장 동력과 함께하는 최적의 입지</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <h4>🏭 원자력수소 국가산업단지</h4>
+                    <p>대규모 국책사업으로 인한<br>지역 발전 및 인구 유입 효과</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🚄 동해선 울진역</h4>
+                    <p>2024년 개통으로<br>수도권 접근성 획기적 개선</p>
+                </div>
+                <div class="feature-item">
+                    <h4>⚡ 풍력발전단지</h4>
+                    <p>신재생에너지 허브로<br>지속가능한 미래 도시</p>
+                </div>
+                <div class="feature-item">
+                    <h4>🏛️ 울진읍 중심가</h4>
+                    <p>행정, 상업, 교육시설이<br>집중된 최적의 생활환경</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 단지 배치도 -->
+    <section id="site-plan" class="site-plan">
+        <div class="container">
+            <div class="section-title">
+                <h2>단지 배치도</h2>
+                <p>3개동으로 구성된 효율적인 단지 배치</p>
+            </div>
+            <div class="plan-container">
+                <div class="buildings">
+                    <div class="building building-101">
+                        <h4>101동</h4>
+                        <p>지하2층<br>~지상20층</p>
+                    </div>
+                    <div class="building building-102">
+                        <h4>102동</h4>
+                        <p>지하2층<br>~지상20층</p>
+                    </div>
+                    <div class="building building-103">
+                        <h4>103동</h4>
+                        <p>지하2층<br>~지상20층</p>
+                    </div>
+                </div>
+                <div class="facilities">
+                    <div class="facility">
+                        <div class="facility-icon">🎮</div>
+                        <h4>놀이터</h4>
+                        <p>어린이 놀이시설</p>
+                    </div>
+                    <div class="facility">
+                        <div class="facility-icon">🚗</div>
+                        <h4>주차장</h4>
+                        <p>161대 (110.47%)</p>
+                    </div>
+                    <div class="facility">
+                        <div class="facility-icon">🌳</div>
+                        <h4>조경</h4>
+                        <p>단지 내 녹지공간</p>
+                    </div>
+                    <div class="facility">
+                        <div class="facility-icon">🏪</div>
+                        <h4>상가</h4>
+                        <p>근린생활시설</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 분양 정보 -->
+    <section id="sales" class="sales-info">
+        <div class="container">
+            <div class="section-title">
+                <h2>분양 정보</h2>
+                <p>합리적인 가격으로 만나는 프리미엄 라이프</p>
+            </div>
+            <div class="sales-grid">
+                <div class="sales-card" style="position:relative;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                      <h3 style="margin: 0; font-size: 1.5rem;">84A 타입</h3>
+                      <span style="color: #e74c3c; font-weight: bold;">| 평당 1,250만원</span>
+                    </div>
+                    <ul class="sales-details">
+                        <li>전용면적: 83.86㎡ (25.37평)</li>
+                        <li>세대수: 73세대</li>
+                        <li>층수: 지하2층~지상20층</li>
+                        <li>주차: 세대당 1대 이상</li>
+                    </ul>
+                    <button class="btn-plan-small" data-type="84A 타입">평면도</button>
+                </div>
+                <div class="sales-card" style="position:relative;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                      <h3 style="margin: 0; font-size: 1.5rem;">84B 타입</h3>
+                      <span style="color: #e74c3c; font-weight: bold;">| 평당 1,300만원</span>
+                    </div>
+                    <ul class="sales-details">
+                        <li>전용면적: 84.96㎡ (25.7평)</li>
+                        <li>세대수: 65세대</li>
+                        <li>층수: 지하2층~지상20층</li>
+                        <li>주차: 세대당 1대 이상</li>
+                    </ul>
+                    <button class="btn-plan-small" data-type="84B 타입">평면도</button>
+                </div>
+            </div>
+        </div>
+        <!-- 평면도 모달 레이어 -->
+        <div id="plan-modal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <span id="plan-modal-close" class="modal-close">&times;</span>
+            <h3 id="plan-modal-title"></h3>
+            <p>작업중입니다.</p>
+          </div>
+        </div>
+        <style>
+        .btn-plan-small {
+          position: absolute;
+          right: 18px;
+          bottom: 18px;
+          background: linear-gradient(135deg, #3498db, #2980b9);
+          color: #fff;
+          border: none;
+          border-radius: 16px;
+          padding: 4px 14px;
+          font-size: 0.95rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+          box-shadow: 0 2px 8px rgba(52,152,219,0.08);
+          z-index: 10;
+        }
+        .btn-plan-small:hover {
+          background: linear-gradient(135deg, #217dbb, #145a86);
+        }
+        .modal {
+          position: fixed;
+          left: 0; top: 0; width: 100vw; height: 100vh;
+          background: rgba(0,0,0,0.4);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 2000;
+        }
+        .modal-content {
+          background: #fff;
+          padding: 30px 40px;
+          border-radius: 8px;
+          text-align: center;
+          min-width: 220px;
+          position: relative;
+        }
+        .modal-close {
+          position: absolute;
+          right: 20px; top: 20px;
+          font-size: 2rem;
+          cursor: pointer;
+        }
+        </style>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.btn-plan-small').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+              var type = btn.getAttribute('data-type');
+              document.getElementById('plan-modal-title').textContent = type + ' 평면도';
+              document.getElementById('plan-modal').style.display = 'flex';
+            });
+          });
+          document.getElementById('plan-modal-close').onclick = function() {
+            document.getElementById('plan-modal').style.display = 'none';
+          };
+          document.getElementById('plan-modal').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+          };
+        });
+        </script>
+    </section>
+
+    <!-- 갤러리 -->
+    <section id="gallery" class="gallery-preview">
+        <div class="container">
+            <div class="section-title gallery-title-strong">
+                <h2>갤러리</h2>
+                <p class="gallery-subtitle">조감도와 설계 이미지로 미리 보는 우리 집</p>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-item">조감도 001<br>3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
+                <div class="gallery-item">조감도 003<br>단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
+                <div class="gallery-item">광역 조감도<br>울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
+            </div>
+        </div>
+        <!-- 갤러리 모달 레이어 -->
+        <div id="gallery-modal" class="modal" style="display:none;">
+          <div class="modal-content">
+            <span id="gallery-modal-close" class="modal-close">&times;</span>
+            <h3 id="gallery-modal-title"></h3>
+            <p>작업중입니다.</p>
+          </div>
+        </div>
+    </section>
+
+    <!-- 연락처 -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-title contact-title-strong">
+                <h2>상담 및 문의</h2>
+                <p class="contact-subtitle">전문 상담원이 친절하게 안내해드립니다</p>
+            </div>
+            <div class="contact-info">
+                <div class="contact-item">
+                    <div class="icon">📞</div>
+                    <h4>전화 상담</h4>
+                    <p>1588-0000<br>평일 09:00~18:00</p>
+                </div>
+                <div class="contact-item">
+                    <div class="icon">🏢</div>
+                    <h4>현장 방문</h4>
+                    <p>경상북도 울진군 울진읍<br>고성리 12-45번지 일원</p>
+                </div>
+                <div class="contact-item">
+                    <div class="icon">💬</div>
+                    <h4>온라인 상담</h4>
+                    <p>홈페이지 문의하기<br>24시간 접수 가능</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <style>
+    /* 갤러리/상담/분양 타이틀 강조 */
+    .gallery-title-strong h2 {
+      font-size: 2.7rem;
+      color: #8e44ad;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 10px rgba(155,89,182,0.08);
+    }
+    .gallery-subtitle {
+      font-size: 1.25rem;
+      color: #5e3370;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    .contact-title-strong h2 {
+      font-size: 2.7rem;
+      color: #fff;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-shadow: 0 3px 16px rgba(44,62,80,0.35), 0 1px 0 #217dbb;
+    }
+    .contact-subtitle {
+      font-size: 1.35rem;
+      color: #fff !important;
+      font-weight: 800;
+      margin-top: 8px;
+      text-shadow: 0 4px 18px rgba(44,62,80,0.7), 0 1px 0 #217dbb;
+      letter-spacing: 0.5px;
+    }
+    .sales-info .section-title h2 {
+      color: #fff;
+    }
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 갤러리 카드 클릭 시 모달
+      document.querySelectorAll('.gallery-item').forEach(function(item) {
+        item.addEventListener('click', function() {
+          var sectionName = '갤러리';
+          document.getElementById('gallery-modal-title').textContent = sectionName;
+          document.getElementById('gallery-modal').style.display = 'flex';
+        });
+      });
+      document.getElementById('gallery-modal-close').onclick = function() {
+        document.getElementById('gallery-modal').style.display = 'none';
+      };
+      document.getElementById('gallery-modal').onclick = function(e) {
+        if (e.target === this) this.style.display = 'none';
+      };
+    });
+    </script>
+
+    <!-- 푸터 -->
+    <footer class="footer">
+        <div class="footer-content">
+            <p><strong>울진군 고성리 공동주택 신축공사</strong></p>
+            <p>경상북도 울진군 울진읍 고성리 12-45번지 일원</p>
+            <p>총 3개동 138세대 | 지하2층~지상20층</p>
+            <p>분양문의: 1588-0000</p>
+            <br>
+            <p>※ 본 홈페이지의 내용은 계약서와 다를 수 있으며, 자세한 내용은 견본주택에서 확인하시기 바랍니다.</p>
+            <p>※ 컴퓨터그래픽 및 모형은 소비자의 이해를 돕기 위한 것으로 실제와 다를 수 있습니다.</p>
+        </div>
+    </footer>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 롤링 관련 코드 제거
+    });
+    </script>
+    <script src="/js/main.js"></script>
+</body>

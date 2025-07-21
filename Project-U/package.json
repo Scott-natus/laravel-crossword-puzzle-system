@@ -1,0 +1,23 @@
+{
+  "name": "project-u",
+  "version": "1.0.0",
+  "description": "아파트 분양 홈페이지",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["apartment", "real-estate", "sales"],
+  "author": "natus",
+  "license": "ISC",
+  "dependencies": {
+    "pg": "^8.11.3",
+    "multer": "^1.4.5-lts.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

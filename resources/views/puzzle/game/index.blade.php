@@ -236,6 +236,74 @@
     -webkit-box-shadow: 0 0 0 30px white inset !important;
     -webkit-text-fill-color: #000 !important;
 }
+
+/* 모바일 최적화 스타일 */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 10px;
+    }
+    
+    .card-header h3 {
+        font-size: 1.5rem;
+    }
+    
+    .card-header h5 {
+        font-size: 1rem;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .puzzle-cell {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+    }
+    
+    .cell-number {
+        font-size: 8px;
+    }
+    
+    .word-number {
+        width: 16px;
+        height: 16px;
+        font-size: 8px;
+    }
+    
+    .col-md-4 {
+        margin-top: 1rem;
+    }
+    
+    .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .form-control {
+        font-size: 0.875rem;
+    }
+}
+
+/* 매우 작은 모바일 화면 (320px 이하) */
+@media (max-width: 320px) {
+    .puzzle-cell {
+        width: 30px;
+        height: 30px;
+        font-size: 12px;
+    }
+    
+    .cell-number {
+        font-size: 7px;
+    }
+    
+    .word-number {
+        width: 14px;
+        height: 14px;
+        font-size: 7px;
+    }
+}
 </style>
 @endpush
 
