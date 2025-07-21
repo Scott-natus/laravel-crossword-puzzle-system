@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>울진 고성리 프리미엄 아파트 분양</title>
+    <title>PROJ-U 프리미엄 아파트 분양</title>
     <style>
         * {
             margin: 0;
@@ -440,12 +440,12 @@
 
         .gallery-item {
             position: relative;
-            height: 250px;
+            height: 125px;
             border-radius: 15px;
             overflow: hidden;
             cursor: pointer;
             transition: transform 0.3s ease;
-            background: linear-gradient(135deg, #3498db, #e74c3c);
+            background: linear-gradient(135deg, #3498db, #e74c3e);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -616,7 +616,7 @@
     <!-- 헤더 -->
     <header class="header">
         <div class="nav-container">
-            <div class="logo">울진 고성리</div>
+            <div class="logo">PROJ-U</div>
             <nav>
                 <ul class="nav-menu">
                     <li><a href="#home">홈</a></li>
@@ -627,14 +627,15 @@
                     <li><a href="#contact">문의</a></li>
                 </ul>
             </nav>
-            <a href="tel:1588-0000" class="contact-btn">상담문의</a>
+            <a href="#contact" class="contact-btn">상담문의</a>
         </div>
     </header>
 
     <!-- 히어로 섹션 -->
     <section id="home" class="hero">
+        <div class="hero-bg-slider"></div>
         <div class="hero-content">
-            <h1>울진 고성리</h1>
+            <h1>PROJ-U</h1>
             <h2>프리미엄 아파트</h2>
             <p>경상북도 울진군 울진읍 고성리 12-45번지 일원<br>
             총 3개동 138세대 | 지하2층~지상20층</p>
@@ -649,11 +650,38 @@
     .hero {
       position: relative;
       height: 100vh;
-      background: url('/images/aerial/jogam.jpg') center center/cover no-repeat;
+      background: #222;
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
+    }
+    .hero-bg-slider {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .hero-bg-slider-img {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 1s;
+      z-index: 2;
+    }
+    .hero-bg-slider-img.active {
+      opacity: 1;
+      z-index: 3;
+    }
+    .hero-content {
+      position: relative;
+      z-index: 4;
+      text-align: center;
+      color: white;
+      max-width: 800px;
+      padding: 0 20px;
     }
     .hero::before {
       content: '';
@@ -661,18 +689,48 @@
       top: 0; left: 0; right: 0; bottom: 0;
       background: linear-gradient(135deg, #2c3e50, #3498db);
       opacity: 0.35;
-      z-index: 1;
+      z-index: 3;
       pointer-events: none;
     }
-    .hero-content {
-      position: relative;
-      z-index: 2;
-      text-align: center;
-      color: white;
-      max-width: 800px;
-      padding: 0 20px;
-    }
     </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const heroImages = [
+        '/images/aerial/jogam.jpg',
+        '/images/aerial/jogam01.jpg',
+        '/images/aerial/jogam02.jpg',
+        '/images/aerial/jogam03.jpg'
+      ];
+      const slider = document.querySelector('.hero-bg-slider');
+      let currentIdx = 0;
+
+      function showHeroImage(idx) {
+        // 모든 기존 이미지를 active 해제 + 1초 후 삭제
+        slider.querySelectorAll('.hero-bg-slider-img').forEach(img => {
+          img.classList.remove('active');
+          setTimeout(() => {
+            if (img.parentNode) img.parentNode.removeChild(img);
+          }, 1000);
+        });
+        // 새 이미지 opacity 0 상태로 추가
+        const img = document.createElement('img');
+        img.src = heroImages[idx];
+        img.className = 'hero-bg-slider-img';
+        img.alt = '배경 이미지';
+        slider.appendChild(img);
+        // 브라우저가 렌더링할 수 있도록 약간의 시간 후 active 부여
+        setTimeout(() => {
+          img.classList.add('active');
+        }, 30);
+      }
+
+      showHeroImage(currentIdx);
+      setInterval(function() {
+        currentIdx = (currentIdx + 1) % heroImages.length;
+        showHeroImage(currentIdx);
+      }, 4000);
+    });
+    </script>
 
     <!-- 프로젝트 개요 -->
     <section id="overview" class="overview">
@@ -682,23 +740,70 @@
                 <p>울진의 새로운 랜드마크가 될 프리미엄 아파트</p>
             </div>
             <div class="overview-grid">
-                <div class="overview-card">
+                <div class="overview-card" data-section="총 138세대">
                     <div class="icon">🏢</div>
                     <h3>총 138세대</h3>
                     <p>3개동으로 구성된 대단지<br>지하2층~지상20층 규모</p>
                 </div>
-                <div class="overview-card">
+                <div class="overview-card" data-section="84A/84B 타입">
                     <div class="icon">📐</div>
                     <h3>84A/84B 타입</h3>
                     <p>84A: 83.86㎡ (25.37평) - 73세대<br>84B: 84.96㎡ (25.7평) - 65세대</p>
                 </div>
-                <div class="overview-card">
+                <div class="overview-card" data-section="161대 주차">
                     <div class="icon">🚗</div>
                     <h3>161대 주차</h3>
                     <p>법정 주차대수 146대 대비<br>110.47% 확보</p>
                 </div>
             </div>
         </div>
+        <!-- 프로젝트 개요 모달 레이어 -->
+        <div id="overview-modal" class="modal" style="display:none;">
+          <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <span id="overview-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+            <h3 id="overview-modal-title"></h3>
+            <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+          </div>
+        </div>
+        <style>
+        .modal {
+          position: fixed;
+          left: 0; top: 0; width: 100vw; height: 100vh;
+          background: rgba(0,0,0,0.4);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 3000;
+        }
+        .modal-content {
+          background: #fff;
+          border-radius: 12px;
+          box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+          text-align: center;
+        }
+        .modal-close {
+          position: absolute;
+          right: 20px; top: 20px;
+          font-size: 2rem;
+          cursor: pointer;
+        }
+        </style>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.overview-card').forEach(function(card) {
+            card.addEventListener('click', function() {
+              var section = card.getAttribute('data-section') || card.querySelector('h3').textContent;
+              document.getElementById('overview-modal-title').textContent = section;
+              document.getElementById('overview-modal').style.display = 'flex';
+            });
+          });
+          document.getElementById('overview-modal-close').onclick = function() {
+            document.getElementById('overview-modal').style.display = 'none';
+          };
+          document.getElementById('overview-modal').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+          };
+        });
+        </script>
+
     </section>
 
     <!-- 입지 환경 -->
@@ -709,23 +814,31 @@
                 <p>울진의 미래 성장 동력과 함께하는 최적의 입지</p>
             </div>
             <div class="features-grid">
-                <div class="feature-item">
+                <div class="feature-item" data-section="원자력수소 국가산업단지">
                     <h4>🏭 원자력수소 국가산업단지</h4>
                     <p>대규모 국책사업으로 인한<br>지역 발전 및 인구 유입 효과</p>
                 </div>
-                <div class="feature-item">
+                <div class="feature-item" data-section="동해선 울진역">
                     <h4>🚄 동해선 울진역</h4>
                     <p>2024년 개통으로<br>수도권 접근성 획기적 개선</p>
                 </div>
-                <div class="feature-item">
+                <div class="feature-item" data-section="풍력발전단지">
                     <h4>⚡ 풍력발전단지</h4>
                     <p>신재생에너지 허브로<br>지속가능한 미래 도시</p>
                 </div>
-                <div class="feature-item">
+                <div class="feature-item" data-section="울진읍 중심가">
                     <h4>🏛️ 울진읍 중심가</h4>
                     <p>행정, 상업, 교육시설이<br>집중된 최적의 생활환경</p>
                 </div>
             </div>
+        </div>
+        <!-- 입지환경 모달 레이어 -->
+        <div id="features-modal" class="modal" style="display:none;">
+          <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <span id="features-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+            <h3 id="features-modal-title"></h3>
+            <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+          </div>
         </div>
     </section>
 
@@ -813,12 +926,12 @@
                 </div>
             </div>
         </div>
-        <!-- 평면도 모달 레이어 -->
+        <!-- 분양정보 평면도 모달 레이어 -->
         <div id="plan-modal" class="modal" style="display:none;">
-          <div class="modal-content">
-            <span id="plan-modal-close" class="modal-close">&times;</span>
+          <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:0;">
+            <span id="plan-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
             <h3 id="plan-modal-title"></h3>
-            <p>작업중입니다.</p>
+            <div id="plan-modal-body" style="margin-top:0;width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:370px;overflow-y:auto;"></div>
           </div>
         </div>
         <style>
@@ -865,10 +978,60 @@
         </style>
         <script>
         document.addEventListener('DOMContentLoaded', function() {
+          // 갤러리 카드 클릭 시 모달
+          document.querySelectorAll('.gallery-item').forEach(function(item) {
+            item.addEventListener('click', function() {
+              var sectionName = '갤러리';
+              document.getElementById('gallery-modal-title').textContent = sectionName;
+              document.getElementById('gallery-modal').style.display = 'flex';
+            });
+          });
+          document.getElementById('gallery-modal-close').onclick = function() {
+            document.getElementById('gallery-modal').style.display = 'none';
+          };
+          document.getElementById('gallery-modal').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+          };
+          // 입지환경(Features) 카드 클릭 - 이벤트 위임
+          document.querySelector('.features-grid').addEventListener('click', function(e) {
+            const card = e.target.closest('.feature-item');
+            if (card) {
+              var section = card.getAttribute('data-section') || card.querySelector('h4').textContent;
+              document.getElementById('features-modal-title').textContent = section;
+              document.getElementById('features-modal').style.display = 'flex';
+            }
+          });
+          document.getElementById('features-modal-close').onclick = function() {
+            document.getElementById('features-modal').style.display = 'none';
+          };
+          document.getElementById('features-modal').onclick = function(e) {
+            if (e.target === this) this.style.display = 'none';
+          };
+          // 분양정보 평면도
           document.querySelectorAll('.btn-plan-small').forEach(function(btn) {
             btn.addEventListener('click', function() {
-              var type = btn.getAttribute('data-type');
+              var type = btn.getAttribute('data-type') || btn.textContent;
               document.getElementById('plan-modal-title').textContent = type + ' 평면도';
+              var body = document.getElementById('plan-modal-body');
+              body.innerHTML = '';
+              if(type.indexOf('84A') !== -1) {
+                // 84A 타입일 때만 이미지 3장 세로로
+                for(let i=1;i<=3;i++) {
+                  var img = document.createElement('img');
+                  img.src = '/images/aerial/map_84-' + i + '.png';
+                  img.style.width = '100%';
+                  img.style.maxWidth = '100%';
+                  img.style.height = 'auto';
+                  img.style.margin = '0';
+                  img.style.display = 'block';
+                  img.alt = '84A 평면도 ' + i;
+                  body.appendChild(img);
+                }
+                // 스크롤 맨 위로 (렌더링 후)
+                setTimeout(() => { body.scrollTop = 0; }, 10);
+              } else {
+                body.innerHTML = '<p style="font-size:1.2rem;">작업중</p>';
+              }
               document.getElementById('plan-modal').style.display = 'flex';
             });
           });
@@ -890,17 +1053,17 @@
                 <p class="gallery-subtitle">조감도와 설계 이미지로 미리 보는 우리 집</p>
             </div>
             <div class="gallery-grid">
-                <div class="gallery-item">조감도 001<br>3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
-                <div class="gallery-item">조감도 003<br>단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
-                <div class="gallery-item">광역 조감도<br>울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
+                <div class="gallery-item" data-section="조감도 001">조감도 001<br>3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
+                <div class="gallery-item" data-section="조감도 003">조감도 003<br>단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
+                <div class="gallery-item" data-section="광역 조감도">광역 조감도<br>울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
             </div>
         </div>
         <!-- 갤러리 모달 레이어 -->
         <div id="gallery-modal" class="modal" style="display:none;">
-          <div class="modal-content">
-            <span id="gallery-modal-close" class="modal-close">&times;</span>
+          <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+            <span id="gallery-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
             <h3 id="gallery-modal-title"></h3>
-            <p>작업중입니다.</p>
+            <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
           </div>
         </div>
     </section>
@@ -980,6 +1143,21 @@
         document.getElementById('gallery-modal').style.display = 'none';
       };
       document.getElementById('gallery-modal').onclick = function(e) {
+        if (e.target === this) this.style.display = 'none';
+      };
+      // 입지환경(Features) 카드 클릭 - 이벤트 위임
+      document.querySelector('.features-grid').addEventListener('click', function(e) {
+        const card = e.target.closest('.feature-item');
+        if (card) {
+          var section = card.getAttribute('data-section') || card.querySelector('h4').textContent;
+          document.getElementById('features-modal-title').textContent = section;
+          document.getElementById('features-modal').style.display = 'flex';
+        }
+      });
+      document.getElementById('features-modal-close').onclick = function() {
+        document.getElementById('features-modal').style.display = 'none';
+      };
+      document.getElementById('features-modal').onclick = function(e) {
         if (e.target === this) this.style.display = 'none';
       };
     });
