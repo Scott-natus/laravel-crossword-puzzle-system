@@ -1,0 +1,245 @@
+{% extends 'main/base.html' %}
+{% load static %}
+{% block title %}울진 아파트 메인{% endblock %}
+{% block content %}
+<!-- 헤더 -->
+<header class="header">
+    <div class="nav-container">
+        <div class="logo">PROJ-U</div>
+        <nav>
+            <ul class="nav-menu">
+                <li><a href="#home">홈</a></li>
+                <li><a href="#overview">단지소개</a></li>
+                <li><a href="#features">입지환경</a></li>
+                <li><a href="#sales">분양정보</a></li>
+                <li><a href="#gallery">갤러리</a></li>
+                <li><a href="#contact">문의</a></li>
+            </ul>
+        </nav>
+        <a href="#contact" class="contact-btn">상담문의</a>
+    </div>
+</header>
+
+<!-- 히어로 섹션 -->
+<section id="home" class="hero">
+    <div class="hero-bg-slider"></div>
+    <div class="hero-content">
+        <h1>PROJ-U</h1>
+        <h2>프리미엄 아파트</h2>
+        <p>경상북도 울진군 울진읍 고성리 12-45번지 일원<br>
+        총 3개동 138세대 | 지하2층~지상20층</p>
+        <div class="cta-buttons">
+            <a href="#sales" class="cta-btn cta-primary">분양정보 보기</a>
+            <a href="#contact" class="cta-btn cta-secondary">상담 신청</a>
+        </div>
+    </div>
+    <div class="scroll-indicator">⌄</div>
+</section>
+
+<!-- 프로젝트 개요 -->
+<section id="overview" class="overview">
+    <div class="container">
+        <div class="section-title">
+            <h2>프로젝트 개요</h2>
+            <p>울진의 새로운 랜드마크가 될 프리미엄 아파트</p>
+        </div>
+        <div class="overview-grid">
+            <div class="overview-card" data-section="총 138세대">
+                <div class="icon">🏢</div>
+                <h3>총 138세대</h3>
+                <p>3개동으로 구성된 대단지<br>지하2층~지상20층 규모</p>
+            </div>
+            <div class="overview-card" data-section="84A/84B 타입">
+                <div class="icon">📐</div>
+                <h3>84A/84B 타입</h3>
+                <p>84A: 83.86㎡ (25.37평) - 73세대<br>84B: 84.96㎡ (25.7평) - 65세대</p>
+            </div>
+            <div class="overview-card" data-section="161대 주차">
+                <div class="icon">🚗</div>
+                <h3>161대 주차</h3>
+                <p>법정 주차대수 146대 대비<br>110.47% 확보</p>
+            </div>
+        </div>
+    </div>
+    <!-- 프로젝트 개요 모달 -->
+    <div id="overview-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+        <span id="overview-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 id="overview-modal-title"></h3>
+        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+      </div>
+    </div>
+</section>
+
+<!-- 입지 환경 -->
+<section id="features" class="features">
+    <div class="container">
+        <div class="section-title">
+            <h2>입지 환경</h2>
+            <p>울진의 미래 성장 동력과 함께하는 최적의 입지</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-item" data-section="원자력수소 국가산업단지">
+                <h4>🏭 원자력수소 국가산업단지</h4>
+                <p>대규모 국책사업으로 인한<br>지역 발전 및 인구 유입 효과</p>
+            </div>
+            <div class="feature-item" data-section="동해선 울진역">
+                <h4>🚄 동해선 울진역</h4>
+                <p>2024년 개통으로<br>수도권 접근성 획기적 개선</p>
+            </div>
+            <div class="feature-item" data-section="풍력발전단지">
+                <h4>⚡ 풍력발전단지</h4>
+                <p>신재생에너지 허브로<br>지속가능한 미래 도시</p>
+            </div>
+            <div class="feature-item" data-section="울진읍 중심가">
+                <h4>🏛️ 울진읍 중심가</h4>
+                <p>행정, 상업, 교육시설이<br>집중된 최적의 생활환경</p>
+            </div>
+        </div>
+    </div>
+    <!-- 입지환경 모달 -->
+    <div id="features-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+        <span id="features-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 id="features-modal-title"></h3>
+        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+      </div>
+    </div>
+</section>
+
+<!-- 분양 정보 -->
+<section id="sales" class="sales-info">
+    <div class="container">
+        <div class="section-title">
+            <h2>분양 정보</h2>
+            <p>합리적인 가격으로 만나는 프리미엄 라이프</p>
+        </div>
+        <div class="sales-grid">
+            <div class="sales-card" style="position:relative;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                  <h3 style="margin: 0; font-size: 1.5rem;">84A 타입</h3>
+                  <span style="color: #e74c3c; font-weight: bold;">| 평당 1,250만원</span>
+                </div>
+                <ul class="sales-details">
+                    <li>전용면적: 83.86㎡ (25.37평)</li>
+                    <li>세대수: 73세대</li>
+                    <li>층수: 지하2층~지상20층</li>
+                    <li>주차: 세대당 1대 이상</li>
+                </ul>
+                <button class="btn-plan-small" data-type="84A 타입">평면도</button>
+            </div>
+            <div class="sales-card" style="position:relative;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                  <h3 style="margin: 0; font-size: 1.5rem;">84B 타입</h3>
+                  <span style="color: #e74c3c; font-weight: bold;">| 평당 1,300만원</span>
+                </div>
+                <ul class="sales-details">
+                    <li>전용면적: 84.96㎡ (25.7평)</li>
+                    <li>세대수: 65세대</li>
+                    <li>층수: 지하2층~지상20층</li>
+                    <li>주차: 세대당 1대 이상</li>
+                </ul>
+                <button class="btn-plan-small" data-type="84B 타입">평면도</button>
+            </div>
+        </div>
+    </div>
+    <!-- 분양정보 평면도 모달 -->
+    <div id="plan-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:0;">
+        <span id="plan-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 id="plan-modal-title"></h3>
+        <div id="plan-modal-body" style="margin-top:0;width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:370px;overflow-y:auto;"></div>
+      </div>
+    </div>
+</section>
+
+<!-- 갤러리 -->
+<section id="gallery" class="gallery-preview">
+    <div class="container">
+        <div class="section-title gallery-title-strong">
+            <h2>갤러리</h2>
+            <p class="gallery-subtitle">조감도와 설계 이미지로 미리 보는 우리 집</p>
+        </div>
+        <div class="gallery-grid">
+            <div class="gallery-item" data-section="조감도 001">3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
+            <div class="gallery-item" data-section="조감도 003">단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
+            <div class="gallery-item" data-section="광역 조감도">울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
+        </div>
+    </div>
+    <!-- 갤러리 모달 -->
+    <div id="gallery-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
+        <span id="gallery-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 id="gallery-modal-title"></h3>
+        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+      </div>
+    </div>
+</section>
+
+<!-- 상담문의(문의) 섹션 복원 -->
+<section id="contact" class="contact">
+    <div class="container">
+        <div class="section-title contact-title-strong">
+            <h2>상담 및 문의</h2>
+            <p class="contact-subtitle">전문 상담원이 친절하게 안내해드립니다</p>
+        </div>
+        <div class="contact-info">
+            <div class="contact-item">
+                <div class="icon">📞</div>
+                <h4>전화 상담</h4>
+                <p>1588-0000<br>평일 09:00~18:00</p>
+            </div>
+            <div class="contact-item">
+                <div class="icon">🏢</div>
+                <h4>현장 방문</h4>
+                <p>경상북도 울진군 울진읍<br>고성리 12-45번지 일원</p>
+            </div>
+            <div class="contact-item">
+                <div class="icon">💬</div>
+                <h4>온라인 상담</h4>
+                <p>홈페이지 문의하기<br>24시간 접수 가능</p>
+            </div>
+        </div>
+    </div>
+    <!-- 상담하기 모달 -->
+    <div id="consult-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;max-width:95vw;">
+        <span id="consult-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 style="margin-bottom:18px;">온라인 상담하기</h3>
+        <form id="consult-form">
+          <input type="text" name="name" placeholder="이름" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="email" name="email" placeholder="이메일 주소" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="text" name="phone" placeholder="핸드폰번호" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="text" name="title" placeholder="제목" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <textarea name="content" placeholder="내용" required style="width:100%;height:80px;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;resize:vertical;"></textarea>
+          <label style="display:block;margin-bottom:10px;">
+            <input type="checkbox" name="agree_privacy" required checked> 개인정보 활용에 동의합니다.
+          </label>
+          <div class="radio-group" style="margin-bottom:10px;">
+            <span style="margin-right:12px; font-size:0.98rem; color:#333;">답변받기 선택</span>
+            <label style="margin-right:20px;"><input type="radio" name="reply_type" value="email" checked> 메일</label>
+            <label><input type="radio" name="reply_type" value="sms"> 문자</label>
+          </div>
+          <button type="submit" style="width:100%;padding:10px 0;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">상담 신청</button>
+        </form>
+        <div id="consult-success" style="display:none;margin-top:20px;color:green;text-align:center;">상담 신청이 접수되었습니다!</div>
+        <div id="consult-error" style="display:none;margin-top:20px;color:#e74c3c;text-align:center;"></div>
+      </div>
+    </div>
+    <!-- 상담신청 접수 완료 안내 모달 -->
+    <div id="consult-complete-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:350px;max-width:95vw;text-align:center;">
+        <h3 style="margin-bottom:18px;">상담신청 접수가 완료되었습니다.</h3>
+        <div style="margin-bottom:18px;">빠른 시간안에 답변을 드리겠습니다.<br>감사합니다.</div>
+        <button id="consult-complete-close" style="padding:8px 30px;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">닫기</button>
+      </div>
+    </div>
+</section>
+
+<!-- 푸터 -->
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2023 PROJ-U. All rights reserved.</p>
+    </div>
+</footer>
+{% endblock %} 

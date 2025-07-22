@@ -1,0 +1,17 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}울진 아파트{% endblock %}</title>
+    <link rel="icon" href="{% static 'main/favicon.ico' %}">
+    <link rel="stylesheet" href="{% static 'main/css/custom.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    <script src="{% static 'main/js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 

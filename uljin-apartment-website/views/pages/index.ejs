@@ -353,7 +353,7 @@
             margin: 0 auto;
             background: #f8f9fa;
             border-radius: 15px;
-            padding: 60px 40px;
+            padding: 5px 40px 40px 40px;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
@@ -415,14 +415,37 @@
 
         .facility {
             background: #e8f4fd;
-            padding: 20px;
+            padding: 14px; /* 기존 20px에서 30% 감소 */
             border-radius: 10px;
-            text-align: center;
+            text-align: left;
+            min-height: 70px !important;
+            height: 70px !important;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .facility-inner {
+            display: flex;
+            align-items: center;
+            height: 100%;
         }
 
         .facility-icon {
             font-size: 2rem;
-            margin-bottom: 10px;
+            margin-right: 12px;
+            min-width: 32px;
+            text-align: center;
+        }
+
+        .facility h4 {
+            margin-bottom: 4px;
+            margin-top: 0;
+        }
+
+        .facility p {
+            font-size: 0.95rem;
+            margin: 0;
         }
 
         /* 갤러리 */
@@ -850,42 +873,56 @@
                 <p>3개동으로 구성된 효율적인 단지 배치</p>
             </div>
             <div class="plan-container">
-                <div class="buildings">
-                    <div class="building building-101">
-                        <h4>101동</h4>
-                        <p>지하2층<br>~지상20층</p>
-                    </div>
-                    <div class="building building-102">
-                        <h4>102동</h4>
-                        <p>지하2층<br>~지상20층</p>
-                    </div>
-                    <div class="building building-103">
-                        <h4>103동</h4>
-                        <p>지하2층<br>~지상20층</p>
-                    </div>
-                </div>
+                <!-- 아파트 3개동(101동, 102동, 103동) 삭제 -->
                 <div class="facilities">
+                    <div class="facility facility-image-view" style="cursor:pointer; background:#d1eaff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">이미지 보기</div>
                     <div class="facility">
-                        <div class="facility-icon">🎮</div>
-                        <h4>놀이터</h4>
-                        <p>어린이 놀이시설</p>
+                        <div class="facility-inner" style="display:flex;align-items:center;">
+                          <div class="facility-icon" style="margin-right:12px;">🎮</div>
+                          <div>
+                            <h4>놀이터</h4>
+                            <p>어린이 놀이시설</p>
+                          </div>
+                        </div>
                     </div>
                     <div class="facility">
-                        <div class="facility-icon">🚗</div>
-                        <h4>주차장</h4>
-                        <p>161대 (110.47%)</p>
+                        <div class="facility-inner" style="display:flex;align-items:center;">
+                          <div class="facility-icon" style="margin-right:12px;">🚗</div>
+                          <div>
+                            <h4>주차장</h4>
+                            <p>161대 (110.47%)</p>
+                          </div>
+                        </div>
                     </div>
                     <div class="facility">
-                        <div class="facility-icon">🌳</div>
-                        <h4>조경</h4>
-                        <p>단지 내 녹지공간</p>
+                        <div class="facility-inner" style="display:flex;align-items:center;">
+                          <div class="facility-icon" style="margin-right:12px;">🌳</div>
+                          <div>
+                            <h4>조경</h4>
+                            <p>단지 내 녹지공간</p>
+                          </div>
+                        </div>
                     </div>
                     <div class="facility">
-                        <div class="facility-icon">🏪</div>
-                        <h4>상가</h4>
-                        <p>근린생활시설</p>
+                        <div class="facility-inner" style="display:flex;align-items:center;">
+                          <div class="facility-icon" style="margin-right:12px;">🏪</div>
+                          <div>
+                            <h4>상가</h4>
+                            <p>근린생활시설</p>
+                          </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+            <!-- 이미지 보기 모달 -->
+            <div id="facility-image-modal" class="modal" style="display:none;">
+              <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:0;">
+                <span id="facility-image-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+                <h3 style="margin-bottom:18px;">단지 배치도 이미지</h3>
+                <div id="facility-image-modal-body" style="width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:340px;overflow-y:auto;">
+                  <p style="font-size:1.2rem; color:#888; text-align:center; margin-top:120px;">작업중</p>
+                </div>
+              </div>
             </div>
         </div>
     </section>
@@ -1053,9 +1090,9 @@
                 <p class="gallery-subtitle">조감도와 설계 이미지로 미리 보는 우리 집</p>
             </div>
             <div class="gallery-grid">
-                <div class="gallery-item" data-section="조감도 001">조감도 001<br>3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
-                <div class="gallery-item" data-section="조감도 003">조감도 003<br>단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
-                <div class="gallery-item" data-section="광역 조감도">광역 조감도<br>울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
+                <div class="gallery-item" data-section="조감도 001">3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
+                <div class="gallery-item" data-section="조감도 003">단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
+                <div class="gallery-item" data-section="광역 조감도">울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
             </div>
         </div>
         <!-- 갤러리 모달 레이어 -->
@@ -1095,6 +1132,40 @@
         </div>
     </section>
 
+    <!-- 상담하기 모달 -->
+    <div id="consult-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:400px;max-width:95vw;">
+        <span id="consult-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+        <h3 style="margin-bottom:18px;">온라인 상담하기</h3>
+        <form id="consult-form">
+          <input type="text" name="name" placeholder="이름" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="email" name="email" placeholder="이메일 주소" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="text" name="phone" placeholder="핸드폰번호" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <input type="text" name="title" placeholder="제목" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
+          <textarea name="content" placeholder="내용" required style="width:100%;height:80px;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;resize:vertical;"></textarea>
+          <label style="display:block;margin-bottom:10px;">
+            <input type="checkbox" name="agree_privacy" required checked> 개인정보 활용에 동의합니다.
+          </label>
+          <div style="margin-bottom:10px;">
+            <label><input type="radio" name="reply_type" value="email" checked> 메일로 답변받기</label>
+            <label style="margin-left:20px;"><input type="radio" name="reply_type" value="sms"> 문자로 답변받기</label>
+          </div>
+          <button type="submit" style="width:100%;padding:10px 0;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">상담 신청</button>
+        </form>
+        <div id="consult-success" style="display:none;margin-top:20px;color:green;text-align:center;">상담 신청이 접수되었습니다!</div>
+        <div id="consult-error" style="display:none;margin-top:20px;color:#e74c3c;text-align:center;"></div>
+      </div>
+    </div>
+
+    <!-- 상담신청 접수 완료 안내 모달 -->
+    <div id="consult-complete-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:350px;max-width:95vw;text-align:center;">
+        <h3 style="margin-bottom:18px;">상담신청 접수가 완료되었습니다.</h3>
+        <div style="margin-bottom:18px;">빠른 시간안에 답변을 드리겠습니다.<br>감사합니다.</div>
+        <button id="consult-complete-close" style="padding:8px 30px;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">닫기</button>
+      </div>
+    </div>
+
     <style>
     /* 갤러리/상담/분양 타이틀 강조 */
     .gallery-title-strong h2 {
@@ -1130,35 +1201,159 @@
     }
     </style>
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // 갤러리 카드 클릭 시 모달
-      document.querySelectorAll('.gallery-item').forEach(function(item) {
-        item.addEventListener('click', function() {
-          var sectionName = '갤러리';
-          document.getElementById('gallery-modal-title').textContent = sectionName;
-          document.getElementById('gallery-modal').style.display = 'flex';
+    // 공통 모달 함수
+    function openModal(modalId) {
+      var modal = document.getElementById(modalId);
+      if (modal) modal.style.display = 'flex';
+    }
+    function closeModal(modalId) {
+      var modal = document.getElementById(modalId);
+      if (modal) modal.style.display = 'none';
+    }
+    function bindModalTrigger(triggerSelector, modalId, beforeOpen) {
+      document.querySelectorAll(triggerSelector).forEach(function(trigger) {
+        trigger.addEventListener('click', function(e) {
+          if (beforeOpen) beforeOpen(trigger, modalId, e);
+          openModal(modalId);
         });
       });
-      document.getElementById('gallery-modal-close').onclick = function() {
-        document.getElementById('gallery-modal').style.display = 'none';
-      };
-      document.getElementById('gallery-modal').onclick = function(e) {
-        if (e.target === this) this.style.display = 'none';
-      };
-      // 입지환경(Features) 카드 클릭 - 이벤트 위임
-      document.querySelector('.features-grid').addEventListener('click', function(e) {
-        const card = e.target.closest('.feature-item');
-        if (card) {
-          var section = card.getAttribute('data-section') || card.querySelector('h4').textContent;
-          document.getElementById('features-modal-title').textContent = section;
-          document.getElementById('features-modal').style.display = 'flex';
+      // 닫기 버튼
+      var closeBtn = document.querySelector('#' + modalId + ' .modal-close');
+      if (closeBtn) {
+        closeBtn.onclick = function() { closeModal(modalId); };
+      }
+      // 바깥 클릭
+      var modal = document.getElementById(modalId);
+      if (modal) {
+        modal.onclick = function(e) {
+          if (e.target === modal) closeModal(modalId);
+        };
+      }
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+      // 프로젝트 개요
+      bindModalTrigger('.overview-card', 'overview-modal', function(trigger) {
+        var section = trigger.getAttribute('data-section') || trigger.querySelector('h3').textContent;
+        document.getElementById('overview-modal-title').textContent = section;
+      });
+      // 입지환경
+      bindModalTrigger('.feature-item', 'features-modal', function(trigger) {
+        var section = trigger.getAttribute('data-section') || trigger.querySelector('h4').textContent;
+        document.getElementById('features-modal-title').textContent = section;
+      });
+      // 단지배치도 이미지 보기
+      bindModalTrigger('.facility-image-view', 'facility-image-modal');
+      // 분양정보 평면도
+      bindModalTrigger('.btn-plan-small', 'plan-modal', function(trigger) {
+        var type = trigger.getAttribute('data-type') || trigger.textContent;
+        document.getElementById('plan-modal-title').textContent = type + ' 평면도';
+        var body = document.getElementById('plan-modal-body');
+        body.innerHTML = '';
+        if(type.indexOf('84A') !== -1) {
+          for(let i=1;i<=3;i++) {
+            var img = document.createElement('img');
+            img.src = '/images/aerial/map_84-' + i + '.png';
+            img.style.width = '100%';
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.margin = '0';
+            img.style.display = 'block';
+            img.alt = '84A 평면도 ' + i;
+            body.appendChild(img);
+          }
+          setTimeout(() => { body.scrollTop = 0; }, 10);
+        } else {
+          body.innerHTML = '<p style="font-size:1.2rem;">작업중</p>';
         }
       });
-      document.getElementById('features-modal-close').onclick = function() {
-        document.getElementById('features-modal').style.display = 'none';
+      // 갤러리
+      bindModalTrigger('.gallery-item', 'gallery-modal', function(trigger) {
+        var sectionName = trigger.getAttribute('data-section') || '갤러리';
+        document.getElementById('gallery-modal-title').textContent = sectionName;
+      });
+      // 온라인 상담 모달
+      bindModalTrigger('.contact-item .icon', 'consult-modal', function(trigger) {
+        openModal('consult-modal');
+      });
+      document.getElementById('consult-modal-close').onclick = function() {
+        closeModal('consult-modal');
       };
-      document.getElementById('features-modal').onclick = function(e) {
-        if (e.target === this) this.style.display = 'none';
+      document.getElementById('consult-modal').onclick = function(e) {
+        if (e.target === this) closeModal('consult-modal');
+      };
+      document.getElementById('consult-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const agree = this.querySelector('input[name="agree_privacy"]').checked;
+        const name = this.querySelector('input[name="name"]').value.trim();
+        const email = this.querySelector('input[name="email"]').value.trim();
+        const phone = this.querySelector('input[name="phone"]').value.trim();
+        const title = this.querySelector('input[name="title"]').value.trim();
+        const content = this.querySelector('textarea[name="content"]').value.trim();
+        const reply_type = this.querySelector('input[name="reply_type"]:checked')?.value;
+        const errorDiv = document.getElementById('consult-error');
+        errorDiv.style.display = 'none';
+        errorDiv.textContent = '';
+        document.getElementById('consult-success').style.display = 'none';
+        // 필수값 체크
+        if (!name || !email || !phone || !title || !content) {
+          errorDiv.textContent = '모든 항목을 입력해 주세요.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        // 이메일 유효성
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+          errorDiv.textContent = '이메일 주소가 올바르지 않습니다.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        // 핸드폰번호 10자리 이상, 숫자만
+        const phoneDigits = phone.replace(/\D/g, '');
+        if (phoneDigits.length < 10) {
+          errorDiv.textContent = '핸드폰번호는 숫자 10자리 이상 입력해 주세요.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        if (!agree) {
+          errorDiv.textContent = '개인정보 활용동의가 있어야 접수 가능합니다.';
+          errorDiv.style.display = 'block';
+          return;
+        }
+        // 실제 전송 (fetch)
+        try {
+          const res = await fetch('/api/consult', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name, email, phone, title, content,
+              agree_privacy: agree,
+              reply_type
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            closeModal('consult-modal');
+            this.reset();
+            // 개인정보동의, 답변방식 기본값 복구
+            this.querySelector('input[name="agree_privacy"]').checked = true;
+            this.querySelector('input[name="reply_type"][value="email"]').checked = true;
+            setTimeout(() => { openModal('consult-complete-modal'); }, 200);
+          } else {
+            errorDiv.textContent = data.error || '저장 중 오류가 발생했습니다.';
+            errorDiv.style.display = 'block';
+          }
+        } catch (err) {
+          errorDiv.textContent = '서버와 통신 중 오류가 발생했습니다.';
+          errorDiv.style.display = 'block';
+        }
+      });
+      // 접수완료 안내 모달 닫기
+      document.getElementById('consult-complete-close').onclick = function() {
+        closeModal('consult-complete-modal');
+      };
+      document.getElementById('consult-complete-modal').onclick = function(e) {
+        if (e.target === this) closeModal('consult-complete-modal');
       };
     });
     </script>
