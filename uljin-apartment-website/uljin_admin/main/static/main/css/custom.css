@@ -576,7 +576,7 @@ body {
 }
 
 .fade-in {
-    animation: fadeInUp 0.8s ease-out;
+    animation: fadeInUp 0.8s ease-out; */
 }
 
 /* 반응형 */
@@ -854,4 +854,17 @@ body {
 #consult-modal textarea::placeholder {
   color: #888 !important;
   opacity: 1 !important;
+} 
+#gallery-card-modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99999;
+  opacity: 1;
+  visibility: visible;
+  background: rgba(0,0,0,0.5);
+  align-items: center;
+  justify-content: center;
 } 

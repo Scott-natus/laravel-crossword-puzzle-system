@@ -565,3 +565,4 @@ cat storage/logs/laravel.log | grep "cleanup"
 2. **가로/세로 모드**: 화면 회전 시 레이아웃 확인
 3. **터치 반응성**: 퍼즐 셀 클릭 및 버튼 터치 확인
 4. **가독성**: 작은 화면에서 텍스트 가독성 확인
+\n2025-07-22 index.ejs 기반 상담모달/갤러리/분양정보/모든 UI/스타일 1:1 복원 및 반응형 개선\n- 상담하기(consult-modal, consult-complete-modal) 모달 구조/스타일/동작 100% 복원 (HTML, CSS, JS)\n- 갤러리 카드형 구조 및 오버레이, 모달 1:1 복원\n- 분양정보 평면도 버튼, 모달, 스타일 1:1 복원\n- 모든 input/label/안내문구/버튼/라디오/체크박스 등 폼 요소 스타일 index.ejs와 동일하게 적용\n- 모바일/반응형(600px 이하)에서 모달/폼/버튼/텍스트/스크롤 완벽 복원\n- main.js: 모든 모달/트리거/공통 함수/상담 fetch 등 index.ejs와 동일하게 동작\n- custom.css: index.ejs의 <style> 및 반응형, 폼, 모달, 버튼, 안내문구 등 1:1 복사\n- index.html: consult-modal, gallery, sales-info 등 모든 구조/클래스/텍스트 1:1 복원\n- git 커밋 및 원격 저장소 푸시 완료\n

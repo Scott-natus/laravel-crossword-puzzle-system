@@ -1,0 +1,34 @@
+{% extends 'main/base.html' %}
+{% block title %}상담문의 상세{% endblock %}
+{% block content %}
+<div style="display:flex;min-height:90vh;">
+  {% include 'manage/_sidebar.html' %}
+  <main style="flex:1;padding:40px 60px;max-width:900px;">
+    <h2 style="font-size:2rem;font-weight:700;margin-bottom:18px;">상담문의 상세</h2>
+    <div style="background:#f5f6fa;padding:32px 36px;border-radius:12px;max-width:600px;">
+      <div><b>이름:</b> {{ consult.name }}</div>
+      <div><b>이메일:</b> {{ consult.email }}</div>
+      <div><b>전화:</b> {{ consult.phone }}</div>
+      <div><b>제목:</b> {{ consult.title }}</div>
+      <div><b>내용:</b> <pre style="white-space:pre-wrap;">{{ consult.content }}</pre></div>
+      <div><b>답변받기:</b> {{ consult.get_reply_type_display }}</div>
+      <div><b>접수일:</b> {{ consult.created_at|date:'Y-m-d H:i' }}</div>
+      <div><b>답변여부:</b> {% if consult.is_replied %}완료{% else %}대기{% endif %}</div>
+      {% if consult.is_replied %}
+        <div style="margin-top:18px;"><b>답변 내용:</b><br>
+          <pre style="white-space:pre-wrap;">{{ consult.reply_content }}</pre>
+        </div>
+      {% endif %}
+      <form method="post" style="margin-top:24px;">
+        {% csrf_token %}
+        {% if not consult.is_replied %}
+          <textarea name="reply_content" placeholder="답변 내용을 입력하세요" style="width:100%;height:80px;margin-bottom:12px;"></textarea>
+          <button type="submit" name="reply" style="padding:8px 24px;background:#3498db;color:#fff;border:none;border-radius:6px;">답변 저장</button>
+        {% endif %}
+        <button type="submit" name="delete" style="padding:8px 24px;background:#e74c3c;color:#fff;border:none;border-radius:6px;margin-left:12px;" onclick="return confirm('정말 삭제하시겠습니까?');">삭제</button>
+        <a href="{% url 'manage_consult' %}" style="padding:8px 24px;background:#888;color:#fff;border:none;border-radius:6px;margin-left:12px;text-decoration:none;">목록</a>
+      </form>
+    </div>
+  </main>
+</div>
+{% endblock %} 

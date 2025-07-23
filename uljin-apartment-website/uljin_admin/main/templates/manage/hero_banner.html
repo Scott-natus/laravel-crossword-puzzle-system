@@ -1,0 +1,55 @@
+{% extends 'main/base.html' %}
+{% block title %}히어로 배너 관리{% endblock %}
+{% block content %}
+<div style="display:flex;min-height:90vh;">
+  {% include 'manage/_sidebar.html' %}
+  <!-- 메인 컨텐츠 -->
+  <main style="flex:1;padding:40px 60px;max-width:900px;">
+    <h2 style="font-size:2rem;font-weight:700;margin-bottom:18px;">히어로 배너 관리</h2>
+    {% if messages %}
+      <ul style="color:green;">
+        {% for message in messages %}<li>{{ message }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+    <form method="post" style="background:#f5f6fa;padding:32px 36px;border-radius:12px;max-width:600px;" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div style="display:grid;grid-template-columns:120px 1fr;gap:12px 18px;align-items:center;">
+        {{ form.title.label_tag }} {{ form.title }}
+        {{ form.subtitle.label_tag }} {{ form.subtitle }}
+        {{ form.description.label_tag }} {{ form.description }}
+        {{ form.primary_button_text.label_tag }} {{ form.primary_button_text }}
+        {{ form.primary_button_link.label_tag }} {{ form.primary_button_link }}
+        {{ form.secondary_button_text.label_tag }} {{ form.secondary_button_text }}
+        {{ form.secondary_button_link.label_tag }} {{ form.secondary_button_link }}
+      </div>
+      <button type="submit" name="save_banner" style="margin-top:24px;padding:10px 30px;background:#232946;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">저장</button>
+    </form>
+    <div style="margin-top:40px;">
+      <h3 style="font-size:1.2rem;font-weight:600;margin-bottom:12px;">롤링 이미지 관리</h3>
+      <form method="post" enctype="multipart/form-data" style="margin-bottom:18px;display:flex;gap:12px;align-items:center;">
+        {% csrf_token %}
+        <input type="file" name="images" multiple required style="padding:6px 0;">
+        <button type="submit" name="upload_image" style="padding:7px 18px;background:#3498db;color:#fff;border:none;border-radius:6px;">이미지 업로드</button>
+      </form>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;">
+        {% for img in images %}
+          <form method="post" style="border:1px solid #ddd;border-radius:8px;padding:8px 8px 4px 8px;background:#fff;display:inline-block;min-width:130px;max-width:130px;">
+            {% csrf_token %}
+            <img src="{{ img.image.url }}" style="width:120px;height:80px;object-fit:cover;border-radius:6px;" alt="">
+            <div style="font-size:0.95rem;color:#555;text-align:center;">순서: {{ img.order }}</div>
+            <div style="display:flex;gap:4px;justify-content:center;margin-top:4px;">
+              <button type="submit" name="move_image" value="{{ img.id }}" name="direction" value="up" style="padding:2px 8px;">▲</button>
+              <button type="submit" name="move_image" value="{{ img.id }}" name="direction" value="down" style="padding:2px 8px;">▼</button>
+              <button type="submit" name="delete_image" value="{{ img.id }}" style="padding:2px 8px;color:#e74c3c;">삭제</button>
+            </div>
+            <input type="hidden" name="direction" value="up">
+          </form>
+        {% empty %}
+          <div style="color:#888;">등록된 이미지가 없습니다.</div>
+        {% endfor %}
+      </div>
+      <div style="margin-top:12px;color:#888;">※ 이미지는 여러 장 업로드 가능, 순서변경/삭제 가능</div>
+    </div>
+  </main>
+</div>
+{% endblock %} 

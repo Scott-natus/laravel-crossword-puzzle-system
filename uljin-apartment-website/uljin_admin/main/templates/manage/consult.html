@@ -1,0 +1,54 @@
+{% extends 'main/base.html' %}
+{% block title %}온라인 상담 관리{% endblock %}
+{% block content %}
+<div style="display:flex;min-height:90vh;">
+  <!-- 좌측 메뉴 (hero_banner.html과 동일) -->
+  <nav style="width:260px;background:#232946;color:#fff;padding:30px 0 0 0;display:flex;flex-direction:column;gap:8px;">
+    <div style="font-size:1.3rem;font-weight:bold;padding:0 24px 24px 24px;">관리자 메뉴</div>
+    <a href="/manage/" style="color:#fff;padding:12px 24px;display:block;text-decoration:none;">대시보드(웰컴)</a>
+    <div style="padding:8px 24px 0 24px;font-size:1.08rem;font-weight:600;">페이지 관리</div>
+    <a href="/manage/hero-banner/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">히어로 배너</a>
+    <a href="/manage/project-overview/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">프로젝트 개요</a>
+    <a href="/manage/location-environment/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">입지환경</a>
+    <a href="/manage/site-plan/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">단지배치도</a>
+    <a href="/manage/sales-info/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">분양정보</a>
+    <a href="/manage/gallery/" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">갤러리</a>
+    <a href="/manage/consult/" style="color:#fff;background:#1a1a2e;padding:8px 36px;display:block;text-decoration:none;font-weight:bold;">온라인 상담</a>
+    <div style="padding:8px 24px 0 24px;font-size:1.08rem;font-weight:600;">설문조사 관리</div>
+    <a href="#" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">설문조사 목록</a>
+    <a href="#" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">설문조사 작성</a>
+    <div style="padding:8px 24px 0 24px;font-size:1.08rem;font-weight:600;">팝업 관리</div>
+    <a href="#" style="color:#fff;padding:8px 36px;display:block;text-decoration:none;">팝업 관리</a>
+  </nav>
+  <!-- 메인 컨텐츠 -->
+  <main style="flex:1;padding:40px 60px;max-width:900px;">
+    <h2 style="font-size:2rem;font-weight:700;margin-bottom:18px;">온라인 상담 문의 내역</h2>
+    <table style="width:100%;border-collapse:collapse;background:#f5f6fa;padding:24px 0;border-radius:12px;overflow:hidden;">
+      <thead>
+        <tr style="background:#e6e6f7;">
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">이름</th>
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">이메일</th>
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">전화</th>
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">제목</th>
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">접수일</th>
+          <th style="padding:10px 8px;border-bottom:1px solid #ddd;">답변여부</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in consults %}
+        <tr onclick="location.href='{% url 'manage_consult_detail' c.id %}'" style="cursor:pointer;">
+          <td style="padding:8px 6px;">{{ c.name }}</td>
+          <td style="padding:8px 6px;">{{ c.email }}</td>
+          <td style="padding:8px 6px;">{{ c.phone }}</td>
+          <td style="padding:8px 6px;">{{ c.title }}</td>
+          <td style="padding:8px 6px;">{{ c.created_at|date:'Y-m-d H:i' }}</td>
+          <td style="padding:8px 6px;">{% if c.is_replied %}완료{% else %}대기{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="padding:16px;text-align:center;">상담 내역이 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </main>
+</div>
+{% endblock %} 

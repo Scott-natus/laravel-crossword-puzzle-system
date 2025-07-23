@@ -15,17 +15,17 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         
         // 10분마다 힌트가 없는 단어 50개씩 자동 생성
-        $schedule->command('puzzle:generate-hints-scheduler --limit=50')
-                ->everyTenMinutes()
-                ->withoutOverlapping()
-                ->runInBackground()
-                ->appendOutputTo(storage_path('logs/hint-scheduler.log'));
+        // $schedule->command('puzzle:generate-hints-scheduler --limit=50')
+        //         ->everyTenMinutes()
+        //         ->withoutOverlapping()
+        //         ->runInBackground()
+        //         ->appendOutputTo(storage_path('logs/hint-scheduler.log'));
         
         // 매시간 5,15,25,35,45,55분마다 새로운 단어 20개씩 자동 생성 (힌트는 기존 스케줄러가 자동 생성)
-        $schedule->command('puzzle:generate-words-scheduler --limit=20')
-                ->cron('5,15,25,35,45,55 * * * *')
-                ->runInBackground()
-                ->appendOutputTo(storage_path('logs/word-scheduler.log'));
+        // $schedule->command('puzzle:generate-words-scheduler --limit=20')
+        //         ->cron('5,15,25,35,45,55 * * * *')
+        //         ->runInBackground()
+        //         ->appendOutputTo(storage_path('logs/word-scheduler.log'));
         
         // 5분마다 임시테이블의 단어들로 힌트 생성 (100개씩) - 일시 중지
         // $schedule->command('puzzle:generate-hints-from-temp-words --limit=100')
@@ -82,7 +82,7 @@ class Kernel extends ConsoleKernel
         })->name('log-rotation')->dailyAt('02:00')->withoutOverlapping();
         
         // 기존 퍼즐 힌트 생성 스케줄러
-        $schedule->command('puzzle:generate-hints-scheduler')->everyMinute()->withoutOverlapping();
+        // $schedule->command('puzzle:generate-hints-scheduler')->everyMinute()->withoutOverlapping();
         
         // 매일 새벽 1시에 퍼즐 단어 정리 및 비활성화
         $schedule->command('puzzle:cleanup-words')

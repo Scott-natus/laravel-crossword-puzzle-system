@@ -1,0 +1,111 @@
+{% extends 'main/base.html' %}
+{% load custom_filters %}
+{% block title %}입지환경 관리{% endblock %}
+{% block content %}
+<div style="display:flex;min-height:90vh;">
+  {% include 'manage/_sidebar.html' %}
+  <main style="flex:1;padding:40px 60px;max-width:1200px;">
+    <h2 style="font-size:2rem;font-weight:700;margin-bottom:18px;">입지환경 관리</h2>
+    <!-- 섹션(제목/서브제목) 폼 -->
+    <div style="background:#f8f9fa;padding:24px;border-radius:8px;margin-bottom:32px;">
+      <h3 style="font-size:1.3rem;font-weight:600;margin-bottom:16px;">섹션 기본 정보</h3>
+      <form method="post">
+        {% csrf_token %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div>
+            <label style="display:block;margin-bottom:4px;font-weight:500;">메인 타이틀</label>
+            {{ form.title }}
+          </div>
+          <div>
+            <label style="display:block;margin-bottom:4px;font-weight:500;">서브 타이틀</label>
+            {{ form.subtitle }}
+          </div>
+        </div>
+        <button type="submit" name="save_section" style="background:#007bff;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">저장</button>
+      </form>
+    </div>
+    <!-- 카드 폼셋 -->
+    <div style="background:#f8f9fa;padding:24px;border-radius:8px;margin-bottom:32px;">
+      <h3 style="font-size:1.3rem;font-weight:600;margin-bottom:16px;">카드 관리</h3>
+      <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+          {% for form in formset %}
+            <div style="background:#fff;padding:16px;border-radius:4px;border:1px solid #dee2e6;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <h4 style="margin:0;font-size:1.1rem;">카드 {{ forloop.counter }}</h4>
+                <label style="display:flex;align-items:center;gap:4px;">{{ form.DELETE }} 삭제</label>
+              </div>
+              <div style="display:grid;gap:8px;">
+                <div>
+                  <label style="display:block;margin-bottom:4px;font-size:0.9rem;">아이콘</label>
+                  {{ form.icon }}
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:4px;font-size:0.9rem;">제목</label>
+                  {{ form.title }}
+                </div>
+                <div>
+                  <label style="display:block;margin-bottom:4px;font-size:0.9rem;">서브 제목</label>
+                  {{ form.subtitle }}
+                </div>
+              </div>
+              {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+        <button type="submit" name="save_cards" style="background:#007bff;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;margin-top:16px;">카드 저장</button>
+      </form>
+    </div>
+    <!-- 카드별 이미지 관리 -->
+    {% for card in cards %}
+    <div style="background:#f8f9fa;padding:24px;border-radius:8px;margin-bottom:32px;">
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:16px;">{{ card.title }} ({{ card.subtitle }}) - 이미지 관리</h3>
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="card_id" value="{{ card.id }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+          {% for image in card_images|get_item:card.id %}
+          <div style="background:#f8f9fa;padding:12px;border-radius:4px;border:1px solid #e9ecef;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span style="font-size:0.9rem;font-weight:500;">이미지 {{ forloop.counter }}</span>
+              <label style="display:flex;align-items:center;gap:4px;font-size:0.8rem;"><input type="checkbox" name="delete_image_{{ image.id }}"> 삭제</label>
+            </div>
+            {% if image.image %}
+            <img src="{{ image.image.url }}" alt="{{ image.title }}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:8px;">
+            {% endif %}
+            <div style="font-size:0.8rem;color:#666;">
+              <div><strong>제목:</strong> {{ image.title }}</div>
+              <div><strong>설명:</strong> {{ image.description|truncatechars:30 }}</div>
+            </div>
+          </div>
+          {% empty %}
+          <div style="color:#666;font-style:italic;">등록된 이미지가 없습니다.</div>
+          {% endfor %}
+        </div>
+        <!-- 새 이미지 추가 -->
+        <div style="background:#e3f2fd;padding:16px;border-radius:4px;margin-bottom:16px;">
+          <h5 style="font-size:1rem;font-weight:600;margin-bottom:12px;color:#1976d2;">새 이미지 추가</h5>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div>
+              <label style="display:block;margin-bottom:4px;font-size:0.9rem;font-weight:500;">이미지 파일</label>
+              <input type="file" name="new_image" accept="image/*" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+            </div>
+            <div>
+              <label style="display:block;margin-bottom:4px;font-size:0.9rem;font-weight:500;">이미지 제목</label>
+              <input type="text" name="new_image_title" placeholder="이미지 제목" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;">
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label style="display:block;margin-bottom:4px;font-size:0.9rem;font-weight:500;">설명</label>
+            <textarea name="new_image_description" placeholder="이미지 설명" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;height:60px;resize:vertical;"></textarea>
+          </div>
+        </div>
+        <button type="submit" name="save_images" style="background:#007bff;color:#fff;border:none;padding:8px 16px;border-radius:4px;cursor:pointer;">이미지 저장</button>
+      </form>
+    </div>
+    {% endfor %}
+  </main>
+</div>
+{% endblock %} 

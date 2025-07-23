@@ -1,6 +1,7 @@
 {% extends 'main/base.html' %}
 {% load static %}
-{% block title %}울진 아파트 메인{% endblock %}
+{% load custom_filters %}
+{% block title %}울진 아파트{% endblock %}
 {% block content %}
 <!-- 헤더 -->
 <header class="header">
@@ -24,26 +25,39 @@
 <section id="home" class="hero">
     <div class="hero-bg-slider"></div>
     <div class="hero-content">
-        <h1>PROJ-U</h1>
-        <h2>프리미엄 아파트</h2>
-        <p>경상북도 울진군 울진읍 고성리 12-45번지 일원<br>
-        총 3개동 138세대 | 지하2층~지상20층</p>
+        <h1>{{ hero_banner.title }}</h1>
+        <h2>{{ hero_banner.subtitle }}</h2>
+        <p>{{ hero_banner.description|linebreaksbr }}</p>
         <div class="cta-buttons">
-            <a href="#sales" class="cta-btn cta-primary">분양정보 보기</a>
-            <a href="#contact" class="cta-btn cta-secondary">상담 신청</a>
+            <a href="{{ hero_banner.primary_button_link }}" class="cta-btn cta-primary">{{ hero_banner.primary_button_text }}</a>
+            <a href="{{ hero_banner.secondary_button_link }}" class="cta-btn cta-secondary">{{ hero_banner.secondary_button_text }}</a>
         </div>
     </div>
     <div class="scroll-indicator">⌄</div>
 </section>
+<script>
+  window.heroImages = [
+    {% for img in hero_images %}
+      "{{ img.image.url }}"{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+</script>
 
 <!-- 프로젝트 개요 -->
 <section id="overview" class="overview">
     <div class="container">
         <div class="section-title">
-            <h2>프로젝트 개요</h2>
-            <p>울진의 새로운 랜드마크가 될 프리미엄 아파트</p>
+            <h2>{{ overview_section.title|default:"프로젝트 개요" }}</h2>
+            <p>{{ overview_section.subtitle|default:"울진의 새로운 랜드마크가 될 프리미엄 아파트" }}</p>
         </div>
         <div class="overview-grid">
+            {% for card in overview_cards %}
+            <div class="overview-card" data-section="{{ card.title }}">
+                <div class="icon">{{ card.icon|default:"🏢" }}</div>
+                <h3>{{ card.title }}</h3>
+                <p>{{ card.subtitle|linebreaksbr }}</p>
+            </div>
+            {% empty %}
             <div class="overview-card" data-section="총 138세대">
                 <div class="icon">🏢</div>
                 <h3>총 138세대</h3>
@@ -59,6 +73,7 @@
                 <h3>161대 주차</h3>
                 <p>법정 주차대수 146대 대비<br>110.47% 확보</p>
             </div>
+            {% endfor %}
         </div>
     </div>
     <!-- 프로젝트 개요 모달 -->
@@ -66,7 +81,22 @@
       <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
         <span id="overview-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
         <h3 id="overview-modal-title"></h3>
-        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+        <div id="overview-modal-content" style="margin-top:30px;font-size:1.2rem;width:100%;height:300px;overflow-y:auto;">
+          {% for card in overview_cards %}
+          <div class="modal-images" data-section="{{ card.title }}" style="display:none;">
+            {% for image in card.images %}
+            <div class="modal-image-item" style="margin-bottom:20px;text-align:center;">
+              <img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;">
+              {% if image.description %}
+              <p style="margin-top:8px;font-size:0.9rem;color:#666;">{{ image.description }}</p>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p style="text-align:center;color:#666;font-style:italic;">이미지 준비중</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
 </section>
@@ -75,10 +105,16 @@
 <section id="features" class="features">
     <div class="container">
         <div class="section-title">
-            <h2>입지 환경</h2>
-            <p>울진의 미래 성장 동력과 함께하는 최적의 입지</p>
+            <h2>{{ features_section.title|default:"입지 환경" }}</h2>
+            <p>{{ features_section.subtitle|default:"울진의 미래 성장 동력과 함께하는 최적의 입지" }}</p>
         </div>
         <div class="features-grid">
+            {% for card in features_cards %}
+            <div class="feature-item" data-section="{{ card.title }}">
+                <h4>{{ card.icon|default:"🏭" }} {{ card.title }}</h4>
+                <p>{{ card.subtitle|linebreaksbr }}</p>
+            </div>
+            {% empty %}
             <div class="feature-item" data-section="원자력수소 국가산업단지">
                 <h4>🏭 원자력수소 국가산업단지</h4>
                 <p>대규모 국책사업으로 인한<br>지역 발전 및 인구 유입 효과</p>
@@ -95,6 +131,7 @@
                 <h4>🏛️ 울진읍 중심가</h4>
                 <p>행정, 상업, 교육시설이<br>집중된 최적의 생활환경</p>
             </div>
+            {% endfor %}
         </div>
     </div>
     <!-- 입지환경 모달 -->
@@ -102,8 +139,111 @@
       <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
         <span id="features-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
         <h3 id="features-modal-title"></h3>
-        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+        <div id="features-modal-content" style="margin-top:30px;font-size:1.2rem;width:100%;height:300px;overflow-y:auto;">
+          {% for card in features_cards %}
+          <div class="modal-images" data-section="{{ card.title }}" style="display:none;">
+            {% for image in card.images %}
+            <div class="modal-image-item" style="margin-bottom:20px;text-align:center;">
+              <img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;">
+              {% if image.description %}
+              <p style="margin-top:8px;font-size:0.9rem;color:#666;">{{ image.description }}</p>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p style="text-align:center;color:#666;font-style:italic;">이미지 준비중</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
       </div>
+    </div>
+</section>
+
+<!-- 단지 배치도 -->
+<section id="site-plan" class="site-plan">
+    <div class="container">
+        <div class="section-title">
+            <h2>{% if site_plan_section %}{{ site_plan_section.title }}{% else %}단지 배치도{% endif %}</h2>
+            <p>{% if site_plan_section %}{{ site_plan_section.subtitle }}{% else %}3개동으로 구성된 효율적인 단지 배치{% endif %}</p>
+        </div>
+        <div class="plan-container">
+            <div class="facilities">
+                <!-- 이미지 보기 버튼 -->
+                <div class="facility facility-image-view" style="cursor:pointer; background:#d1eaff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1.1rem;">이미지 보기</div>
+                
+                <!-- 시설 카드들 -->
+                {% for card in site_plan_cards %}
+                <div class="facility">
+                    <div class="facility-inner" style="display:flex;align-items:center;">
+                      <div class="facility-icon" style="margin-right:12px;">{{ card.icon }}</div>
+                      <div>
+                        <h4>{{ card.title }}</h4>
+                        <p>{{ card.subtitle }}</p>
+                      </div>
+                    </div>
+                </div>
+                {% empty %}
+                <!-- 기본 시설 카드들 -->
+                <div class="facility">
+                    <div class="facility-inner" style="display:flex;align-items:center;">
+                      <div class="facility-icon" style="margin-right:12px;">🎮</div>
+                      <div>
+                        <h4>놀이터</h4>
+                        <p>어린이 놀이시설</p>
+                      </div>
+                    </div>
+                </div>
+                <div class="facility">
+                    <div class="facility-inner" style="display:flex;align-items:center;">
+                      <div class="facility-icon" style="margin-right:12px;">🚗</div>
+                      <div>
+                        <h4>주차장</h4>
+                        <p>161대 (110.47%)</p>
+                      </div>
+                    </div>
+                </div>
+                <div class="facility">
+                    <div class="facility-inner" style="display:flex;align-items:center;">
+                      <div class="facility-icon" style="margin-right:12px;">🌳</div>
+                      <div>
+                        <h4>조경</h4>
+                        <p>단지 내 녹지공간</p>
+                      </div>
+                    </div>
+                </div>
+                <div class="facility">
+                    <div class="facility-inner" style="display:flex;align-items:center;">
+                      <div class="facility-icon" style="margin-right:12px;">🏪</div>
+                      <div>
+                        <h4>상가</h4>
+                        <p>근린생활시설</p>
+                      </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <!-- 단지배치도 이미지 보기 모달 -->
+        <div id="facility-image-modal" class="modal" style="display:none;">
+          <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:0;">
+            <span id="facility-image-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
+            <h3 style="margin-bottom:18px;">단지 배치도 이미지</h3>
+            <div id="facility-image-modal-body" style="width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:340px;overflow-y:auto;">
+              {% if site_plan_images %}
+                {% for image in site_plan_images %}
+                <div class="modal-image-item" style="margin-bottom:20px;text-align:center;">
+                  <img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;">
+                  {% if image.description %}
+                  <p style="margin-top:8px;font-size:0.9rem;color:#666;">{{ image.description }}</p>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              {% else %}
+                <p style="font-size:1.2rem; color:#888; text-align:center; margin-top:120px;">작업중</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
     </div>
 </section>
 
@@ -111,10 +251,26 @@
 <section id="sales" class="sales-info">
     <div class="container">
         <div class="section-title">
-            <h2>분양 정보</h2>
-            <p>합리적인 가격으로 만나는 프리미엄 라이프</p>
+            <h2>{% if sales_section %}{{ sales_section.title }}{% else %}분양 정보{% endif %}</h2>
+            <p>{% if sales_section %}{{ sales_section.subtitle }}{% else %}합리적인 가격으로 만나는 프리미엄 라이프{% endif %}</p>
         </div>
         <div class="sales-grid">
+            {% for sales_info in sales_infos %}
+            <div class="sales-card" style="position:relative;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                  <h3 style="margin: 0; font-size: 1.5rem;">{{ sales_info.get_type_display }}</h3>
+                  <span style="color: #e74c3c; font-weight: bold;">| 평당 {{ sales_info.price_per_pyeong }}</span>
+                </div>
+                <ul class="sales-details">
+                    <li>전용면적: {{ sales_info.area }}</li>
+                    <li>세대수: {{ sales_info.households }}</li>
+                    <li>층수: {{ sales_info.floors }}</li>
+                    <li>주차: {{ sales_info.parking }}</li>
+                </ul>
+                <button class="btn-plan-small" data-type="{{ sales_info.get_type_display }}">평면도</button>
+            </div>
+            {% empty %}
+            <!-- 기본 분양정보 -->
             <div class="sales-card" style="position:relative;">
                 <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
                   <h3 style="margin: 0; font-size: 1.5rem;">84A 타입</h3>
@@ -141,6 +297,7 @@
                 </ul>
                 <button class="btn-plan-small" data-type="84B 타입">평면도</button>
             </div>
+            {% endfor %}
         </div>
     </div>
     <!-- 분양정보 평면도 모달 -->
@@ -148,30 +305,67 @@
       <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;padding:0;">
         <span id="plan-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
         <h3 id="plan-modal-title"></h3>
-        <div id="plan-modal-body" style="margin-top:0;width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:370px;overflow-y:auto;"></div>
+        <div id="plan-modal-body" style="margin-top:0;width:100%;display:flex;flex-direction:column;align-items:stretch;max-height:370px;overflow-y:auto;">
+          {% for sales_info in sales_infos %}
+          <div class="modal-images" data-type="{{ sales_info.get_type_display }}" style="display:none;">
+            {% for image in sales_images|get_item:sales_info.type %}
+            <div class="modal-image-item" style="margin-bottom:20px;text-align:center;">
+              <img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width:100%;max-height:200px;object-fit:contain;border-radius:8px;">
+              {% if image.title %}
+              <p style="margin-top:8px;font-size:0.9rem;color:#666;">{{ image.title }}</p>
+              {% endif %}
+            </div>
+            {% empty %}
+            <p style="text-align:center;color:#666;font-style:italic;">평면도 이미지 준비중</p>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
 </section>
 
 <!-- 갤러리 -->
-<section id="gallery" class="gallery-preview">
+<section id="gallery" class="gallery" style="background:#f7f8fa;padding:60px 0;">
     <div class="container">
-        <div class="section-title gallery-title-strong">
-            <h2>갤러리</h2>
-            <p class="gallery-subtitle">조감도와 설계 이미지로 미리 보는 우리 집</p>
+        <div class="section-title" style="margin-bottom:40px;">
+            <h2 style="font-size:2.1rem;font-weight:800;margin-bottom:8px;letter-spacing:-1px;color:#7B4BAA;">갤러리</h2>
+            <p style="font-size:1.1rem;color:#888;">조감도와 설계 이미지로 미리 보는 우리 집</p>
         </div>
-        <div class="gallery-grid">
-            <div class="gallery-item" data-section="조감도 001">3개동 전체 조망<div class="gallery-overlay">조감도 001</div></div>
-            <div class="gallery-item" data-section="조감도 003">단지 중심부 조망<div class="gallery-overlay">조감도 003</div></div>
-            <div class="gallery-item" data-section="광역 조감도">울진읍 전경<div class="gallery-overlay">광역 조감도</div></div>
+        <div class="gallery-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:32px;">
+            {% for card in gallery_cards %}
+            <div class="gallery-item" data-card-id="{{ card.id }}" style="background:{{ gallery_card_colors|index:forloop.counter0 }};border-radius:24px;box-shadow:0 2px 12px rgba(0,0,0,0.07);overflow:hidden;cursor:pointer;transition:box-shadow 0.2s;display:flex;align-items:center;justify-content:center;min-height:120px;height:120px;" onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,0.13)';" onmouseout="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.07)';">
+                <div style="width:100%;text-align:center;">
+                  <span style="font-size:1.45rem;font-weight:700;color:#fff;letter-spacing:-1px;">{{ card.title }}</span>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
-    <!-- 갤러리 모달 -->
-    <div id="gallery-modal" class="modal" style="display:none;">
-      <div class="modal-content" style="width:400px;height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;">
-        <span id="gallery-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
-        <h3 id="gallery-modal-title"></h3>
-        <p style="margin-top:30px;font-size:1.2rem;">작업중</p>
+    <!-- 갤러리 카드별 모달 -->
+    <div id="gallery-card-modal" class="modal" style="display:none;">
+      <div class="modal-content" style="width:95%;max-width:820px;height:80%;max-height:640px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:0;background:#fff;border-radius:16px;box-shadow:0 4px 32px rgba(0,0,0,0.18);">
+        <span id="gallery-card-modal-close" class="modal-close" style="position:absolute;right:24px;top:24px;font-size:2.2rem;cursor:pointer;z-index:1000;color:#222;">&times;</span>
+        <div id="gallery-card-modal-body" style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow-y:auto;">
+          {% for card in gallery_cards %}
+          <div class="gallery-card-modal-images" data-card-id="{{ card.id }}" style="display:none;">
+            <div style="margin:32px 0 18px 0;text-align:center;">
+              <div style="font-size:1.35rem;font-weight:800;letter-spacing:-1px;">{{ card.title }}</div>
+              <div style="font-size:1.05rem;color:#888;margin-top:6px;">{{ card.subtitle }}</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:32px;justify-content:center;align-items:center;">
+              {% for image in gallery_images_by_card|get_item:card.id %}
+              <div style="text-align:center;">
+                <img src="{{ image.image.url }}" alt="{{ image.title }}" style="max-width:320px;max-height:220px;object-fit:cover;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.09);">
+                {% if image.title %}<div style="margin-top:10px;font-size:0.98rem;color:#555;">{{ image.title }}</div>{% endif %}
+              </div>
+              {% empty %}
+              <div style="color:#bbb;font-style:italic;font-size:1.1rem;">이미지가 없습니다.</div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
 </section>
@@ -203,34 +397,31 @@
     </div>
     <!-- 상담하기 모달 -->
     <div id="consult-modal" class="modal" style="display:none;">
-      <div class="modal-content" style="width:400px;max-width:95vw;">
-        <span id="consult-modal-close" class="modal-close" style="position:absolute;right:20px;top:20px;font-size:2rem;cursor:pointer;">&times;</span>
-        <h3 style="margin-bottom:18px;">온라인 상담하기</h3>
+      <div class="modal-content">
+        <span class="modal-close">&times;</span>
         <form id="consult-form">
-          <input type="text" name="name" placeholder="이름" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
-          <input type="email" name="email" placeholder="이메일 주소" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
-          <input type="text" name="phone" placeholder="핸드폰번호" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
-          <input type="text" name="title" placeholder="제목" required style="width:100%;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;">
-          <textarea name="content" placeholder="내용" required style="width:100%;height:80px;margin-bottom:10px;padding:8px;border:1px solid #ddd;border-radius:4px;resize:vertical;"></textarea>
-          <label style="display:block;margin-bottom:10px;">
-            <input type="checkbox" name="agree_privacy" required checked> 개인정보 활용에 동의합니다.
-          </label>
-          <div class="radio-group" style="margin-bottom:10px;">
-            <span style="margin-right:12px; font-size:0.98rem; color:#333;">답변받기 선택</span>
-            <label style="margin-right:20px;"><input type="radio" name="reply_type" value="email" checked> 메일</label>
+          <input type="text" name="name" placeholder="이름" required>
+          <input type="email" name="email" placeholder="이메일 주소" required>
+          <input type="text" name="phone" placeholder="핸드폰번호" required>
+          <input type="text" name="title" placeholder="제목" required>
+          <textarea name="content" placeholder="내용" required></textarea>
+          <label><input type="checkbox" name="agree_privacy" required checked> 개인정보 활용에 동의합니다.</label>
+          <div class="radio-group">
+            <label><input type="radio" name="reply_type" value="email" checked> 메일</label>
             <label><input type="radio" name="reply_type" value="sms"> 문자</label>
+            <span style="margin-left:10px; font-size:0.98rem; color:#333;">(피드백 받기)</span>
           </div>
-          <button type="submit" style="width:100%;padding:10px 0;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">상담 신청</button>
+          <button type="submit">상담 신청</button>
         </form>
-        <div id="consult-success" style="display:none;margin-top:20px;color:green;text-align:center;">상담 신청이 접수되었습니다!</div>
-        <div id="consult-error" style="display:none;margin-top:20px;color:#e74c3c;text-align:center;"></div>
+        <div id="consult-success" style="display:none; color:green; text-align:center; margin-top:20px;">상담 신청이 접수되었습니다!</div>
+        <div id="consult-error" style="display:none; color:red; text-align:center; margin-top:20px;"></div>
       </div>
     </div>
     <!-- 상담신청 접수 완료 안내 모달 -->
     <div id="consult-complete-modal" class="modal" style="display:none;">
       <div class="modal-content" style="width:350px;max-width:95vw;text-align:center;">
-        <h3 style="margin-bottom:18px;">상담신청 접수가 완료되었습니다.</h3>
-        <div style="margin-bottom:18px;">빠른 시간안에 답변을 드리겠습니다.<br>감사합니다.</div>
+        <h3 style="margin-bottom:18px; color:#333;">상담신청 접수가 완료되었습니다.</h3>
+        <div style="margin-bottom:18px; color:#333;">빠른 시간안에 답변을 드리겠습니다.<br>감사합니다.</div>
         <button id="consult-complete-close" style="padding:8px 30px;background:#3498db;color:#fff;border:none;border-radius:6px;font-size:1.1rem;">닫기</button>
       </div>
     </div>
