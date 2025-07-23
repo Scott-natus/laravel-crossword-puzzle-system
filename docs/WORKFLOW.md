@@ -1,3 +1,58 @@
+# 프로젝트U (프로젝트 번호 4번) - 관리 시스템 작업/운영/구조 정리
+
+## 프로젝트 개요
+- 명칭: **프로젝트U**
+- 프로젝트 번호: 4번
+- 목적: 아파트 분양/홍보/상담/설문/갤러리 등 통합 관리 시스템
+- 주요 기능: 관리자 페이지(분양정보, 단지배치도, 입지환경, 프로젝트 개요, 갤러리, 온라인상담, 설문, 팝업 등) + 프론트엔드
+
+## 서버 및 폴더 구조
+- 운영 서버: 222.100.103.227 (Ubuntu Linux)
+- 작업 경로: `/var/www/html/uljin-apartment-website/`
+- 관리자 소스: `uljin_admin/main/`
+- 관리자 템플릿: `uljin_admin/main/templates/manage/`
+- 주요 문서: `/var/www/html/docs/WORKFLOW.md` (이 파일)
+- 백업: `/var/www/html/backups/source_backup_YYYYMMDD_HHMMSS.tar.gz`
+
+## 주요 기술스택
+- Python 3.12, Django 5.x
+- PostgreSQL
+- HTML5, CSS3, JS (jQuery 일부)
+- Bootstrap 기반 반응형
+- Git, systemd, Nginx
+
+## 관리자 기능 구조
+- **프로젝트 개요**: 섹션(타이틀/서브타이틀), 카드(제목/서브제목/아이콘), 카드별 이미지
+- **입지환경**: 섹션(타이틀/서브타이틀), 카드(제목/서브제목/아이콘), 카드별 이미지
+- **단지배치도**: 섹션(타이틀/서브타이틀), 카드(제목/서브제목/아이콘), [이미지보기] 버튼용 이미지(card=None)만 관리
+- **분양정보**: 섹션(타이틀/서브타이틀), 타입별 정보(가격/면적/세대수/층수/주차 등), 타입별 평면도 이미지
+- **갤러리**: 카드(타이틀/서브타이틀), 카드별 이미지
+- **온라인상담**: 리스트, 상세, 답변, 삭제(소프트딜리트)
+- **설문조사/팝업**: 설문/팝업 관리 기능(확장 예정)
+- **좌측 메뉴**: `_sidebar.html`로 모든 관리자 메뉴 통일, 동적 active 처리
+
+## 작업/백업/운영 규칙
+- 모든 소스/DB 변경 전 **백업 필수** (backups/)
+- git 커밋/푸시 필수, 커밋 메시지에 작업 내역 명확히 기록
+- DB 조작(INSERT/UPDATE/DELETE 등)은 반드시 대화형 승인
+- 스키마 변경 시 puzzle_db_schema.sql, docs/DATABASE_SCHEMA.md에 기록
+- 운영 서버는 systemd 등 백그라운드 서비스만 사용(포그라운드 실행 금지)
+- 주요 변경/문제해결은 docs/ 폴더에 기록
+
+## 참고 URL/명령어
+- 관리자: http://222.100.103.227:8000/manage/
+- 프론트: http://222.100.103.227:8000/
+- DB 백업: `pg_dump -h 127.0.0.1 -U myuser mydb > backup.sql`
+- 소스 백업: `tar czf backups/source_backup_$(date +%Y%m%d_%H%M%S).tar.gz ...`
+- git 커밋/푸시: `git add . && git commit -m "메시지" && git push`
+
+## 다음 작업시 참고
+- 이 문서( /var/www/html/docs/WORKFLOW.md )를 항상 최신화
+- 관리자 템플릿/구조/운영 규칙/백업 정책 등 반드시 준수
+- 신규 기능/수정/문제해결 시 반드시 이 문서에 기록 후 커밋/푸시
+
+---
+
 # Laravel Crossword Puzzle Management System - Workflow
 
 ## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 - 정답 표시 문제 해결)
