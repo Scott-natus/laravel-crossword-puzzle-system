@@ -12,6 +12,7 @@ import json
 from django.db import models
 from django.utils import timezone
 from django.shortcuts import get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 
 def get_client_ip(request):
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -178,11 +179,13 @@ def admin_dashboard(request):
     return render(request, 'admin/dashboard.html', context)
 
 # ====== 커스텀 관리자 대시보드 ======
+@login_required(login_url='/manage/login/')
 def manage_welcome(request):
     # 추후: 진행중인 설문조사, 방문자 추이 등 데이터 context에 추가
     return render(request, 'manage/welcome.html')
 
 # ====== 히어로 배너 관리 ======
+@login_required(login_url='/manage/login/')
 def manage_hero_banner(request):
     from django.forms import modelform_factory, modelformset_factory
     HeroBannerForm = modelform_factory(HeroBanner, fields=[
@@ -235,6 +238,7 @@ def manage_hero_banner(request):
         'images': images,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_project_overview(request):
     from django.forms import modelform_factory, modelformset_factory
     
@@ -339,6 +343,7 @@ def manage_project_overview(request):
         'card_images': card_images,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_location_environment(request):
     from django.forms import modelform_factory, modelformset_factory
     
@@ -443,6 +448,7 @@ def manage_location_environment(request):
         'card_images': card_images,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_site_plan(request):
     from django.forms import modelform_factory, modelformset_factory
     
@@ -546,6 +552,7 @@ def manage_site_plan(request):
         'site_plan_images': site_plan_images,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_sales_info(request):
     from django.forms import modelform_factory, modelformset_factory
     
@@ -642,6 +649,7 @@ def manage_sales_info(request):
         'sales_images': sales_images,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_gallery(request):
     from django.forms import modelform_factory, modelformset_factory
     from django.forms import inlineformset_factory
@@ -688,10 +696,12 @@ def manage_gallery(request):
         'cards': cards,
     })
 
+@login_required(login_url='/manage/login/')
 def manage_consult(request):
     consults = Consultation.objects.filter(is_deleted=False).order_by('-created_at')
     return render(request, 'manage/consult.html', {'consults': consults})
 
+@login_required(login_url='/manage/login/')
 def manage_consult_detail(request, consult_id):
     consult = get_object_or_404(Consultation, id=consult_id)
     if request.method == 'POST':

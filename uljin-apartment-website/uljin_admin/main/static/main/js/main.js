@@ -419,3 +419,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 }); 
+
+document.addEventListener('DOMContentLoaded', function() {
+  var hamburger = document.getElementById('hamburger-btn');
+  var navMenu = document.getElementById('mobile-nav-menu');
+  if (hamburger && navMenu) {
+    hamburger.addEventListener('click', function() {
+      navMenu.classList.toggle('open');
+    });
+  }
+}); 

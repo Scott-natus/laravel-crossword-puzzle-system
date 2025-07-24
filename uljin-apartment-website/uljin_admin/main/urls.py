@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('', views.index, name='index'),
@@ -14,4 +15,7 @@ urlpatterns = [
     path('manage/gallery/', views.manage_gallery, name='manage_gallery'),
     path('manage/consult/', views.manage_consult, name='manage_consult'),
     path('manage/consult/<int:consult_id>/', views.manage_consult_detail, name='manage_consult_detail'),
+    path('manage/login/', auth_views.LoginView.as_view(template_name='manage/login.html'), name='manage_login'),
+    path('manage/logout/', auth_views.LogoutView.as_view(next_page='manage_login'), name='manage_logout'),
+    path('manage/password_change/', auth_views.PasswordChangeView.as_view(template_name='manage/password_change.html'), name='manage_password_change'),
 ] 

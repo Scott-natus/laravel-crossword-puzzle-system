@@ -621,3 +621,30 @@ cat storage/logs/laravel.log | grep "cleanup"
 3. **터치 반응성**: 퍼즐 셀 클릭 및 버튼 터치 확인
 4. **가독성**: 작은 화면에서 텍스트 가독성 확인
 \n2025-07-22 index.ejs 기반 상담모달/갤러리/분양정보/모든 UI/스타일 1:1 복원 및 반응형 개선\n- 상담하기(consult-modal, consult-complete-modal) 모달 구조/스타일/동작 100% 복원 (HTML, CSS, JS)\n- 갤러리 카드형 구조 및 오버레이, 모달 1:1 복원\n- 분양정보 평면도 버튼, 모달, 스타일 1:1 복원\n- 모든 input/label/안내문구/버튼/라디오/체크박스 등 폼 요소 스타일 index.ejs와 동일하게 적용\n- 모바일/반응형(600px 이하)에서 모달/폼/버튼/텍스트/스크롤 완벽 복원\n- main.js: 모든 모달/트리거/공통 함수/상담 fetch 등 index.ejs와 동일하게 동작\n- custom.css: index.ejs의 <style> 및 반응형, 폼, 모달, 버튼, 안내문구 등 1:1 복사\n- index.html: consult-modal, gallery, sales-info 등 모든 구조/클래스/텍스트 1:1 복원\n- git 커밋 및 원격 저장소 푸시 완료\n
+
+## 2025-07-24 작업 내역 (Django /manage/ 관리자 인증 및 계정 관리 UI 구축)
+
+### 목적
+- 기존 Django admin이 아닌 별도 관리자 페이지(/manage/)에 세션 기반 인증 및 계정 관리 기능 도입
+
+### 주요 구현 내용
+- /manage/ 하위 모든 뷰에 @login_required 데코레이터 적용(비로그인 시 접근 불가)
+- /manage/login/ (로그인), /manage/logout/ (로그아웃), /manage/password_change/ (비밀번호 변경) URL 및 뷰 추가
+- 로그인/비밀번호 변경 폼 템플릿(manage/login.html, manage/password_change.html) 및 공통 레이아웃(manage/base.html) 생성
+- 로그인 성공 시 /manage/로 리다이렉트되도록 LOGIN_REDIRECT_URL 설정
+- 템플릿 경로 및 권한 문제 해결, 서버 재시작 및 정상 동작 확인
+- 관리자 계정 생성/삭제 등 추가 기능은 추후 구현 예정
+
+### 적용 파일
+- uljin_admin/main/urls.py
+- uljin_admin/main/views.py
+- uljin_admin/main/templates/manage/login.html
+- uljin_admin/main/templates/manage/password_change.html
+- uljin_admin/main/templates/manage/base.html
+- uljin_admin/uljin_admin/settings.py
+- docs/WORKFLOW.md (본 문서)
+
+### 테스트 방법
+1. /manage/login/에서 로그인 시도 → 성공 시 /manage/로 이동
+2. 비밀번호 변경, 로그아웃 등 정상 동작 확인
+3. 로그인하지 않으면 /manage/ 하위 접근 불가 확인
