@@ -1,4 +1,8 @@
 {
   "name": "CrosswordPuzzleMobileApp",
-  "displayName": "CrosswordPuzzleMobileApp"
+  "displayName": "Crossword Puzzle",
+  "version": "1.0.0",
+  "description": "크로스워드 퍼즐 모바일 앱",
+  "author": "Your Name",
+  "platforms": ["android", "ios", "web"]
 }

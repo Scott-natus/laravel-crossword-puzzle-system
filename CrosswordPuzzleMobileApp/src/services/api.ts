@@ -1,12 +1,22 @@
 import axios, { AxiosInstance, AxiosResponse } from 'axios';
 
-// 웹 환경에서는 localStorage 사용
+// React Native 환경에 맞는 스토리지 설정
 const getStorage = () => {
-  return {
-    getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
-    setItem: (key: string, value: string) => Promise.resolve(localStorage.setItem(key, value)),
-    removeItem: (key: string) => Promise.resolve(localStorage.removeItem(key)),
-  };
+  // React Native 환경에서는 AsyncStorage 사용
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    console.log('✅ CrosswordPuzzleMobileApp AsyncStorage 로드 성공');
+    return AsyncStorage;
+  } catch (error) {
+    console.log('❌ CrosswordPuzzleMobileApp AsyncStorage 로드 실패, 메모리 스토리지 사용');
+    // AsyncStorage 로드 실패 시 메모리 스토리지 사용
+    const memoryStorage: any = {};
+    return {
+      getItem: (key: string) => Promise.resolve(memoryStorage[key] || null),
+      setItem: (key: string, value: string) => Promise.resolve(memoryStorage[key] = value),
+      removeItem: (key: string) => Promise.resolve(delete memoryStorage[key]),
+    };
+  }
 };
 
 const storage = getStorage();
@@ -22,6 +32,7 @@ import {
   LoginResponse
 } from '../types';
 
+// API URL 설정 - 모바일에서 접근 가능한 URL로 변경
 const API_BASE_URL = 'http://222.100.103.227:8080/api';
 
 class ApiService {
@@ -30,35 +41,50 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: 30000, // 타임아웃 증가
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
     });
 
-    // 요청 인터셉터 - 토큰 추가
+    // 요청 인터셉터 - 토큰 추가 및 디버깅
     this.api.interceptors.request.use(
       async (config) => {
+        console.log('🌐 CrosswordPuzzleMobileApp API 요청:', config.method?.toUpperCase(), config.url);
+        console.log('📡 CrosswordPuzzleMobileApp 요청 데이터:', config.data);
+        console.log('🔗 CrosswordPuzzleMobileApp 요청 헤더:', config.headers);
+        
         const token = await storage.getItem('auth_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log('🔑 CrosswordPuzzleMobileApp 토큰 추가됨');
         }
         return config;
       },
       (error) => {
+        console.error('❌ CrosswordPuzzleMobileApp 요청 인터셉터 오류:', error);
         return Promise.reject(error);
       }
     );
 
-    // 응답 인터셉터 - 에러 처리
+    // 응답 인터셉터 - 에러 처리 및 디버깅
     this.api.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        console.log('✅ CrosswordPuzzleMobileApp API 응답 성공:', response.status, response.config.url);
+        return response;
+      },
       async (error) => {
+        console.error('❌ CrosswordPuzzleMobileApp API 응답 오류:', error.response?.status, error.response?.data);
+        console.error('📡 CrosswordPuzzleMobileApp 오류 URL:', error.config?.url);
+        console.error('🔍 CrosswordPuzzleMobileApp 오류 상세:', error.message);
+        console.error('🔍 CrosswordPuzzleMobileApp 오류 코드:', error.code);
+        
         if (error.response?.status === 401) {
           // 토큰이 만료된 경우 로그아웃
           await storage.removeItem('auth_token');
           await storage.removeItem('user');
+          console.log('🔑 CrosswordPuzzleMobileApp 토큰 만료로 로그아웃 처리');
         }
         return Promise.reject(error);
       }
@@ -68,9 +94,44 @@ class ApiService {
   // 인증 관련 API
   async login(credentials: LoginRequest): Promise<ApiResponse<LoginResponse>> {
     try {
+      console.log('🔐 CrosswordPuzzleMobileApp 로그인 시도:', credentials.email);
+      console.log('📡 CrosswordPuzzleMobileApp 요청 URL:', this.api.defaults.baseURL + '/login');
+      console.log('📦 CrosswordPuzzleMobileApp 요청 데이터:', JSON.stringify(credentials));
+      console.log('🌐 CrosswordPuzzleMobileApp API 인스턴스:', this.api.defaults.baseURL);
+      
+      console.log('🚀 CrosswordPuzzleMobileApp API 호출 시작...');
+      console.log('🌐 CrosswordPuzzleMobileApp 요청 URL:', this.api.defaults.baseURL + '/login');
+      console.log('⏱️ CrosswordPuzzleMobileApp 타임아웃 설정:', this.api.defaults.timeout);
+      
       const response: AxiosResponse = await this.api.post('/login', credentials);
-      return response.data;
+      
+      console.log('✅ CrosswordPuzzleMobileApp 서버 응답 받음');
+      console.log('📊 CrosswordPuzzleMobileApp 응답 상태:', response.status);
+      console.log('📋 CrosswordPuzzleMobileApp 응답 헤더:', response.headers);
+      console.log('📄 CrosswordPuzzleMobileApp 응답 데이터:', JSON.stringify(response.data));
+      
+      // 응답 데이터 구조 확인
+      console.log('🔍 CrosswordPuzzleMobileApp 응답 데이터 구조 분석 시작');
+      console.log('🔍 CrosswordPuzzleMobileApp response.data 존재 여부:', !!response.data);
+      console.log('🔍 CrosswordPuzzleMobileApp response.data.status:', response.data?.status);
+      
+      if (response.data && response.data.status === 'success') {
+        console.log('✅ CrosswordPuzzleMobileApp 로그인 성공 - 응답 파싱 완료');
+        console.log('✅ CrosswordPuzzleMobileApp 반환할 데이터:', JSON.stringify(response.data));
+        return response.data;
+      } else {
+        console.error('❌ CrosswordPuzzleMobileApp 응답 데이터 구조 문제:', response.data);
+        console.error('❌ CrosswordPuzzleMobileApp response.data 타입:', typeof response.data);
+        console.error('❌ CrosswordPuzzleMobileApp response.data 키들:', Object.keys(response.data || {}));
+        throw new Error('🚨 2025-07-31 수정된 코드가 적용됨! 서버 응답 형식이 올바르지 않습니다.');
+      }
     } catch (error: any) {
+      console.error('❌ CrosswordPuzzleMobileApp 로그인 실패:', error.message);
+      console.error('🔍 CrosswordPuzzleMobileApp 에러 타입:', typeof error);
+      console.error('📊 CrosswordPuzzleMobileApp 에러 객체:', error);
+      console.error('🔍 CrosswordPuzzleMobileApp 에러 스택:', error.stack);
+      console.error('🔍 CrosswordPuzzleMobileApp 에러 코드:', error.code);
+      console.error('🔍 CrosswordPuzzleMobileApp 에러 이름:', error.name);
       throw this.handleError(error);
     }
   }
@@ -390,16 +451,31 @@ class ApiService {
   }
 
   private handleError(error: any): Error {
+    console.error('🔍 CrosswordPuzzleMobileApp 에러 상세 분석:');
+    console.error('  - CrosswordPuzzleMobileApp error.response:', error.response);
+    console.error('  - CrosswordPuzzleMobileApp error.request:', error.request);
+    console.error('  - CrosswordPuzzleMobileApp error.message:', error.message);
+    console.error('  - CrosswordPuzzleMobileApp error.code:', error.code);
+    console.error('  - CrosswordPuzzleMobileApp error.config:', error.config);
+    console.error('  - CrosswordPuzzleMobileApp error.name:', error.name);
+    console.error('  - CrosswordPuzzleMobileApp error.stack:', error.stack);
+    
     if (error.response) {
       // 서버 응답이 있는 경우
+      console.log('✅ CrosswordPuzzleMobileApp 서버 응답 받음:', error.response.status, error.response.data);
       const message = error.response.data?.message || error.response.data?.error || '서버 오류가 발생했습니다.';
       return new Error(message);
     } else if (error.request) {
       // 요청은 보냈지만 응답을 받지 못한 경우
-      return new Error('네트워크 연결을 확인해주세요.');
+      console.log('❌ CrosswordPuzzleMobileApp 요청은 보냈지만 응답 없음');
+      console.log('❌ CrosswordPuzzleMobileApp error.request:', error.request);
+      return new Error('🚨 2025-07-31 수정된 코드! 네트워크 연결을 확인해주세요. (요청은 보냈지만 응답 없음)');
     } else {
       // 요청 자체에 문제가 있는 경우
-      return new Error('요청을 처리할 수 없습니다.');
+      console.log('❌ CrosswordPuzzleMobileApp 요청 자체에 문제 있음');
+      console.log('❌ CrosswordPuzzleMobileApp error.message:', error.message);
+      console.log('❌ CrosswordPuzzleMobileApp error.code:', error.code);
+      return new Error(`🚨 2025-07-31 수정된 코드! 요청을 처리할 수 없습니다. (${error.message || error.code || '알 수 없는 오류'})`);
     }
   }
 }

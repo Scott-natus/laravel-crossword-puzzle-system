@@ -55,6 +55,90 @@
 
 # Laravel Crossword Puzzle Management System - Workflow
 
+## 2025-07-31 작업 내역 (React Native 모바일 앱 localStorage 에러 해결)
+
+### 문제 상황
+- React Native 모바일 앱에서 `Property 'localStorage' doesn't exist` 에러 발생
+- 모바일 환경에서 웹 브라우저 API인 localStorage를 사용하려고 해서 발생한 문제
+- 로그인 후 게임 페이지로 전환되지 않는 인증 문제
+
+### 해결 과정
+
+#### 1. localStorage 사용 위치 파악
+- `CrosswordPuzzleMobileApp/src/services/api.ts`: API 서비스에서 토큰 저장/로드
+- `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`: 인증 컨텍스트에서 토큰 관리
+- 두 파일 모두 localStorage를 직접 사용하여 모바일 환경에서 에러 발생
+
+#### 2. 환경별 스토리지 처리 로직 구현
+- **React Native 환경**: AsyncStorage 사용
+- **웹 환경**: localStorage 사용 (fallback)
+- **AsyncStorage 로드 실패 시**: 메모리 스토리지 사용
+
+#### 3. 수정된 파일들
+
+**CrosswordPuzzleMobileApp/src/services/api.ts**
+```typescript
+const getStorage = () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    console.log('✅ CrosswordPuzzleMobileApp AsyncStorage 로드 성공');
+    return AsyncStorage;
+  } catch (error) {
+    console.log('❌ CrosswordPuzzleMobileApp AsyncStorage 로드 실패, 메모리 스토리지 사용');
+    const memoryStorage: any = {};
+    return {
+      getItem: (key: string) => Promise.resolve(memoryStorage[key] || null),
+      setItem: (key: string, value: string) => Promise.resolve(memoryStorage[key] = value),
+      removeItem: (key: string) => Promise.resolve(delete memoryStorage[key]),
+    };
+  }
+};
+```
+
+**CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx**
+```typescript
+const getStorage = () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext AsyncStorage 로드 성공');
+    return AsyncStorage;
+  } catch (error) {
+    console.log('❌ CrosswordPuzzleMobileApp AuthContext AsyncStorage 로드 실패, 메모리 스토리지 사용');
+    const memoryStorage: any = {};
+    return {
+      getItem: (key: string) => Promise.resolve(memoryStorage[key] || null),
+      setItem: (key: string, value: string) => Promise.resolve(memoryStorage[key] = value),
+      removeItem: (key: string) => Promise.resolve(delete memoryStorage[key]),
+    };
+  }
+};
+```
+
+#### 4. 디버깅 로그 추가
+- 각 파일에 `CrosswordPuzzleMobileApp` 접두사를 사용한 로그 추가
+- AsyncStorage 로드 성공/실패 로그
+- API 요청/응답 로그
+- 인증 상태 변경 로그
+
+#### 5. 빌드 및 테스트
+- Android APK 빌드: `./build-android.sh`
+- 빌드 시간: 2025-07-31 15:30:00
+- 테스트 계정: test@test.com / 123456
+
+### 예상 결과
+- localStorage 에러 해결
+- 모바일 환경에서 AsyncStorage 정상 동작
+- 로그인 후 게임 페이지로 정상 전환
+- 인증 토큰 저장/로드 정상 동작
+
+### 다음 단계
+1. 새 APK 설치 및 테스트
+2. 로그인 플로우 확인
+3. 인증 상태 유지 확인
+4. 게임 페이지 전환 확인
+
+---
+
 ## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 - 정답 표시 문제 해결)
 
 ### 문제 상황
@@ -648,3 +732,63 @@ cat storage/logs/laravel.log | grep "cleanup"
 1. /manage/login/에서 로그인 시도 → 성공 시 /manage/로 이동
 2. 비밀번호 변경, 로그아웃 등 정상 동작 확인
 3. 로그인하지 않으면 /manage/ 하위 접근 불가 확인
+
+---
+
+## 2025-07-31 작업 내역 (React Native 모바일 앱 개발 - AuthContext 디버깅)
+
+### 문제 상황
+- React Native 모바일 앱에서 로그인 API 호출은 성공하지만 AuthContext의 login 함수가 호출되지 않는 문제
+- 두 개의 AuthContext.tsx 파일이 존재하여 어떤 파일이 실제로 사용되는지 불분명
+- 터미널 감지 문제로 빌드 진행이 어려운 상황
+
+### 해결 과정
+
+#### 1. AuthContext 파일 중복 문제 해결
+- `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`: 모바일 앱용 AuthContext
+- `/var/www/html/CrosswordPuzzleApp/src/contexts/AuthContext.tsx`: 웹앱용 AuthContext
+- 각 파일에 고유한 로그 메시지 추가로 실제 사용되는 파일 식별
+
+#### 2. 디버깅 로그 추가
+- 모바일 앱 AuthContext: `🚨 AuthContext login 함수 호출됨!`
+- 웹앱 AuthContext: `🔥 CrosswordPuzzleApp AuthContext login 함수 호출됨!`
+- API 서비스: `📡 요청 URL:`, `🔍 apiService.login 함수 호출 시작...` 등 상세 로그
+
+#### 3. 빌드 시스템 개선
+- `build-android.sh` 스크립트에 빌드 시간 자동 업데이트 기능 추가
+- `BUILD_TIME` 상수를 LoginScreen.tsx에 자동 반영
+- APK 설치 후 앱에서 빌드 시간 확인 가능
+
+#### 4. 현재 상태
+- ✅ **APK 빌드 성공**: 45M 크기, 2025-07-31 13:27:48 빌드
+- ✅ **API 서버 정상**: 8080 포트에서 Laravel API 서비스 중
+- ✅ **CORS 설정 완료**: 모든 도메인에서 API 접근 허용
+- ⚠️ **AuthContext 호출 문제**: 로그인 성공 후 AuthContext login 함수 미호출
+- ⚠️ **터미널 감지 문제**: 빌드 중 터미널 상태 감지 어려움
+
+### 수정된 파일
+- `CrosswordPuzzleMobileApp/src/screens/LoginScreen.tsx`: 상세 로그 추가, AuthContext 사용
+- `CrosswordPuzzleMobileApp/src/services/api.ts`: API 호출 로그 강화
+- `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`: 고유 로그 메시지 추가
+- `/var/www/html/CrosswordPuzzleApp/src/contexts/AuthContext.tsx`: 고유 로그 메시지 추가
+- `CrosswordPuzzleMobileApp/build-android.sh`: 빌드 시간 자동 업데이트
+
+### 다음 작업 예정
+1. **APK 재설치 및 테스트**: 새로 빌드된 APK로 AuthContext 로그 확인
+2. **AuthContext 파일 식별**: 어떤 AuthContext 파일이 실제 사용되는지 확인
+3. **로그인 플로우 완성**: AuthContext login 함수 정상 호출 및 화면 전환
+4. **터미널 감지 개선**: 빌드 진행 상황 실시간 모니터링
+
+### 중요 파일 위치
+- **모바일 앱**: `/var/www/html/CrosswordPuzzleMobileApp/`
+- **웹앱**: `/var/www/html/CrosswordPuzzleApp/`
+- **API 서버**: `public/api.php` (8080 포트)
+- **빌드 스크립트**: `CrosswordPuzzleMobileApp/build-android.sh`
+
+### 디버깅 명령어
+- **APK 빌드**: `cd CrosswordPuzzleMobileApp && ./build-android.sh`
+- **API 테스트**: `curl -X POST http://222.100.103.227:8080/api/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'`
+- **서비스 상태**: `ps aux | grep php` (API 서버 확인)
+- **로그 확인**: `adb logcat` (Android 디바이스 로그)
+
+---

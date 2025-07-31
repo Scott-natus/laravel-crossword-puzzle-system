@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,60 +6,121 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
 } from 'react-native';
+import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
-// 웹 환경에서 localStorage 사용, 모바일에서는 AsyncStorage 사용
-const getStorage = () => {
-  if (typeof (globalThis as any).window !== 'undefined') {
-    return {
-      getItem: (key: string) => Promise.resolve(localStorage.getItem(key)),
-      setItem: (key: string, value: string) => Promise.resolve(localStorage.setItem(key, value)),
-      removeItem: (key: string) => Promise.resolve(localStorage.removeItem(key)),
-    };
-  } else {
-    return require('@react-native-async-storage/async-storage').default;
-  }
-};
+const LoginScreen: React.FC = () => {
+  const [email, setEmail] = useState('test@test.com');
+  const [password, setPassword] = useState('123456');
+  const [loading, setLoading] = useState(false);
+  const [logs, setLogs] = useState<string[]>([]);
+  const { login } = useAuth(); // AuthContext에서 login 함수 가져오기
 
-const storage = getStorage();
+  // APK 빌드 시간 정보
+  const BUILD_TIME = '2025-07-31 17:57:31'; // 이 값을 빌드할 때마다 업데이트
 
-interface LoginScreenProps {
-  navigation: any;
-}
+  // 로그 추가 함수
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    const logMessage = `[${timestamp}] ${message}`;
+    setLogs(prev => [...prev.slice(-9), logMessage]); // 최근 10개만 유지
+    console.log(logMessage);
+  };
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  // 로그 초기화
+  const clearLogs = () => {
+    setLogs([]);
+  };
 
-  // 컴포넌트 마운트 시 저장된 이메일과 로그인 정보 기억하기 상태 로드
-  useEffect(() => {
-    const loadSavedData = async () => {
-      try {
-        const savedEmail = await storage.getItem('remember_email');
-        const savedRememberMe = await storage.getItem('remember_me');
-        
-        if (savedEmail) {
-          setEmail(savedEmail);
-        }
-        
-        if (savedRememberMe === '1') {
-          setRememberMe(true);
-        }
-      } catch (error) {
-        console.error('Error loading saved data:', error);
-      }
-    };
-    
-    loadSavedData();
+  // 컴포넌트 마운트 시 빌드 정보 표시
+  React.useEffect(() => {
+    addLog('🚀 앱 시작됨');
+    addLog(`📱 APK 빌드 시간: ${BUILD_TIME}`);
+    addLog('🔧 디버그 모드 활성화');
   }, []);
+
+  // 네트워크 연결 테스트 함수 추가
+  const testNetworkConnection = async () => {
+    try {
+      addLog('🌐 네트워크 연결 테스트 시작...');
+      const response = await fetch('http://222.100.103.227:8080/api/test');
+      const data = await response.json();
+      addLog('✅ 네트워크 테스트 성공: ' + JSON.stringify(data));
+      Alert.alert('네트워크 테스트', `성공!\n서버: ${data.server_ip}\n클라이언트: ${data.client_ip}`);
+    } catch (error: any) {
+      addLog('❌ 네트워크 테스트 실패: ' + error.message);
+      Alert.alert('네트워크 테스트', `실패!\n오류: ${error.message}`);
+    }
+  };
+
+  // 직접 API 호출 테스트 함수 추가
+  const testDirectApiCall = async () => {
+    try {
+      addLog('🧪 직접 API 호출 테스트 시작...');
+      
+      // fetch를 사용한 직접 호출
+      const response = await fetch('http://222.100.103.227:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'test@test.com',
+          password: '123456'
+        })
+      });
+      
+      addLog(`📊 응답 상태: ${response.status}`);
+      addLog(`📋 응답 헤더: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+      
+      const responseText = await response.text();
+      addLog(`📄 응답 텍스트: ${responseText}`);
+      
+      if (response.ok) {
+        const data = JSON.parse(responseText);
+        addLog('✅ 직접 API 호출 성공: ' + JSON.stringify(data));
+        Alert.alert('직접 API 테스트', '성공!\n응답을 로그에서 확인하세요.');
+      } else {
+        addLog('❌ 직접 API 호출 실패: ' + response.status);
+        Alert.alert('직접 API 테스트', `실패!\n상태: ${response.status}`);
+      }
+    } catch (error: any) {
+      addLog('❌ 직접 API 호출 에러: ' + error.message);
+      addLog('❌ 에러 상세: ' + JSON.stringify(error));
+      Alert.alert('직접 API 테스트', `에러!\n${error.message}`);
+    }
+  };
+
+  // axios를 사용한 직접 호출 테스트
+  const testAxiosCall = async () => {
+    try {
+      addLog('🚀 Axios 직접 호출 테스트 시작...');
+      
+      const axios = require('axios');
+      const response = await axios.post('http://222.100.103.227:8080/api/login', {
+        email: 'test@test.com',
+        password: '123456'
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        timeout: 10000
+      });
+      
+      addLog('✅ Axios 호출 성공: ' + JSON.stringify(response.data));
+      Alert.alert('Axios 테스트', '성공!\n응답을 로그에서 확인하세요.');
+    } catch (error: any) {
+      addLog('❌ Axios 호출 실패: ' + error.message);
+      if (error.response) {
+        addLog('❌ 응답 에러: ' + JSON.stringify(error.response.data));
+      }
+      Alert.alert('Axios 테스트', `실패!\n${error.message}`);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -67,58 +128,81 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
       return;
     }
 
-    setIsLoading(true);
-
+    setLoading(true);
     try {
-      // 로그인 정보 기억하기 처리
-      if (rememberMe) {
-        await storage.setItem('remember_email', email);
-        await storage.setItem('remember_me', '1');
-      } else {
-        await storage.removeItem('remember_email');
-        await storage.removeItem('remember_me');
-      }
-
-      const success = await login(email, password);
-      if (!success) {
-        Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
+      addLog('🔐 로그인 시도 중...');
+      addLog(`📧 이메일: ${email}`);
+      addLog(`🔑 비밀번호: ${password}`);
+      addLog('🔍 apiService.login 함수 호출 시작...');
+      
+      const response = await apiService.login({ email, password });
+      addLog('✅ 로그인 성공: ' + JSON.stringify(response));
+      
+      // 로그인 성공 후 메인 화면으로 이동
+      addLog('🔐 CrosswordPuzzleMobileApp AuthContext 로그인 시도 시작...');
+      try {
+        const loginSuccess = await login(email, password);
+        addLog('🔍 CrosswordPuzzleMobileApp AuthContext 로그인 결과: ' + loginSuccess);
+        if (loginSuccess) {
+          addLog('✅ CrosswordPuzzleMobileApp AuthContext 로그인 성공');
+        } else {
+          addLog('❌ CrosswordPuzzleMobileApp AuthContext 로그인 실패');
+        }
+      } catch (authError: any) {
+        addLog('❌ CrosswordPuzzleMobileApp AuthContext 로그인 에러: ' + authError.message);
+        addLog('❌ CrosswordPuzzleMobileApp AuthContext 에러 상세: ' + JSON.stringify(authError));
       }
     } catch (error: any) {
-      Alert.alert('오류', error.message || '로그인 중 오류가 발생했습니다.');
+      addLog('❌ 로그인 실패: ' + error.message);
+      addLog('❌ 에러 상세: ' + JSON.stringify(error));
+      Alert.alert('로그인 실패', error.message || '로그인에 실패했습니다.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  // 엔터키 처리
-  const handleEmailSubmit = () => {
-    // 이메일 입력 후 엔터키를 누르면 비밀번호 필드로 포커스
-    if (password) {
-      handleLogin();
+  const handleTestLogin = async () => {
+    setLoading(true);
+    try {
+      addLog('🧪 테스트 로그인 시도...');
+      addLog('🔍 apiService.login 함수 호출 시작...');
+      
+      const response = await apiService.login({ 
+        email: 'test@test.com', 
+        password: '123456' 
+      });
+      addLog('✅ 테스트 로그인 성공: ' + JSON.stringify(response));
+      
+      // 로그인 성공 후 메인 화면으로 이동
+      addLog('🔐 CrosswordPuzzleMobileApp AuthContext 테스트 로그인 시도 시작...');
+      try {
+        const loginSuccess = await login('test@test.com', '123456');
+        addLog('🔍 CrosswordPuzzleMobileApp AuthContext 테스트 로그인 결과: ' + loginSuccess);
+        if (loginSuccess) {
+          addLog('✅ CrosswordPuzzleMobileApp AuthContext 테스트 로그인 성공');
+        } else {
+          addLog('❌ CrosswordPuzzleMobileApp AuthContext 테스트 로그인 실패');
+        }
+      } catch (authError: any) {
+        addLog('❌ CrosswordPuzzleMobileApp AuthContext 테스트 로그인 에러: ' + authError.message);
+        addLog('❌ CrosswordPuzzleMobileApp AuthContext 테스트 에러 상세: ' + JSON.stringify(authError));
+      }
+    } catch (error: any) {
+      addLog('❌ 테스트 로그인 실패: ' + error.message);
+      addLog('❌ 에러 상세: ' + JSON.stringify(error));
+      Alert.alert('테스트 로그인 실패', error.message || '테스트 로그인에 실패했습니다.');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handlePasswordSubmit = () => {
-    // 비밀번호 입력 후 엔터키를 누르면 로그인 실행
-    handleLogin();
-  };
-
-  const handleRegister = () => {
-    navigation.navigate('Register');
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
-        <View style={styles.header}>
-          <Text style={styles.title}>K-CrossWord</Text>
-          <Text style={styles.subtitle}>로그인하여 게임을 시작하세요</Text>
-        </View>
+    <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Crossword Puzzle</Text>
+        <Text style={styles.subtitle}>로그인</Text>
 
-        <View style={styles.form}>
+        <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
             placeholder="이메일"
@@ -126,148 +210,184 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
-            autoCorrect={false}
-            onSubmitEditing={handleEmailSubmit}
-            returnKeyType="next"
           />
-
           <TextInput
             style={styles.input}
             placeholder="비밀번호"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            onSubmitEditing={handlePasswordSubmit}
-            returnKeyType="done"
           />
+        </View>
 
-          <View style={styles.rememberContainer}>
-            <TouchableOpacity
-              style={styles.checkboxContainer}
-              onPress={() => setRememberMe(!rememberMe)}
-            >
-              <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text style={styles.checkboxLabel}>로그인 정보 기억하기</Text>
-            </TouchableOpacity>
-          </View>
-
+        <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={[styles.button, styles.loginButton]}
             onPress={handleLogin}
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.buttonText}>로그인</Text>
-            )}
+            <Text style={styles.buttonText}>
+              {loading ? '로그인 중...' : '로그인'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.button, styles.registerButton]}
-            onPress={handleRegister}
-            disabled={isLoading}
+            style={[styles.button, styles.testButton]}
+            onPress={handleTestLogin}
+            disabled={loading}
           >
-            <Text style={[styles.buttonText, styles.registerButtonText]}>
-              회원가입
-            </Text>
+            <Text style={styles.buttonText}>테스트 로그인</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.networkButton]}
+            onPress={testNetworkConnection}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>네트워크 테스트</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.clearButton]}
+            onPress={clearLogs}
+          >
+            <Text style={styles.buttonText}>로그 초기화</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.directApiButton]}
+            onPress={testDirectApiCall}
+          >
+            <Text style={styles.buttonText}>직접 API 테스트</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.button, styles.axiosButton]}
+            onPress={testAxiosCall}
+          >
+            <Text style={styles.buttonText}>Axios 테스트</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        {/* 로그 표시 영역 */}
+        <View style={styles.logContainer}>
+          <Text style={styles.logTitle}>📋 API 호출 로그:</Text>
+          {logs.map((log, index) => (
+            <Text key={index} style={styles.logText}>
+              {log}
+            </Text>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={styles.signupLink}
+          onPress={() => {
+            addLog('📝 회원가입 버튼 클릭됨 (현재 비활성화)');
+            Alert.alert('회원가입', '회원가입 기능은 현재 개발 중입니다.');
+          }}
+        >
+          <Text style={styles.signupText}>계정이 없으신가요? 회원가입</Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: '#f5f5f5',
   },
-  scrollContainer: {
-    flexGrow: 1,
-    justifyContent: 'center',
+  content: {
+    flex: 1,
     padding: 20,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 40,
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#333',
+    textAlign: 'center',
     marginBottom: 10,
+    color: '#333',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 18,
     textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
   },
-  form: {
-    width: '100%',
+  inputContainer: {
+    marginBottom: 20,
   },
   input: {
     backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     borderRadius: 8,
-    padding: 15,
-    marginBottom: 15,
+    marginBottom: 10,
     fontSize: 16,
     borderWidth: 1,
     borderColor: '#ddd',
   },
+  buttonContainer: {
+    marginBottom: 20,
+  },
   button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
-    padding: 15,
+    marginBottom: 10,
     alignItems: 'center',
-    marginBottom: 15,
   },
   loginButton: {
     backgroundColor: '#007AFF',
   },
-  registerButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: '#007AFF',
+  testButton: {
+    backgroundColor: '#34C759',
+  },
+  networkButton: {
+    backgroundColor: '#FF9500',
+  },
+  clearButton: {
+    backgroundColor: '#FF3B30',
+  },
+  directApiButton: {
+    backgroundColor: '#8E44AD',
+  },
+  axiosButton: {
+    backgroundColor: '#E67E22',
   },
   buttonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },
-  registerButtonText: {
-    color: '#007AFF',
+  logContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 20,
+    maxHeight: 200,
   },
-  rememberContainer: {
-    marginBottom: 15,
-  },
-  checkboxContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: '#007AFF',
-    borderRadius: 4,
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#007AFF',
-  },
-  checkmark: {
-    color: '#fff',
-    fontSize: 12,
+  logTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
-  },
-  checkboxLabel: {
-    fontSize: 16,
+    marginBottom: 5,
     color: '#333',
   },
-}); 
+  logText: {
+    fontSize: 11,
+    color: '#666',
+    marginBottom: 2,
+    fontFamily: 'monospace',
+  },
+  signupLink: {
+    alignItems: 'center',
+  },
+  signupText: {
+    color: '#007AFF',
+    fontSize: 16,
+  },
+});
+
+export default LoginScreen; 

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모바일 앱 API 테스트</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .button {
+            background: #007AFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin: 10px 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .button.success { background: #34C759; }
+        .button.warning { background: #FF9500; }
+        .button.danger { background: #FF3B30; }
+        .result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 모바일 앱 API 테스트</h1>
+        <p>이 페이지에서 모바일 앱에서 사용할 API들을 테스트할 수 있습니다.</p>
+        
+        <h2>🔗 네트워크 연결 테스트</h2>
+        <button class="button" onclick="testNetwork()">네트워크 연결 테스트</button>
+        <div id="networkResult" class="result"></div>
+        
+        <h2>🔐 로그인 테스트</h2>
+        <button class="button success" onclick="testLogin()">테스트 로그인</button>
+        <div id="loginResult" class="result"></div>
+        
+        <h2>🎮 퍼즐 게임 API 테스트</h2>
+        <button class="button warning" onclick="testPuzzleTemplate()">퍼즐 템플릿 가져오기</button>
+        <div id="puzzleResult" class="result"></div>
+        
+        <h2>📊 현재 상태</h2>
+        <div id="status" class="result info">
+            테스트를 시작하려면 위의 버튼들을 클릭하세요.
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://222.100.103.227:8080/api';
+        
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+        
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        }
+        
+        async function testNetwork() {
+            updateStatus('네트워크 연결 테스트 중...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/test`);
+                const data = await response.json();
+                showResult('networkResult', 
+                    `✅ 네트워크 연결 성공!\n\n서버 IP: ${data.server_ip}\n클라이언트 IP: ${data.client_ip}\n시간: ${data.timestamp}`, 
+                    'success'
+                );
+                updateStatus('네트워크 연결 테스트 완료');
+            } catch (error) {
+                showResult('networkResult', 
+                    `❌ 네트워크 연결 실패!\n\n오류: ${error.message}\n\n가능한 원인:\n1. API 서버가 실행되지 않음\n2. 방화벽 설정 문제\n3. 네트워크 연결 문제`, 
+                    'error'
+                );
+                updateStatus('네트워크 연결 테스트 실패');
+            }
+        }
+        
+        async function testLogin() {
+            updateStatus('로그인 테스트 중...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: 'test@test.com',
+                        password: '123456'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showResult('loginResult', 
+                        `✅ 로그인 성공!\n\n사용자: ${data.user.name}\n이메일: ${data.user.email}\n토큰: ${data.authorization.token.substring(0, 20)}...`, 
+                        'success'
+                    );
+                    updateStatus('로그인 테스트 완료');
+                } else {
+                    showResult('loginResult', 
+                        `❌ 로그인 실패!\n\n오류: ${data.message || '알 수 없는 오류'}`, 
+                        'error'
+                    );
+                    updateStatus('로그인 테스트 실패');
+                }
+            } catch (error) {
+                showResult('loginResult', 
+                    `❌ 로그인 요청 실패!\n\n오류: ${error.message}`, 
+                    'error'
+                );
+                updateStatus('로그인 테스트 실패');
+            }
+        }
+        
+        async function testPuzzleTemplate() {
+            updateStatus('퍼즐 템플릿 테스트 중...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/puzzle/template`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showResult('puzzleResult', 
+                        `✅ 퍼즐 템플릿 성공!\n\n그리드 크기: ${data.data.grid_pattern?.length || 'N/A'}x${data.data.grid_pattern?.[0]?.length || 'N/A'}\n단어 수: ${data.data.word_positions?.length || 0}개`, 
+                        'success'
+                    );
+                    updateStatus('퍼즐 템플릿 테스트 완료');
+                } else {
+                    showResult('puzzleResult', 
+                        `❌ 퍼즐 템플릿 실패!\n\n오류: ${data.message || '알 수 없는 오류'}`, 
+                        'error'
+                    );
+                    updateStatus('퍼즐 템플릿 테스트 실패');
+                }
+            } catch (error) {
+                showResult('puzzleResult', 
+                    `❌ 퍼즐 템플릿 요청 실패!\n\n오류: ${error.message}`, 
+                    'error'
+                );
+                updateStatus('퍼즐 템플릿 테스트 실패');
+            }
+        }
+        
+        // 페이지 로드 시 자동으로 네트워크 테스트
+        window.onload = function() {
+            updateStatus('페이지 로드 완료. 테스트를 시작하세요.');
+        };
+    </script>
+</body>
+</html> 
