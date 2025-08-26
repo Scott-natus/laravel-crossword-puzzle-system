@@ -53,6 +53,177 @@
 
 ---
 
+# 프로젝트 5번 - 크로스워드 퍼즐 모바일앱
+
+## 프로젝트 개요
+- **명칭**: 크로스워드 퍼즐 모바일앱
+- **프로젝트 번호**: 5번
+- **목적**: React Native를 사용한 크로스워드 퍼즐 모바일 앱
+- **API 서버**: 8080 포트 (http://222.100.103.227:8080/api)
+- **기술 스택**: React Native, Expo, TypeScript, AsyncStorage
+
+## 서버 및 폴더 구조
+- **작업 경로**: `/var/www/html/CrosswordPuzzleMobile/`
+- **API 서버**: 8080 포트 (기존 Laravel API 서버 활용)
+- **웹앱과 분리**: 기존 웹앱(CrosswordPuzzleApp)과 완전히 독립적인 프로젝트
+
+## 주요 기능
+- **사용자 인증**: 로그인/회원가입 (AsyncStorage로 토큰 저장)
+- **퍼즐 게임**: 퍼즐 플레이, 정답 확인, 힌트 시스템
+- **게임 상태**: 진행 상태 저장 및 복원
+- **반응형 UI**: 다양한 모바일 화면 크기 지원
+
+## 기술적 특징
+- **AsyncStorage**: 토큰 및 사용자 정보 안전한 저장
+- **네비게이션**: 인증 상태에 따른 화면 분기
+- **에러 처리**: 네트워크 오류 및 인증 실패 처리
+- **Expo**: 빌드 환경 단순화
+
+## 이전 문제 해결 방안
+### 1. AsyncStorage 저장 실패 문제
+- **해결**: Expo 환경에서 안정적인 AsyncStorage 사용
+- **구현**: @react-native-async-storage/async-storage 패키지 사용
+- **테스트**: 토큰 저장/복원 기능 검증
+
+### 2. CMake 빌드 실패 문제
+- **해결**: Expo를 사용하여 네이티브 빌드 환경 단순화
+- **장점**: Expo가 네이티브 모듈 컴파일을 자동으로 처리
+- **빌드**: expo build:android 명령으로 간단한 APK 빌드
+
+### 3. 버전 호환성 문제
+- **해결**: 최신 안정 버전 사용 (React Native 0.73.x)
+- **Expo**: 버전 관리 자동화
+- **의존성**: 명시적 버전 지정으로 호환성 보장
+
+### 4. 반복적인 빌드 실패
+- **해결**: Expo 개발 환경 사용
+- **개발**: npm run android/ios/web로 간단한 개발 서버 실행
+
+---
+
+# 2025-08-26 작업 내역 - 라라벨 게시판 인증 시스템 구축
+
+## 작업 개요
+- **목적**: 특정 게시판([입학자료], [프로젝트U])을 인증된 사용자만 접근 가능하도록 제한
+- **대상 게시판**: 입학자료(bbs1), 프로젝트U(proj2)
+- **기술**: Laravel 인증 시스템, 데이터베이스 스키마 확장
+
+## 데이터베이스 변경사항
+### 1. board_types 테이블 스키마 확장
+```sql
+-- 인증 요구 컬럼 추가
+ALTER TABLE board_types ADD COLUMN requires_auth BOOLEAN DEFAULT false;
+
+-- 특정 게시판에 인증 요구 설정
+UPDATE board_types SET requires_auth = true WHERE slug IN ('bbs1', 'proj2');
+```
+
+### 2. 현재 설정 상태
+- **입학자료 (bbs1)**: requires_auth = true (로그인 필요)
+- **자유게시판 (talk)**: requires_auth = false (비회원 접근 가능)
+- **프로젝트 (proj)**: requires_auth = false (비회원 접근 가능)
+- **라이브러리 (library)**: requires_auth = false (비회원 접근 가능)
+- **프로젝트U (proj2)**: requires_auth = true (로그인 필요)
+
+## 코드 변경사항
+
+### 1. BoardType 모델 업데이트
+- **파일**: `app/Models/BoardType.php`
+- **변경**: `requires_auth` 컬럼을 fillable과 casts에 추가
+
+### 2. BoardController 인증 체크 추가
+- **파일**: `app/Http/Controllers/BoardController.php`
+- **변경**: 
+  - `index()` 메서드: 게시판 목록 접근 시 인증 체크
+  - `show()` 메서드: 게시글 상세 접근 시 인증 체크
+
+### 3. 프론트엔드 UI 개선
+- **파일**: `resources/views/layouts/app.blade.php`, `resources/views/welcome.blade.php`
+- **변경**: 인증이 필요한 게시판에 자물쇠 아이콘 표시
+
+## 보안 기능
+### 1. 접근 제어
+- **게시판 목록**: 인증이 필요한 게시판 접근 시 로그인 페이지로 리다이렉트
+- **게시글 상세**: 인증이 필요한 게시판의 게시글 접근 시 로그인 페이지로 리다이렉트
+- **에러 메시지**: "이 게시판은 로그인이 필요합니다." 표시
+
+### 2. UI 표시
+- **자물쇠 아이콘**: 인증이 필요한 게시판에 노란색 자물쇠 아이콘 표시
+- **툴팁**: "로그인 필요" 툴팁 제공
+
+## 테스트 방법
+1. **비로그인 상태**: 입학자료, 프로젝트U 게시판 접근 시 로그인 페이지로 리다이렉트
+2. **로그인 상태**: 모든 게시판 정상 접근 가능
+3. **UI 확인**: 게시판 목록에서 자물쇠 아이콘 표시 확인
+
+## 파일 변경 목록
+- `app/Models/BoardType.php`: 모델 업데이트
+- `app/Http/Controllers/BoardController.php`: 인증 체크 로직 추가
+- `resources/views/layouts/app.blade.php`: UI 개선
+- `resources/views/welcome.blade.php`: UI 개선
+- `puzzle_db_schema.sql`: 스키마 변경사항 기록
+- **배포**: Expo EAS Build 또는 expo build 사용
+
+## 프로젝트 구조
+```
+CrosswordPuzzleMobile/
+├── src/
+│   ├── contexts/
+│   │   └── AuthContext.tsx      # 인증 상태 관리
+│   ├── screens/
+│   │   ├── LoadingScreen.tsx    # 로딩 화면
+│   │   ├── LoginScreen.tsx      # 로그인 화면
+│   │   ├── RegisterScreen.tsx   # 회원가입 화면
+│   │   └── GameScreen.tsx       # 게임 화면
+│   ├── services/
+│   │   └── apiService.ts        # API 연동 서비스
+│   └── components/              # 재사용 컴포넌트
+├── App.tsx                      # 메인 앱 컴포넌트
+├── app.json                     # Expo 설정
+└── package.json                 # 의존성 관리
+```
+
+## 설치 및 실행 명령어
+```bash
+# 의존성 설치
+cd CrosswordPuzzleMobile && npm install
+
+# 개발 서버 실행
+npm run android    # Android
+npm run ios        # iOS (macOS 필요)
+npm run web        # 웹
+
+# 빌드
+expo build:android  # Android APK
+expo build:ios      # iOS (macOS 필요)
+```
+
+## API 연동
+- **기본 URL**: http://222.100.103.227:8080/api
+- **인증**: Bearer 토큰 방식
+- **토큰 저장**: AsyncStorage 사용
+- **에러 처리**: 401 오류 시 자동 토큰 제거
+
+## 개발 환경 설정
+- **Node.js**: 18.x 이상
+- **Expo CLI**: 최신 버전
+- **React Native**: 0.73.x
+- **TypeScript**: 5.x
+
+## 주의사항
+- API 서버(8080 포트)가 실행 중이어야 함
+- 네트워크 연결이 필요함
+- AsyncStorage는 디바이스별로 독립적으로 저장됨
+- Expo 개발 환경 사용으로 빌드 문제 최소화
+
+## 문제 해결 가이드
+- **빌드 오류**: `expo doctor` 실행 후 문제 해결
+- **네트워크 오류**: API 서버 상태 확인
+- **토큰 문제**: AsyncStorage 클리어 후 재로그인
+- **버전 충돌**: package.json의 의존성 버전 확인
+
+---
+
 # Laravel Crossword Puzzle Management System - Workflow
 
 ## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 - 정답 표시 문제 해결)

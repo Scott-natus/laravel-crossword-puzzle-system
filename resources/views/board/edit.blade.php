@@ -68,7 +68,7 @@
                             <label for="attachments" class="form-label">새 첨부파일</label>
                             <input type="file" class="form-control @error('attachments.*') is-invalid @enderror" 
                                 id="attachments" name="attachments[]" multiple>
-                            <div class="form-text">이미지(10MB), 동영상(100MB) 파일만 업로드 가능합니다.</div>
+                            <div class="form-text">이미지, 동영상, PDF, 문서 파일 등 최대 100MB까지 업로드 가능합니다.</div>
                             @error('attachments.*')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

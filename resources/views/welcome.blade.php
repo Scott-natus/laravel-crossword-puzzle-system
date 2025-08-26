@@ -162,6 +162,9 @@
                                         <li>
                                             <a class="dropdown-item" href="{{ route('board.index', ['boardType' => $boardType->slug]) }}">
                                                 {{ $boardType->name }}
+                                                @if($boardType->requires_auth)
+                                                    <i class="fas fa-lock text-warning ms-1" title="로그인 필요"></i>
+                                                @endif
                                             </a>
                                         </li>
                                     @endforeach

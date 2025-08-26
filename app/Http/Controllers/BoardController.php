@@ -28,6 +28,11 @@ class BoardController extends Controller
         $boardTypeSlug = $request->route('boardType');
         $boardType = BoardType::where('slug', $boardTypeSlug)->firstOrFail();
         
+        // 인증이 필요한 게시판인지 확인
+        if ($boardType->requires_auth && !auth()->check()) {
+            return redirect()->route('login')->with('error', '이 게시판은 로그인이 필요합니다.');
+        }
+        
         // 디버깅 로그 추가
         \Log::info('Board index method called:', [
             'requested_slug' => $boardTypeSlug,
@@ -133,7 +138,7 @@ class BoardController extends Controller
             'password' => 'required',
             'attachments.*' => [
                 'file',
-                'max:512000', // 500MB
+                'max:102400', // 100MB
                 'mimes:jpg,jpeg,png,gif,bmp,webp,mp4,avi,mov,wmv,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar',
                 'mimetypes:image/jpeg,image/png,image/gif,image/bmp,image/webp,video/mp4,video/avi,video/quicktime,video/x-ms-wmv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,application/zip,application/x-rar-compressed'
             ],
@@ -261,8 +266,15 @@ class BoardController extends Controller
      */
     public function show($boardType, $id)
     {
-        // 인증 체크 제거: 비회원도 게시글 상세 열람 가능
         $board = \App\Models\Board::with(['user', 'attachments', 'comments.user', 'comments.children.user', 'parent'])->findOrFail($id);
+        
+        // 게시판 타입 확인
+        $boardTypeModel = BoardType::find($board->board_type_id);
+        
+        // 인증이 필요한 게시판인지 확인
+        if ($boardTypeModel && $boardTypeModel->requires_auth && !auth()->check()) {
+            return redirect()->route('login')->with('error', '이 게시글은 로그인이 필요합니다.');
+        }
         
         // 디버깅을 위한 로그 추가
         \Log::info('Board data before increment:', [
@@ -359,7 +371,7 @@ class BoardController extends Controller
             'password' => 'required',
             'attachments.*' => [
                 'file',
-                'max:512000', // 500MB
+                'max:102400', // 100MB
                 'mimes:jpg,jpeg,png,gif,bmp,webp,mp4,avi,mov,wmv,pdf,doc,docx,xls,xlsx,ppt,pptx,txt,zip,rar',
                 'mimetypes:image/jpeg,image/png,image/gif,image/bmp,image/webp,video/mp4,video/avi,video/quicktime,video/x-ms-wmv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain,application/zip,application/x-rar-compressed'
             ],

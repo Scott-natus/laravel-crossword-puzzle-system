@@ -66,7 +66,7 @@ class BoardController extends Controller
             'title' => 'required|max:255',
             'content' => 'required',
             'password' => 'required|string|min:4',
-            'attachments.*' => 'file|max:512000',
+            'attachments.*' => 'file|max:102400',
         ]);
 
         try {
@@ -116,7 +116,7 @@ class BoardController extends Controller
         $validated = $request->validate([
             'title' => 'required|max:255',
             'content' => 'required',
-            'attachments.*' => 'file|max:512000',
+            'attachments.*' => 'file|max:102400',
         ]);
 
         try {

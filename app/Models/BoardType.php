@@ -15,11 +15,13 @@ class BoardType extends Model
         'slug',
         'description',
         'is_active',
-        'sort_order'
+        'sort_order',
+        'requires_auth'
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'requires_auth' => 'boolean',
     ];
 
     public function boards(): HasMany
