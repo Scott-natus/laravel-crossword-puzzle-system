@@ -54,6 +54,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user;
   const isAdmin = user?.is_admin || false;
+  
+  console.log('🔥 CrosswordPuzzleApp AuthProvider 컴포넌트가 렌더링됨!');
 
   const checkAuthStatus = async () => {
     try {
@@ -87,10 +89,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('🔥 CrosswordPuzzleApp AuthContext login 함수 호출됨!');
+    console.log('📧 CrosswordPuzzleApp 이메일:', email);
+    console.log('🔑 CrosswordPuzzleApp 비밀번호:', password);
+    
     try {
-      console.log('Attempting login with:', email);
+      console.log('🔐 CrosswordPuzzleApp AuthContext: 로그인 시도 시작');
       const response = await apiService.login({ email, password });
-      console.log('Login response:', response);
+      console.log('📄 CrosswordPuzzleApp AuthContext: 로그인 응답 받음:', response);
       
       if ((response.success || (response as any).status === 'success')) {
         // Laravel 기존 로그인과 동일한 비즈니스 로직 처리

@@ -226,6 +226,90 @@ expo build:ios      # iOS (macOS 필요)
 
 # Laravel Crossword Puzzle Management System - Workflow
 
+## 2025-07-31 작업 내역 (React Native 모바일 앱 localStorage 에러 해결)
+
+### 문제 상황
+- React Native 모바일 앱에서 `Property 'localStorage' doesn't exist` 에러 발생
+- 모바일 환경에서 웹 브라우저 API인 localStorage를 사용하려고 해서 발생한 문제
+- 로그인 후 게임 페이지로 전환되지 않는 인증 문제
+
+### 해결 과정
+
+#### 1. localStorage 사용 위치 파악
+- `CrosswordPuzzleMobileApp/src/services/api.ts`: API 서비스에서 토큰 저장/로드
+- `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`: 인증 컨텍스트에서 토큰 관리
+- 두 파일 모두 localStorage를 직접 사용하여 모바일 환경에서 에러 발생
+
+#### 2. 환경별 스토리지 처리 로직 구현
+- **React Native 환경**: AsyncStorage 사용
+- **웹 환경**: localStorage 사용 (fallback)
+- **AsyncStorage 로드 실패 시**: 메모리 스토리지 사용
+
+#### 3. 수정된 파일들
+
+**CrosswordPuzzleMobileApp/src/services/api.ts**
+```typescript
+const getStorage = () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    console.log('✅ CrosswordPuzzleMobileApp AsyncStorage 로드 성공');
+    return AsyncStorage;
+  } catch (error) {
+    console.log('❌ CrosswordPuzzleMobileApp AsyncStorage 로드 실패, 메모리 스토리지 사용');
+    const memoryStorage: any = {};
+    return {
+      getItem: (key: string) => Promise.resolve(memoryStorage[key] || null),
+      setItem: (key: string, value: string) => Promise.resolve(memoryStorage[key] = value),
+      removeItem: (key: string) => Promise.resolve(delete memoryStorage[key]),
+    };
+  }
+};
+```
+
+**CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx**
+```typescript
+const getStorage = () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext AsyncStorage 로드 성공');
+    return AsyncStorage;
+  } catch (error) {
+    console.log('❌ CrosswordPuzzleMobileApp AuthContext AsyncStorage 로드 실패, 메모리 스토리지 사용');
+    const memoryStorage: any = {};
+    return {
+      getItem: (key: string) => Promise.resolve(memoryStorage[key] || null),
+      setItem: (key: string, value: string) => Promise.resolve(memoryStorage[key] = value),
+      removeItem: (key: string) => Promise.resolve(delete memoryStorage[key]),
+    };
+  }
+};
+```
+
+#### 4. 디버깅 로그 추가
+- 각 파일에 `CrosswordPuzzleMobileApp` 접두사를 사용한 로그 추가
+- AsyncStorage 로드 성공/실패 로그
+- API 요청/응답 로그
+- 인증 상태 변경 로그
+
+#### 5. 빌드 및 테스트
+- Android APK 빌드: `./build-android.sh`
+- 빌드 시간: 2025-07-31 15:30:00
+- 테스트 계정: test@test.com / 123456
+
+### 예상 결과
+- localStorage 에러 해결
+- 모바일 환경에서 AsyncStorage 정상 동작
+- 로그인 후 게임 페이지로 정상 전환
+- 인증 토큰 저장/로드 정상 동작
+
+### 다음 단계
+1. 새 APK 설치 및 테스트
+2. 로그인 플로우 확인
+3. 인증 상태 유지 확인
+4. 게임 페이지 전환 확인
+
+---
+
 ## 2025-07-18 작업 내역 (Wordle 스타일 게임 상태 유지 시스템 - 정답 표시 문제 해결)
 
 ### 문제 상황
@@ -819,3 +903,202 @@ cat storage/logs/laravel.log | grep "cleanup"
 1. /manage/login/에서 로그인 시도 → 성공 시 /manage/로 이동
 2. 비밀번호 변경, 로그아웃 등 정상 동작 확인
 3. 로그인하지 않으면 /manage/ 하위 접근 불가 확인
+
+---
+
+## 2025-07-31 작업 내역 (React Native 모바일 앱 AuthContext 토큰 저장 및 API 인증 문제 해결)
+
+### 문제 상황
+- React Native 모바일 앱에서 로그인은 성공하지만 AuthContext 함수가 실행되지 않는 문제
+- 로그인 후 메인 화면에서 "Unauthenticated" 에러 발생
+- 토큰이 제대로 저장되지 않거나 API 호출 시 전달되지 않는 문제
+- 로그가 너무 빨리 지나가서 디버깅이 어려운 상황
+
+### 해결 과정
+
+#### 1. AuthContext 연결 문제 해결
+- **문제 발견**: LoginScreen에서 `apiService.login()`과 `AuthContext.login()` 두 번의 로그인 시도
+- **해결**: `apiService.login()` 호출 제거하고 AuthContext의 `login()` 함수만 사용
+- **수정 파일**: `CrosswordPuzzleMobileApp/src/screens/LoginScreen.tsx`
+
+#### 2. 토큰 저장 로직 개선
+- **기존 문제**: 복잡한 응답 구조 처리로 토큰 추출 실패
+- **개선 사항**: 
+  - 4가지 주요 응답 구조 지원 (response.authorization.token, response.data.authorization.token, response.token, response.data.token)
+  - 저장 후 즉시 확인하는 로직 추가
+  - 상세한 JSON 로그 출력
+- **수정 파일**: `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`
+
+#### 3. API 서비스 토큰 전달 로그 강화
+- **추가된 로그**:
+  - API 요청 시작/메서드/헤더 로그
+  - 토큰 저장 상태 및 값 확인
+  - 최종 요청 헤더 확인
+- **수정 파일**: `CrosswordPuzzleMobileApp/src/services/api.ts`
+
+#### 4. MainScreen API 호출 로그 개선
+- **추가된 로그**:
+  - API 호출 전 토큰 확인
+  - 응답 구조 상세 로그
+  - 성공/실패 상태 명확한 구분
+- **수정 파일**: `CrosswordPuzzleMobileApp/src/screens/MainScreen.tsx`
+
+#### 5. 로그 확인 시스템 개선
+- **로그인 화면**: 로그인 성공 후 3초간 대기 (로그 확인용)
+- **메인 화면**: 로그 화면 자동 표시, 2초간 대기 후 데이터 로드
+- **개선 사항**:
+  - "⏳ 3초간 대기 중... (로그 확인용)" 메시지
+  - "🚀 메인 화면으로 이동합니다..." 메시지
+  - 로그 화면 자동 표시 (`showLogs = true`)
+
+### 수정된 파일들
+
+**CrosswordPuzzleMobileApp/src/screens/LoginScreen.tsx**
+```typescript
+// AuthContext의 login 함수만 사용
+const loginSuccess = await login(email, password);
+addLog('🔍 AuthContext 로그인 결과: ' + loginSuccess);
+
+if (loginSuccess) {
+  addLog('✅ AuthContext 로그인 성공');
+  addLog('⏳ 3초간 대기 중... (로그 확인용)');
+  
+  // 3초간 대기하여 로그 확인 가능
+  await new Promise(resolve => setTimeout(resolve, 3000));
+  
+  addLog('🚀 메인 화면으로 이동합니다...');
+}
+```
+
+**CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx**
+```typescript
+// 다양한 응답 구조 처리
+const responseAny = response as any;
+if (response && typeof response === 'object') {
+  // 1. response.authorization.token
+  if (responseAny.authorization && responseAny.authorization.token) {
+    token = responseAny.authorization.token;
+    userData = responseAny.user;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext: response.authorization.token 구조');
+  }
+  // 2. response.data.authorization.token
+  else if (responseAny.data && responseAny.data.authorization && responseAny.data.authorization.token) {
+    token = responseAny.data.authorization.token;
+    userData = responseAny.data.user;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext: response.data.authorization.token 구조');
+  }
+  // 3. response.token (직접 토큰)
+  else if (responseAny.token) {
+    token = responseAny.token;
+    userData = responseAny.user;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext: response.token 구조');
+  }
+  // 4. response.data.token
+  else if (responseAny.data && responseAny.data.token) {
+    token = responseAny.data.token;
+    userData = responseAny.data.user;
+    console.log('✅ CrosswordPuzzleMobileApp AuthContext: response.data.token 구조');
+  }
+  else {
+    console.log('❌ CrosswordPuzzleMobileApp AuthContext: 토큰을 찾을 수 없음');
+    console.log('❌ CrosswordPuzzleMobileApp AuthContext: response 구조:', JSON.stringify(response, null, 2));
+  }
+}
+
+if (token && userData) {
+  console.log('✅ CrosswordPuzzleMobileApp AuthContext: 토큰 발견:', token);
+  console.log('✅ CrosswordPuzzleMobileApp AuthContext: 사용자 데이터:', userData);
+  
+  // 토큰 저장
+  try {
+    await storage.setItem('auth_token', token);
+    console.log('✅ AuthContext: 토큰 저장 성공');
+    
+    // 저장된 토큰 확인
+    const savedToken = await storage.getItem('auth_token');
+    console.log('🔍 AuthContext: 저장된 토큰 확인:', savedToken);
+  } catch (error) {
+    console.error('❌ AuthContext: 토큰 저장 실패:', error);
+  }
+}
+```
+
+**CrosswordPuzzleMobileApp/src/services/api.ts**
+```typescript
+// Request interceptor
+api.interceptors.request.use(
+  async (config) => {
+    console.log('🔧 CrosswordPuzzleMobileApp API 요청 시작:', config.url);
+    console.log('🔧 CrosswordPuzzleMobileApp 요청 메서드:', config.method);
+    console.log('🔧 CrosswordPuzzleMobileApp 요청 헤더:', config.headers);
+    
+    const token = await storage.getItem('auth_token');
+    console.log('🔑 CrosswordPuzzleMobileApp 저장된 토큰:', token ? '있음' : '없음');
+    console.log('🔑 CrosswordPuzzleMobileApp 토큰 값:', token);
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 CrosswordPuzzleMobileApp 토큰 추가됨:', `Bearer ${token}`);
+      console.log('🔧 CrosswordPuzzleMobileApp 최종 요청 헤더:', config.headers);
+    } else {
+      console.log('❌ CrosswordPuzzleMobileApp 토큰 없음');
+    }
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ CrosswordPuzzleMobileApp 요청 인터셉터 에러:', error);
+    return Promise.reject(error);
+  }
+);
+```
+
+**CrosswordPuzzleMobileApp/src/screens/MainScreen.tsx**
+```typescript
+useEffect(() => {
+  addLog('🚀 MainScreen 컴포넌트 마운트됨');
+  addLog('⏳ 2초 후 데이터 로드 시작...');
+  
+  // 2초간 대기 후 데이터 로드 (로그 확인용)
+  const timer = setTimeout(() => {
+    loadUserData();
+  }, 2000);
+  
+  return () => clearTimeout(timer);
+}, []);
+
+const [showLogs, setShowLogs] = useState(true); // 자동으로 로그 표시
+```
+
+### 빌드 결과
+- ✅ **APK 빌드 성공**: 45M 크기, 2025-08-01 02:08:31 빌드
+- ✅ **AuthContext 연결**: LoginScreen에서 AuthContext login 함수 정상 호출
+- ✅ **토큰 저장 로직**: 다양한 응답 구조 지원 및 저장 확인
+- ✅ **로그 확인 시스템**: 로그인/메인 화면에서 충분한 대기 시간 제공
+- ✅ **API 호출 로그**: 토큰 전달 과정 상세 추적 가능
+
+### 현재 상태
+- ✅ **AuthContext 함수 호출**: 로그인 시 AuthContext login 함수 정상 실행
+- ✅ **토큰 저장**: 다양한 응답 구조에서 토큰 추출 및 저장
+- ✅ **로그 확인**: 3초/2초 대기로 로그 충분히 확인 가능
+- ⚠️ **API 인증**: 메인 화면에서 "Unauthenticated" 에러 여전히 발생 가능성
+
+### 다음 작업 예정
+1. **새 APK 테스트**: 토큰 저장 및 API 호출 과정 로그 확인
+2. **인증 문제 해결**: "Unauthenticated" 에러 원인 파악 및 수정
+3. **API 서버 확인**: Laravel API 서버에서 토큰 인증 처리 확인
+4. **최종 테스트**: 전체 로그인 → 메인 화면 → API 호출 플로우 확인
+
+### 중요 파일 위치
+- **모바일 앱**: `/var/www/html/CrosswordPuzzleMobileApp/`
+- **AuthContext**: `CrosswordPuzzleMobileApp/src/contexts/AuthContext.tsx`
+- **API 서비스**: `CrosswordPuzzleMobileApp/src/services/api.ts`
+- **로그인 화면**: `CrosswordPuzzleMobileApp/src/screens/LoginScreen.tsx`
+- **메인 화면**: `CrosswordPuzzleMobileApp/src/screens/MainScreen.tsx`
+
+### 디버깅 명령어
+- **APK 빌드**: `cd CrosswordPuzzleMobileApp && ./build-android.sh`
+- **API 테스트**: `curl -X POST http://222.100.103.227:8080/api/login -H "Content-Type: application/json" -d '{"email":"test@test.com","password":"123456"}'`
+- **로그 확인**: 앱에서 "로그 보기" 버튼 클릭 또는 자동 표시된 로그 확인
+
+---

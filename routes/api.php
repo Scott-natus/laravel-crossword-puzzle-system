@@ -1,5 +1,24 @@
 <?php
 
+// CORS는 Laravel 미들웨어에서 처리
+
+// 간단한 테스트 엔드포인트
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'GET' && isset($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/api/test') !== false) {
+    header('Content-Type: application/json');
+    echo json_encode([
+        'status' => 'success',
+        'message' => 'API 서버에 정상적으로 접근되었습니다.',
+        'timestamp' => date('Y-m-d H:i:s'),
+        'server_ip' => $_SERVER['SERVER_ADDR'] ?? 'unknown',
+        'client_ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+    ]);
+    exit();
+}
+
+// 기존 API 로직
+require_once __DIR__ . '/../vendor/autoload.php';
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
