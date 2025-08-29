@@ -98,6 +98,7 @@
 
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ route('puzzle-game.index') }}">퍼즐게임</a></li>
+                            <li><a class="dropdown-item" href="{{ route('lotto.index') }}">똥손 로또</a></li>
 
                             @auth
                                 @if(Auth::user()->is_admin)

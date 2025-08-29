@@ -28,6 +28,9 @@ class User extends Authenticatable implements JWTSubject
         'avatar',
         'nickname',
         'last_login_at',
+        'total_ddongsun_power',
+        'current_level',
+        'profile_image',
     ];
 
     /**
@@ -54,6 +57,16 @@ class User extends Authenticatable implements JWTSubject
     public function boards()
     {
         return $this->hasMany(\App\Models\Board::class);
+    }
+
+    public function lottoTickets()
+    {
+        return $this->hasMany(LottoTicket::class);
+    }
+
+    public function ddongsunRankings()
+    {
+        return $this->hasMany(DdongsunRanking::class);
     }
 
     /**

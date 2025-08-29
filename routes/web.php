@@ -196,3 +196,13 @@ Route::prefix('ocr')->name('ocr.')->group(function () {
     Route::post('/save-result', [OcrController::class, 'saveResult'])->name('save-result');
     Route::get('/history', [OcrController::class, 'history'])->name('history');
 });
+
+// 똥손 로또 시스템
+Route::prefix('lotto')->name('lotto.')->middleware(['auth'])->group(function () {
+    Route::get('/', [App\Http\Controllers\LottoController::class, 'index'])->name('index');
+    Route::get('/upload', [App\Http\Controllers\LottoController::class, 'upload'])->name('upload');
+    Route::post('/upload', [App\Http\Controllers\LottoController::class, 'store'])->name('store');
+    Route::get('/ticket/{id}', [App\Http\Controllers\LottoController::class, 'show'])->name('show');
+    Route::get('/rankings', [App\Http\Controllers\LottoController::class, 'rankings'])->name('rankings');
+    Route::get('/statistics', [App\Http\Controllers\LottoController::class, 'statistics'])->name('statistics');
+});
